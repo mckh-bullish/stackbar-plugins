@@ -22,7 +22,8 @@ A plugin is accepted when all of these hold:
    `.settings` surface; quick mid-task controls stay in the panel.
 6. **Destructive actions say so** with `role: .critical`.
 7. **It renders every surface it declares** and survives the soak in CI.
-8. **Its manifest is complete:** an id starting `io.navbytes.stackbar.plugins.`,
+8. **Its manifest is complete:** an id starting `io.navbytes.stackbar.plugins.`
+   (the plugins that moved here from Stackbar keep their old ids),
    a `version` (`x.y.z`), a one-sentence `summary`, `minimumStackbar` (the
    oldest Stackbar it builds against) and `homepage` (its folder on GitHub).
 9. **It has a README** saying what it does, what it needs and its settings.

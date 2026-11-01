@@ -28,6 +28,12 @@ An update that asks for something new waits for your approval.
 
 | Plugin | Category | What it does |
 | --- | --- | --- |
+| [Stay Awake](System/StayAwake) | System | Keeps your Mac awake for a while, until a time, while an app runs or on a schedule. |
+| [PR Cockpit](Developer/PRCockpit) | Developer | Your pull requests and the ones waiting on your review, with CI and review state. |
+| [Clipboard History](Productivity/Clipboard) | Productivity | Everything you copy, searchable and one keystroke from pasting back. |
+| [Quicklinks](Productivity/Quicklinks) | Productivity | Open links and folders by name, with placeholders filled in. |
+| [Snippets](Productivity/Snippets) | Productivity | Paste text by name, with placeholders filled in. |
+| [Up Next](Productivity/UpNext) | Productivity | Your next meeting in the menu bar, with a countdown and one-click join. |
 | [World Clock](Productivity/WorldClock) | Productivity | The time in the cities you work with, with offsets and working hours. |
 
 <!-- plugins:end -->
