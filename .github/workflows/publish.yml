@@ -1,0 +1,56 @@
+name: Publish
+
+# Signs new plugin versions with the navbytes key and rebuilds the signed
+# index on the gh-pages branch, which GitHub Pages serves at
+# https://navbytes.github.io/stackbar-plugins/index.json.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: macos-26
+    timeout-minutes: 45
+    # The key is only available to jobs in this environment, which only main
+    # may use (Settings → Environments → release).
+    environment: release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Check out gh-pages
+        run: |
+          if git ls-remote --exit-code origin gh-pages > /dev/null; then
+            git fetch --depth 1 origin gh-pages
+            git worktree add site origin/gh-pages
+            cd site && git checkout -B gh-pages
+          else
+            git worktree add --detach site
+            cd site && git checkout --orphan gh-pages && git rm -rfq .
+          fi
+      - name: Sign and index
+        env:
+          STACKBAR_PUBLISHER_KEY: ${{ secrets.STACKBAR_PUBLISHER_KEY }}
+        run: |
+          if [ -z "$STACKBAR_PUBLISHER_KEY" ]; then
+            echo "::warning::STACKBAR_PUBLISHER_KEY is not set; nothing published"
+            exit 0
+          fi
+          umask 077
+          printf '%s' "$STACKBAR_PUBLISHER_KEY" > "$RUNNER_TEMP/publisher.key"
+          scripts/publish.sh site "$RUNNER_TEMP/publisher.key"
+          rm -f "$RUNNER_TEMP/publisher.key"
+      - name: Push gh-pages
+        run: |
+          cd site
+          git add -A
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -qm "Publish ${GITHUB_SHA::7}"
+          git push origin gh-pages

@@ -1,0 +1,6 @@
+.build/
+.swiftpm/
+Package.resolved
+/site/
+*.key
+.DS_Store
