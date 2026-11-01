@@ -7,10 +7,12 @@
                                              plugins whose source changed since that ref
 """
 import json
+import os
 import pathlib
 import re
 import subprocess
 import sys
+import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CATEGORIES = ["System", "Developer", "Network", "Monitoring", "Productivity"]
@@ -39,19 +41,27 @@ def plugins():
             yield category, directory
 
 
-def manifest_field(source: str, name: str):
-    block = re.search(r"static let manifest = Manifest\((.*?)\n    \)", source, re.S)
-    if not block:
-        return None
-    match = re.search(rf'\b{name}:\s*"([^"]*)"', block.group(1))
-    return match.group(1) if match else None
+def stackbarctl():
+    """check.sh passes the stackbarctl it built; run alone, lint builds the same one."""
+    if "STACKBARCTL" in os.environ:
+        return os.environ["STACKBARCTL"]
+    subprocess.run(["swift", "build", "-c", "release", "--product", "stackbarctl"], cwd=ROOT, check=True, stdout=sys.stderr)
+    bin_path = subprocess.run(["swift", "build", "-c", "release", "--show-bin-path"], cwd=ROOT, check=True, capture_output=True, text=True)
+    return f"{bin_path.stdout.strip()}/stackbarctl"
+
+
+def manifest_report(ctl, source_file):
+    """The manifest the plugin declares, from `stackbarctl manifest --json`:
+    {"manifest", "problems", "publishingProblems"}. None if it doesn't build."""
+    result = subprocess.run([ctl, "manifest", str(source_file), "--json"], cwd=ROOT, capture_output=True, text=True)
+    return json.loads(result.stdout) if result.returncode == 0 else None
 
 
 def version_tuple(text):
     return tuple(int(part) for part in re.findall(r"\d+", text or "0"))
 
 
-def lint(base=None):
+def lint(ctl, base=None):
     problems = []
     rows = []
     seen_ids = {}
@@ -78,30 +88,40 @@ def lint(base=None):
         for banned in ("URLSession", "Process(", "FileManager"):
             if banned in source:
                 problems.append(f"{where}: uses {banned.rstrip('(')}; plugins are sandboxed, go through Stackbar.* host calls")
-        plugin_id = manifest_field(source, "id")
-        version = manifest_field(source, "version")
-        summary = manifest_field(source, "summary")
-        display = manifest_field(source, "name") or name
-        if not plugin_id or not (plugin_id.startswith(ID_PREFIX) or plugin_id in LEGACY_IDS):
+        report = manifest_report(ctl, source_file)
+        if report is None:
+            problems.append(f"{where}: can't read its manifest; run stackbarctl manifest {where}/{name}.swift")
+            continue
+        manifest = report["manifest"]
+        plugin_id, version, summary = manifest["id"], manifest["version"], manifest.get("summary")
+        # The version format, summary and minimumStackbar every published plugin needs.
+        problems += [f"{where}: {problem}" for problem in report["publishingProblems"]]
+        if not (plugin_id.startswith(ID_PREFIX) or plugin_id in LEGACY_IDS):
             problems.append(f"{where}: manifest id must start with {ID_PREFIX}")
         elif plugin_id in seen_ids:
             problems.append(f"{where}: id {plugin_id} is also used by {seen_ids[plugin_id]}")
         else:
             seen_ids[plugin_id] = where
-        if not version or not re.fullmatch(r"\d+\.\d+\.\d+", version):
-            problems.append(f"{where}: manifest needs version: \"x.y.z\"")
-        if not summary:
-            problems.append(f"{where}: manifest needs a summary (the store shows it on the card)")
-        if not manifest_field(source, "minimumStackbar"):
-            problems.append(f"{where}: manifest needs minimumStackbar")
-        if base and version:
+        if base:
             old = git_show(base, f"{category}/{name}/{name}.swift")
             if old is not None and old != source:
-                old_version = manifest_field(old, "version")
-                if version_tuple(version) <= version_tuple(old_version):
+                old_version = base_version(ctl, name, old)
+                if old_version is None:
+                    print(f"warning: {where}: can't build its source at {base}, so its version bump isn't checked")
+                elif version_tuple(version) <= version_tuple(old_version):
                     problems.append(f"{where}: source changed since {base} but version is still {version}; raise it")
-        rows.append(f"| [{display}]({category}/{name}) | {category} | {summary or ''} |")
+        rows.append(f"| [{manifest['name']}]({category}/{name}) | {category} | {summary or ''} |")
     return problems, rows
+
+
+def base_version(ctl, name, source):
+    """The version an older source declared, built from a copy under the
+    plugin's own file name, which stackbarctl names the helper after."""
+    with tempfile.TemporaryDirectory() as directory:
+        copy = pathlib.Path(directory) / f"{name}.swift"
+        copy.write_text(source)
+        report = manifest_report(ctl, copy)
+    return report and report["manifest"]["version"]
 
 
 def git_show(ref, path):
@@ -118,7 +138,7 @@ def readme_with(rows):
 
 def main(argv):
     base = argv[argv.index("--base") + 1] if "--base" in argv else None
-    problems, rows = lint(base)
+    problems, rows = lint(stackbarctl(), base)
     expected = readme_with(rows)
     if "--write-readme" in argv:
         (ROOT / "README.md").write_text(expected)
@@ -129,7 +149,7 @@ def main(argv):
         if not {"id", "reason"} <= entry.keys():
             problems.append(f"revoked.json: every entry needs id and reason: {entry}")
     for problem in problems:
-        print(f"::error::{problem}" if "GITHUB_ACTIONS" in __import__("os").environ else f"error: {problem}")
+        print(f"::error::{problem}" if "GITHUB_ACTIONS" in os.environ else f"error: {problem}")
     print(f"{len(rows)} plugins, {len(problems)} problems")
     return 1 if problems else 0
 

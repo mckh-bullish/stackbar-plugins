@@ -14,7 +14,7 @@ import PackageDescription
 /// and custom styling.
 /// Switch to `exact:` once tags are pushed, and raise it in its own pull
 /// request; a plugin may still set an older `minimumStackbar`.
-let stackbarRevision = "6996c7da4b3535c496ec80f673363b2024978332" // Stackbar 0.12.0 with custom styling, host timers and box shadows (#38)
+let stackbarRevision = "be31c8e8a735082dce2f7f0d0439fa4e8a045623" // Stackbar main with manifest --json, publishing rules and getJSON(auth:) (#45)
 
 /// Category folders. The folder name is the category the store shows.
 let categories = ["System", "Developer", "Network", "Monitoring", "Productivity"]
@@ -27,6 +27,9 @@ let plugins: [(category: String, name: String)] = categories.flatMap { category 
         FileManager.default.fileExists(atPath: folder.appendingPathComponent(name).appendingPathComponent("\(name).swift").path)
     }.map { (category, $0) }
 }
+
+/// The plugins Tests/PluginTests runs.
+let testedPlugins = ["Clipboard", "PRCockpit", "Quicklinks", "Snippets", "StayAwake", "UpNext"]
 
 let stackbar: Package.Dependency = ProcessInfo.processInfo.environment["STACKBAR_PATH"].map { .package(name: "stackbar", path: $0) }
     ?? .package(url: "https://github.com/navbytes/stackbar", revision: stackbarRevision)
@@ -43,5 +46,17 @@ let package = Package(
             path: "\(plugin.category)/\(plugin.name)",
             exclude: ["README.md"]
         )
-    }
+    } + [
+        // Plugins' own behaviour, driven as real processes through
+        // StackbarHostCore's supervisor over a simulated Mac. Depending on a
+        // plugin builds its executable next to the tests.
+        .testTarget(
+            name: "PluginTests",
+            dependencies: [
+                .product(name: "StackbarHostCore", package: "stackbar"),
+                .product(name: "StackbarProtocol", package: "stackbar"),
+            ] + testedPlugins.map { .target(name: "Plugin_\($0)") },
+            path: "Tests/PluginTests"
+        ),
+    ]
 )

@@ -1,0 +1,146 @@
+import Foundation
+import XCTest
+import StackbarHostCore
+import StackbarProtocol
+
+final class SnippetsTests: XCTestCase {
+    private static let raycastExport = """
+    [
+      {"name": "Signature", "text": "-- \\n{argument name=\\"who\\" default=\\"Nav\\"}", "keyword": ";sig"},
+      {"name": "Reply", "text": "Hi {argument name=\\"name\\"},\\n\\n{cursor}\\n\\n{snippet name=\\"Signature\\"}", "keyword": ";re"},
+      {"name": "Today", "text": "{date: yyyy-MM-dd} at {time: HH:mm}"},
+      {"name": "Signature", "text": "-- \\n{argument name=\\"who\\" default=\\"Nav\\"}"},
+      {"name": "Spaced", "text": "x", "keyword": "has space"},
+      {"name": "Too many", "text": "{argument name=a}{argument name=b}{argument name=c}{argument name=d}"}
+    ]
+    """
+
+    private func host() -> Host {
+        let host = Host(self)
+        host.system.restoreDelay = .milliseconds(20)
+        return host
+    }
+
+    private func importSample(_ host: Host, _ session: PluginSession) async throws {
+        host.system.simulate(chosenFile: ChosenFile(name: "snippets.json", data: Data(Self.raycastExport.utf8)))
+        let result = try await session.runCommand("import")
+        guard case .message = result else { return XCTFail("\(result)") }
+    }
+
+    private func snippets(_ session: PluginSession) async -> [CommandSpec] {
+        await session.commands().filter { $0.id.hasPrefix("sn-") }
+    }
+
+    private func command(_ session: PluginSession, titled title: String) async throws -> CommandSpec {
+        let found = await snippets(session).first { $0.title == title }
+        return try XCTUnwrap(found, "no command \(title)")
+    }
+
+    func testImportingARaycastExport() async throws {
+        let host = host()
+        let session = try await host.session("Snippets")
+        try await importSample(host, session)
+        let titles = await snippets(session).map(\.title)
+        XCTAssertEqual(titles.sorted(), ["Reply", "Signature", "Spaced", "Today"], "a duplicate and one with four arguments are skipped")
+        let spaced = try await command(session, titled: "Spaced")
+        XCTAssertFalse(spaced.keywords.contains("has space"), "a keyword with a space is left out")
+        try await importSample(host, session)
+        let again = await snippets(session)
+        XCTAssertEqual(again.count, 4, "importing again skips them all")
+
+        let today = try await command(session, titled: "Today")
+        XCTAssertEqual(today.subtitle, #"{date format="yyyy-MM-dd"} at {time format="HH:mm"}"#, "the old shorthand is modernised")
+        await session.stop()
+    }
+
+    func testEachSnippetPastesWithItsArgumentsAndCursor() async throws {
+        let host = host()
+        let session = try await host.session("Snippets")
+        try await importSample(host, session)
+        let reply = try await command(session, titled: "Reply")
+        XCTAssertEqual(reply.arguments.map(\.name), ["name", "who"], "an included snippet's arguments are asked for too")
+        XCTAssertEqual(reply.arguments.map(\.required), [true, false])
+        XCTAssertTrue(reply.keywords.contains(";re"))
+
+        let result = try await session.runCommand(reply.id, arguments: ["name": "Zoë"])
+        let tail = "\n\n-- \nNav"
+        XCTAssertEqual(result, .paste("Hi Zoë,\n\n" + tail, cursorFromEnd: tail.count))
+
+        // Grapheme clusters, not UTF-16: one ← per character the user sees.
+        let reply2 = try await session.runCommand(reply.id, arguments: ["name": "A", "who": "🇸🇬 e\u{301}"])
+        guard case .paste(let text, let cursor) = reply2 else { return XCTFail("\(reply2)") }
+        XCTAssertTrue(text.hasSuffix("🇸🇬 e\u{301}"))
+        XCTAssertEqual(cursor, 9)
+
+        let missing = try await session.runCommand(reply.id)
+        guard case .failure = missing else { return XCTFail("a required argument left out fails: \(missing)") }
+        await session.stop()
+    }
+
+    func testPlaceholdersFillFromTheClipboard() async throws {
+        let host = host()
+        let session = try await host.session("Snippets")
+        host.system.simulate(chosenFile: ChosenFile(name: "s.json", data: Data(#"[{"name": "Hello", "text": "Hello {clipboard | uppercase}{cursor}!"}]"#.utf8)))
+        _ = try await session.runCommand("import")
+        let hello = try await command(session, titled: "Hello")
+        host.system.simulateCopy("world")
+        let result = try await session.runCommand(hello.id)
+        XCTAssertEqual(result, .paste("Hello WORLD!", cursorFromEnd: 1))
+        await session.stop()
+    }
+
+    func testTheFormValidates() async throws {
+        let host = host()
+        let session = try await host.session("Snippets")
+        try await importSample(host, session)
+        let opened = try await session.openView("create")
+        let submit = ActionID("view/\(opened.session)/form/new")
+        func errors(_ fields: [String: String]) async throws -> [String: String] {
+            try await session.event(submit, value: .fields(fields.mapValues { .text($0) }))
+            return await session.commandView(opened.session)?.form?.errors ?? [:]
+        }
+        let empty = try await errors(["name": "", "text": "{cursor} and {cursor}", "keyword": "a b"])
+        XCTAssertEqual(Set(empty.keys), ["name", "text", "keyword"], "no name, two cursors, a space in the keyword")
+        for (text, why) in [(#"{snippet name="Loop"}"#, "can't include itself"), (#"{snippet name="Reply"}"#, "one level deep"), ("{clipbaord}", "a typo")] {
+            let found = try await errors(["name": "Loop", "text": text])
+            XCTAssertEqual(Set(found.keys), ["text"], why)
+        }
+        let typo = try await errors(["name": "Typo", "text": "{clipbaord}"])
+        XCTAssertTrue(typo["text"]?.contains("{clipbaord}") == true, "the typo is named: \(typo)")
+        let taken = try await errors(["name": "Taken", "text": "x", "keyword": ";sig"])
+        XCTAssertEqual(Set(taken.keys), ["keyword"], "a keyword already taken")
+
+        let none = try await errors(["name": "Thanks", "text": "Thanks!\n{snippet name=\"Signature\"}", "keyword": ";ty", "tags": "email"])
+        XCTAssertEqual(none, [:])
+        let created = try await command(session, titled: "Thanks")
+        XCTAssertTrue(created.keywords.contains("email"))
+        let ran = try await session.runCommand(created.id)
+        XCTAssertEqual(ran, .paste("Thanks!\n-- \nNav", cursorFromEnd: 0))
+        await session.stop()
+    }
+
+    func testSearchRowsPreviewPasteAndExportRoundTrips() async throws {
+        let host = host()
+        let session = try await host.session("Snippets")
+        try await importSample(host, session)
+        let opened = try await session.openView("search")
+        let rows = try XCTUnwrap(opened.root).rows
+        let reply = try XCTUnwrap(rows.first { $0.title == "Reply" })
+        XCTAssertTrue(reply.preview?.text?.hasSuffix("-- \nNav") == true, "the preview expands what it includes: \(reply.preview?.text ?? "none")")
+        let replyCommand = try await command(session, titled: "Reply")
+        XCTAssertEqual(reply.actions.first?.navigate, CommandTarget(command: replyCommand.id), "a snippet that needs input opens its own command")
+
+        let signature = try XCTUnwrap(rows.first { $0.title == "Signature" })
+        try await session.event(try XCTUnwrap(signature.actions.first).id)
+        XCTAssertEqual(host.system.pastes.last?.content, .text("-- \nNav"))
+        XCTAssertEqual(host.system.pastes.last?.options.restoreClipboard, true, "the user's clipboard comes back")
+
+        _ = try await session.runCommand("export")
+        let saved = try XCTUnwrap(host.system.saved.last)
+        let items = try JSONDecoder().decode([[String: String]].self, from: saved.data)
+        XCTAssertEqual(items.count, 4)
+        XCTAssertEqual(items.first { $0["name"] == "Signature" }?["keyword"], ";sig")
+        XCTAssertNil(items.first { $0["name"] == "Spaced" }?["keyword"])
+        await session.stop()
+    }
+}

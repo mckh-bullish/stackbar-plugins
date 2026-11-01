@@ -35,7 +35,14 @@ A plugin is accepted when all of these hold:
 ```
 <Category>/<Name>/<Name>.swift    the plugin, the only file that ships
 <Category>/<Name>/README.md
+Tests/PluginTests/<Name>Tests.swift    optional: the plugin's behaviour, run as a real
+                                      process on a simulated Mac (swift test)
 ```
+
+A plugin's tests live under `Tests/`, never in its folder. A plugin with tests
+is listed in `testedPlugins` in `Package.swift`. Tests drive the plugin the
+way the host does, so assert what it does (actions, command results, URLs,
+keep-awake reasons) rather than the words it shows.
 
 The categories are `System`, `Developer`, `Network`, `Monitoring` and
 `Productivity`; the folder is the category the store shows. A new category is

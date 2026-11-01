@@ -1,8 +1,9 @@
 #!/bin/sh
 # The gate for a pull request, on Linux or macOS:
 #   1. every plugin builds against the pinned StackbarKit (swift build)
-#   2. house rules and the README table (scripts/lint.py)
-#   3. every plugin renders every surface it declares with stackbarctl
+#   2. the plugins' own tests (Tests/PluginTests)
+#   3. house rules and the README table (scripts/lint.py)
+#   4. every plugin renders every surface it declares with stackbarctl
 # On macOS it also soaks each plugin for a minute (pass SOAK_MINUTES to change).
 #
 #   scripts/check.sh [--base <git ref>]   --base also requires version bumps
@@ -10,9 +11,10 @@ set -eu
 cd "$(dirname "$0")/.."
 
 swift build
-python3 scripts/lint.py "$@"
+swift test
 
 # stackbarctl comes from the same StackbarKit the plugins build against.
+# lint.py reads each manifest through it.
 swift build -c release --product stackbarctl
 CTL="$(swift build -c release --show-bin-path)/stackbarctl"
 if [ -n "${STACKBAR_PATH:-}" ]; then
@@ -21,10 +23,11 @@ else
     STACKBAR_PACKAGE="$(pwd)/.build/checkouts/stackbar"
 fi
 export STACKBAR_PACKAGE
+STACKBARCTL="$CTL" python3 scripts/lint.py "$@"
 
 summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
 for source in */*/*.swift; do
-    case "$source" in scripts/*|.build/*) continue ;; esac
+    case "$source" in scripts/*|.build/*|Tests/*) continue ;; esac
     echo "== $source"
     manifest=$("$CTL" manifest "$source")
     echo "$manifest"
