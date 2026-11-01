@@ -40,6 +40,7 @@ An update that asks for something new waits for your approval.
 | [System Monitor](Monitoring/SystemMonitor) | Monitoring | CPU, memory and disk in the menu bar, with the processes using the most. |
 | [Clipboard History](Productivity/Clipboard) | Productivity | Everything you copy, searchable and one keystroke from pasting back. |
 | [Music](Productivity/Music) | Productivity | What's playing in Music or Spotify, with play, pause, skip and volume. |
+| [Pomodoro](Productivity/Pomodoro) | Productivity | A focus timer with presets, a progress ring, tags and today's sessions. |
 | [Quicklinks](Productivity/Quicklinks) | Productivity | Open links and folders by name, with placeholders filled in. |
 | [Snippets](Productivity/Snippets) | Productivity | Paste text by name, with placeholders filled in. |
 | [Translate](Productivity/Translate) | Productivity | Translate the selected text, in your browser or in place with DeepL. |
