@@ -13,12 +13,12 @@ final class GitHub: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.github",
         name: "GitHub",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Your repositories and issues from the palette, and new issues without a browser.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .minutes(30), .wake],
         capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN")],
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/GitHub"
     )
 
@@ -146,6 +146,11 @@ final class GitHub: StackbarPlugin {
     func matching(_ text: String) -> [Repo] {
         let words = text.lowercased().split(separator: " ")
         return shownRepos.filter { repo in words.allSatisfy { repo.full_name.lowercased().contains($0) } }
+    }
+
+    /// 1234 as "1.2k".
+    static func compactCount(_ value: Int) -> String {
+        value >= 1000 ? String(format: "%.1fk", Double(value) / 1000) : "\(value)"
     }
 
     var shownRepos: [Repo] {
@@ -280,6 +285,14 @@ final class GitHub: StackbarPlugin {
                 }
             } else {
                 PanelHeader(issues.isEmpty ? "Nothing assigned" : "\(issues.count) issue\(issues.count == 1 ? "" : "s") assigned", subtitle: "\(shownRepos.count) repositories" + (updated.map { " · updated \($0.formatted(date: .omitted, time: .shortened))" } ?? ""), symbol: "book.closed.fill", theme: theme)
+                HeroCard(theme: theme, look: .glow) {
+                    HStack(spacing: Space.l) {
+                        HeroStat("Assigned", value: "\(issues.count)", theme: theme, symbol: "smallcircle.filled.circle")
+                        HeroStat("Repos", value: "\(shownRepos.count)", theme: theme, symbol: "book.closed.fill")
+                        HeroStat("Stars", value: Self.compactCount(shownRepos.reduce(0) { $0 + $1.stargazers_count }), theme: .amber, symbol: "star.fill")
+                        Spacer()
+                    }
+                }
                 if let problem { Banner(problem) }
                 List(searchable: true) {
                     if !issues.isEmpty {

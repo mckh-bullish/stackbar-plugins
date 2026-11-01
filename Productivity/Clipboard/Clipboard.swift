@@ -15,13 +15,13 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         triggers: [.launch, .clipboard],
         capabilities: [.clipboard],
         hotkey: "cmd+shift+v",
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard"
     )
 
@@ -312,6 +312,7 @@ final class Clipboard: StackbarPlugin {
                 EmptyState("Nothing copied yet", symbol: "list.clipboard", message: "Copy something in any app and it shows up here.", theme: theme)
             }
         } else {
+            if let latest = history.first { lastCopied(latest) }
             List(searchable: true) {
                 if !pinned.isEmpty {
                     Section("Pinned") {
@@ -325,6 +326,37 @@ final class Clipboard: StackbarPlugin {
                 }
             }
         }
+    }
+
+    /// The newest copy as a card: its first lines in a code face, where it
+    /// came from, and one button to use it again.
+    func lastCopied(_ entry: Entry) -> some StackbarView {
+        HeroCard(theme: theme, look: .glow, spacing: Space.s) {
+            HStack(spacing: Space.s) {
+                IconTile(entry.symbol, theme: theme, size: 30).symbolEffect(.bounce)
+                VStack(spacing: 0) {
+                    Text("LAST COPIED").typography(.overline).foreground(theme.textPaint)
+                    Text([entry.appName, Self.relative(entry.lastCopied)].compactMap { $0 }.joined(separator: " · ")).role(.secondary).typography(.caption)
+                }
+                Spacer(minLength: Space.xs)
+                IconButton(pasteDirectly ? "arrow.down.doc.fill" : "doc.on.doc.fill", label: pasteDirectly ? "Paste" : "Copy", theme: theme,
+                           prominence: .filled, size: 32, key: "use-latest") { await self.use(entry, paste: self.pasteDirectly) }
+            }
+            Text(Self.snippet(entry))
+                .typography(Typography(size: 12, design: entry.kind == .text ? .monospaced : .default))
+                .padding(Space.s)
+                .frame(fillWidth: true, alignment: .leading)
+                .background(.raised, in: .roundedRectangle(cornerRadius: Radius.medium))
+        }
+    }
+
+    /// Up to three lines of a copy, each cut to fit the card.
+    static func snippet(_ entry: Entry) -> String {
+        guard entry.kind == .text || entry.kind == .url, let text = entry.text else { return entry.title }
+        let lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        let shown = lines.prefix(3).map { $0.count > 52 ? String($0.prefix(51)) + "…" : $0 }
+        let more = lines.count > 3 ? "\n+ \(lines.count - 3) more lines" : ""
+        return shown.isEmpty ? entry.title : shown.joined(separator: "\n") + more
     }
 
     /// The window has room for the history and what it says about you.

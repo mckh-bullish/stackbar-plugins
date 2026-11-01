@@ -11,12 +11,12 @@ final class Ports: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.ports",
         name: "Ports",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Which process is listening on which port, and a way to stop it.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .every(.seconds(30))],
         capabilities: [.run(commands: ["lsof", "kill"])],
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports"
     )
 
@@ -134,9 +134,19 @@ final class Ports: StackbarPlugin {
                 PanelHeader("Ports", subtitle: "Checking…", symbol: "network", theme: theme)
             } else {
                 let open = shown.filter { !$0.isLocalOnly }.count
-                PanelHeader(shown.isEmpty ? "Nothing listening" : "\(shown.count) listening", subtitle: open > 0 ? "\(open) open to the network" : "All local", symbol: "network", theme: theme) {
+                PanelHeader(shown.isEmpty ? "Nothing listening" : "\(shown.count) listening", subtitle: open > 0 ? "\(open) reachable" : "All local", symbol: "network", theme: theme) {
                     Picker("Show ports", options: Self.ranges, selection: range, style: .segmented) { self.setRange($0) }
-                        .frame(width: 150)
+                        .frame(width: 180)
+                }
+                if !shown.isEmpty {
+                    HeroCard(theme: theme, look: .glow) {
+                        HStack(spacing: Space.l) {
+                            HeroStat("Listening", value: "\(shown.count)", theme: theme, live: true)
+                            HeroStat("Local", value: "\(shown.count - open)", theme: .neutral, symbol: "lock.fill")
+                            HeroStat("Open", value: "\(open)", theme: open > 0 ? .warning : .neutral, symbol: "globe")
+                            Spacer()
+                        }
+                    }
                 }
                 if let notice { Banner(notice, symbol: noticeOK ? "checkmark.circle.fill" : "exclamationmark.triangle.fill", theme: noticeOK ? .success : .warning) }
                 if shown.isEmpty {

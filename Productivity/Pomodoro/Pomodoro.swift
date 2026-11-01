@@ -10,11 +10,11 @@ final class Pomodoro: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.pomodoro",
         name: "Pomodoro",
-        version: "1.0.1",
+        version: "1.1.0",
         summary: "A focus timer with presets, a progress ring, tags and today's sessions.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(1)), .wake],
-        minimumStackbar: "0.12.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Pomodoro"
     )
 
@@ -56,6 +56,10 @@ final class Pomodoro: StackbarPlugin {
     let onOrange = Paint.hex("#1C1A19")
     let muted = Paint.hex("#6E625A", dark: "#C9B9AC")
     let track = Paint.hex("#1C1A1914", dark: "#F7EDE41F")
+    /// The ring's ember sweep: pale gold at the start, burnt orange at the end.
+    let ember = Paint.angularGradient(colors: [HexColor("#FFC074", dark: "#FFB45E"), HexColor("#F28C38", dark: "#F59A4E"), HexColor("#D9512C", dark: "#F0703F")], angle: -90)
+    /// The warm halo behind a running ring.
+    let halo = Paint.radialGradient(colors: [HexColor("#F28C3866", dark: "#F59A4E55"), HexColor("#F28C3800", dark: "#F59A4E00")], x: 0.5, y: 0.5, radius: 72)
 
     @Stored("mode") var mode = Mode.focus
     @Stored("focusMinutes") var focusMinutes = 25
@@ -106,8 +110,12 @@ final class Pomodoro: StackbarPlugin {
     var widget: ViewContent {
         HStack(spacing: 16) {
             ZStack {
-                progress(lineWidth: 7)
-                Image(systemName: mode.symbol).font(size: 24).foreground(orange)
+                progress(lineWidth: 9)
+                if isRunning {
+                    Image(systemName: mode.symbol).font(size: 24).foreground(orange).symbolEffect(.breathe)
+                } else {
+                    Image(systemName: mode.symbol).font(size: 24).foreground(orange)
+                }
             }
             .frame(width: 84, height: 84)
             VStack(alignment: .start, spacing: 2) {
@@ -192,7 +200,10 @@ final class Pomodoro: StackbarPlugin {
 
     @ViewBuilder private var ring: ViewContent {
         ZStack {
-            progress(lineWidth: 6)
+            if isRunning {
+                Circle().fill(halo).frame(width: 144, height: 144)
+            }
+            progress(lineWidth: 10)
             Button(key: "start") { self.toggle() } label: {
                 Image(systemName: isRunning ? "pause.fill" : "play.fill")
                     .font(size: 26, weight: .bold)
@@ -204,7 +215,7 @@ final class Pomodoro: StackbarPlugin {
             }
             .accessibilityLabel(isRunning ? "Pause" : "Start")
         }
-        .frame(width: 128, height: 128)
+        .frame(width: 144, height: 144)
     }
 
     @ViewBuilder private var tagChip: ViewContent {
@@ -277,10 +288,10 @@ final class Pomodoro: StackbarPlugin {
 
     @ViewBuilder private func progress(lineWidth: Double) -> ViewContent {
         if let range = session?.range {
-            ProgressBar(timing: range, style: .ring(lineWidth: lineWidth)).foreground(orange)
+            ProgressBar(timing: range, style: .ring(lineWidth: lineWidth)).foreground(ember)
         } else {
             let total = Double(currentMinutes * 60)
-            ProgressBar(value: total - (session?.remaining ?? total), total: total, style: .ring(lineWidth: lineWidth)).foreground(orange)
+            ProgressBar(value: total - (session?.remaining ?? total), total: total, style: .ring(lineWidth: lineWidth)).foreground(ember)
         }
     }
 

@@ -12,12 +12,12 @@ final class Jira: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.jira",
         name: "Jira",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Your assigned Jira Cloud issues, search and new issues from the palette.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("*.atlassian.net"), .secret(name: "JIRA_API_TOKEN")],
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira"
     )
 
@@ -198,6 +198,17 @@ final class Jira: StackbarPlugin {
                 let toDo = assigned.filter { $0.category == "new" }
                 let done = assigned.filter { $0.category == "done" }
                 PanelHeader(inProgress.isEmpty ? (assigned.isEmpty ? "Nothing assigned" : "Nothing in progress") : "\(inProgress.count) in progress", subtitle: "\(toDo.count) to do · \(Self.host(of: site) ?? site)", symbol: "square.stack.3d.up.fill", theme: theme)
+                if !assigned.isEmpty {
+                    HeroCard(theme: theme, look: .glow) {
+                        HStack(spacing: Space.l) {
+                            HeroStat("In progress", value: "\(inProgress.count)", theme: theme, live: !inProgress.isEmpty)
+                            HeroStat("To do", value: "\(toDo.count)", theme: .neutral, symbol: "circle.dashed")
+                            HeroStat("Done", value: "\(done.count)", theme: .success, symbol: "checkmark.circle.fill")
+                            Spacer()
+                        }
+                        ProgressBar(value: Double(done.count), total: Double(max(1, assigned.count))).foreground(theme.sweep)
+                    }
+                }
                 if let problem { Banner(problem) }
                 if assigned.isEmpty {
                     EmptyState("Nothing assigned to you", symbol: "checkmark", theme: .success)

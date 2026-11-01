@@ -10,12 +10,12 @@ final class StayAwake: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.stay-awake",
         name: "Stay Awake",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Keeps your Mac awake for a while, until a time, while an app runs or on a schedule.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.power],
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake"
     )
 
@@ -324,15 +324,42 @@ final class StayAwake: StackbarPlugin {
     }
 
     /// The cup in a ring that drains as a timed session runs out.
+    /// The cup in a ring of time left. Awake, it sits on the vivid hero in
+    /// `onSolid`, glowing and breathing; asleep, a quiet moon on neutral.
     @ViewBuilder func dial(size: Double, lineWidth: Double) -> ViewContent {
-        let awake = held != nil
-        let cup = Image(systemName: awake ? "cup.and.heat.waves.fill" : "moon.zzz.fill")
-            .font(size: (size * 0.36).rounded(), weight: .semibold).foreground((awake ? theme : .neutral).textPaint)
-        if awake, let range {
-            Gauge(timing: range, theme: theme, size: size, lineWidth: lineWidth) { cup }
+        if held != nil {
+            let ink = theme.onSolidPaint
+            ZStack {
+                Circle().fill(.radial(["#FFFFFF59", "#FFFFFF00"], radius: size * 0.62))
+                Circle().stroke(.hex("#FFFFFF3D", dark: "#00000029"), lineWidth: lineWidth)
+                if let range {
+                    ProgressBar(timing: range, style: .ring(lineWidth: lineWidth)).foreground(ink)
+                } else {
+                    ProgressBar(value: 1, style: .ring(lineWidth: lineWidth)).foreground(ink)
+                }
+                Image(systemName: "cup.and.heat.waves.fill").font(size: (size * 0.36).rounded(), weight: .semibold).foreground(ink).symbolEffect(.breathe)
+            }
+            .frame(width: size, height: size)
         } else {
-            Gauge(value: awake ? 1 : 0, theme: awake ? theme : .neutral, size: size, lineWidth: lineWidth) { cup }
+            Gauge(value: 0, theme: .neutral, size: size, lineWidth: lineWidth) {
+                Image(systemName: "moon.zzz.fill").font(size: (size * 0.36).rounded(), weight: .semibold).foreground(Theme.neutral.textPaint)
+            }
         }
+    }
+
+    /// A button on the vivid hero: `onSolid` on a light veil.
+    func heroButton(_ title: String?, symbol: String, label: String? = nil, key: String? = nil, action: @escaping @MainActor () async throws -> Void) -> some StackbarView {
+        Button(key: key ?? title ?? label, action: action) {
+            HStack(spacing: Space.xs) {
+                Image(systemName: symbol).font(size: 12, weight: .semibold)
+                if let title { Text(title).typography(.headline) }
+            }
+            .foreground(theme.onSolidPaint)
+            .padding(horizontal: title == nil ? Space.s : Space.m, vertical: Space.s - 1)
+            .background(.hex("#00000029", dark: "#0000001F"), in: .capsule)
+            .hover(scale: 1.04, lift: false)
+        }
+        .accessibilityLabel(label ?? title ?? symbol)
     }
 
     var caption: String {
@@ -357,41 +384,65 @@ final class StayAwake: StackbarPlugin {
 
     var panel: ViewContent {
         let awake = held != nil
-        HeroCard(theme: awake ? theme : .neutral) {
-            HStack(spacing: Space.m) {
-                dial(size: 64, lineWidth: 5)
-                VStack(spacing: Space.xxs) {
-                    Text(awake ? "Awake" : "Sleeps normally").typography(Typography(size: 22, weight: .bold, design: .rounded))
-                    Text(caption).role(.secondary).typography(.caption)
+        if awake {
+            HeroCard(theme: theme, look: .vivid) {
+                HStack(spacing: Space.m) {
+                    dial(size: 76, lineWidth: 6)
+                    VStack(spacing: Space.xxs) {
+                        Text("Awake").typography(Typography(size: 22, weight: .bold, design: .rounded))
+                        Text(caption).typography(.caption).opacity(0.85)
+                    }
+                    .frame(fillWidth: true, alignment: .leading)
+                    heroButton(nil, symbol: keepDisplayOn ? "display" : "display.trianglebadge.exclamationmark", label: keepDisplayOn ? "Display stays on" : "Keep display on", key: "display") {
+                        self.keepDisplayOn.toggle()
+                        await self.apply()
+                    }
                 }
-                .frame(fillWidth: true, alignment: .leading)
-                IconButton("display", label: keepDisplayOn ? "Display stays on" : "Keep display on", theme: theme,
-                           prominence: keepDisplayOn ? .filled : .tinted, key: "display") {
-                    self.keepDisplayOn.toggle()
-                    await self.apply()
+                if let range {
+                    TimerText(range).typography(Typography(size: 52, weight: .heavy, design: .rounded, monospacedDigit: true))
                 }
-            }
-            if awake, let range {
-                TimerText(range).typography(.hero)
-            }
-            if let blocker, session != nil {
-                Banner("Paused: \(blocker)")
-            }
-            if awake || session != nil {
+                if let blocker, session != nil {
+                    Text("Paused: \(blocker)").typography(.caption)
+                }
                 HStack(spacing: Space.s) {
                     if session != nil {
-                        ActionButton("Stop", symbol: "stop.fill", theme: .critical, prominent: true) { await self.stop() }
+                        heroButton("Stop", symbol: "stop.fill") { await self.stop() }
                     }
                     if let remaining {
-                        ActionButton("+30 min", symbol: "plus", theme: theme) { await self.start(.until(Date().addingTimeInterval(remaining + 1800))) }
+                        heroButton("+30 min", symbol: "plus") { await self.start(.until(Date().addingTimeInterval(remaining + 1800))) }
                     }
                     if heldByRule {
-                        ActionButton("Pause for 1 hour", symbol: "pause.fill", theme: theme) {
+                        heroButton("Pause for 1 hour", symbol: "pause.fill") {
                             self.pausedUntil = Date().addingTimeInterval(3600)
                             await self.apply()
                         }
                     }
                     Spacer()
+                }
+            }
+        } else {
+            HeroCard(theme: .neutral) {
+                HStack(spacing: Space.m) {
+                    dial(size: 64, lineWidth: 5)
+                    VStack(spacing: Space.xxs) {
+                        Text("Sleeps normally").typography(Typography(size: 22, weight: .bold, design: .rounded))
+                        Text(caption).role(.secondary).typography(.caption)
+                    }
+                    .frame(fillWidth: true, alignment: .leading)
+                    IconButton("display", label: keepDisplayOn ? "Display stays on" : "Keep display on", theme: theme,
+                               prominence: keepDisplayOn ? .filled : .tinted, key: "display") {
+                        self.keepDisplayOn.toggle()
+                        await self.apply()
+                    }
+                }
+                if let blocker, session != nil {
+                    Banner("Paused: \(blocker)")
+                }
+                if session != nil {
+                    HStack(spacing: Space.s) {
+                        ActionButton("Stop", symbol: "stop.fill", theme: .critical, prominent: true) { await self.stop() }
+                        Spacer()
+                    }
                 }
             }
         }
@@ -518,16 +569,30 @@ final class StayAwake: StackbarPlugin {
     }
 
     var widget: ViewContent {
-        HStack(spacing: Space.m) {
-            dial(size: 72, lineWidth: 6)
-            VStack(spacing: Space.xxs) {
-                Text(held != nil ? "Awake" : "Sleeps normally").typography(.title)
-                if held != nil, let range { TimerText(range).typography(Typography(size: 24, weight: .bold, design: .rounded, monospacedDigit: true)) }
-                Text(held != nil ? reason ?? "" : "Today \(Self.clock(awakeByDay[Self.day(Date())] ?? 0)) awake").role(.secondary).typography(.caption)
+        if held != nil {
+            HeroCard(theme: theme, look: .vivid, spacing: Space.s) {
+                HStack(spacing: Space.m) {
+                    dial(size: 64, lineWidth: 5)
+                    VStack(spacing: Space.xxs) {
+                        Text("Awake").typography(.title)
+                        if let range { TimerText(range).typography(Typography(size: 26, weight: .heavy, design: .rounded, monospacedDigit: true)) }
+                        Text(reason ?? "").typography(.caption).opacity(0.85)
+                    }
+                    .frame(fillWidth: true, alignment: .leading)
+                }
             }
-            .frame(fillWidth: true, alignment: .leading)
+            .frame(fillWidth: true, fillHeight: true)
+        } else {
+            HStack(spacing: Space.m) {
+                dial(size: 64, lineWidth: 5)
+                VStack(spacing: Space.xxs) {
+                    Text("Sleeps normally").typography(.title)
+                    Text("Today \(Self.clock(awakeByDay[Self.day(Date())] ?? 0)) awake").role(.secondary).typography(.caption)
+                }
+                .frame(fillWidth: true, alignment: .leading)
+            }
+            .frame(fillWidth: true, fillHeight: true)
         }
-        .frame(fillWidth: true, fillHeight: true)
     }
 
     var whileRunningName: String? {

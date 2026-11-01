@@ -13,12 +13,12 @@ final class Linear: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.linear",
         name: "Linear",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Your assigned Linear issues, branch names, search and new issues from the palette.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("api.linear.app"), .secret(name: "LINEAR_API_KEY")],
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear"
     )
 
@@ -182,7 +182,9 @@ final class Linear: StackbarPlugin {
                 PanelHeader("Linear", subtitle: "Checking…", symbol: "checklist", theme: theme)
             } else if let problem, assigned.isEmpty {
                 if problem.contains("LINEAR_API_KEY") && !problem.contains("401") {
-                    EmptyState("Paste a Linear API key above", symbol: "key.fill", message: "Create a personal API key in Linear under Settings > Security & access.", theme: theme)
+                    EmptyState("Connect Linear", symbol: "key.fill", message: "Create a personal API key in Linear under Settings > Security & access. Stackbar asks for it once and keeps it in your Keychain.", theme: theme) {
+                        ActionButton("Add API Key", symbol: "key.fill", theme: theme, prominent: true) { try await self.refresh() }
+                    }
                 } else {
                     EmptyState("Can't reach Linear", symbol: "exclamationmark.triangle.fill", message: problem, theme: .critical) {
                         ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh() }
@@ -190,6 +192,16 @@ final class Linear: StackbarPlugin {
                 }
             } else {
                 PanelHeader(inProgress.isEmpty ? (assigned.isEmpty ? "Nothing assigned" : "Nothing in progress") : "\(inProgress.count) in progress", subtitle: "\(assigned.count) assigned" + (urgent > 0 ? " · \(urgent) urgent" : ""), symbol: "checklist", theme: theme)
+                if !assigned.isEmpty {
+                    HeroCard(theme: theme, look: .glow) {
+                        HStack(spacing: Space.l) {
+                            HeroStat("In progress", value: "\(inProgress.count)", theme: theme, live: !inProgress.isEmpty)
+                            HeroStat("Assigned", value: "\(assigned.count)", theme: .neutral, symbol: "tray.full.fill")
+                            HeroStat("Urgent", value: "\(urgent)", theme: urgent > 0 ? .critical : .neutral, symbol: "exclamationmark.square.fill")
+                            Spacer()
+                        }
+                    }
+                }
                 if let problem { Banner(problem) }
                 if assigned.isEmpty {
                     EmptyState("Nothing assigned to you", symbol: "checkmark", theme: .success)

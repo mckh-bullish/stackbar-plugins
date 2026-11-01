@@ -12,12 +12,12 @@ final class SystemMonitor: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.system-monitor",
         name: "System Monitor",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "CPU, memory and disk in the menu bar, with the processes using the most.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(10)), .wake],
         capabilities: [.run(commands: ["top", "vm_stat", "df", "kill"])],
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor"
     )
 
@@ -200,8 +200,18 @@ final class SystemMonitor: StackbarPlugin {
     let theme = Theme.green
 
     /// Green while there is room, amber when it's getting full, red when it's not.
-    func tone(_ fraction: Double) -> Theme {
-        fraction >= 0.9 ? .critical : fraction >= 0.75 ? .warning : theme
+    func tone(_ fraction: Double, calm: Theme? = nil) -> Theme {
+        fraction >= 0.9 ? .critical : fraction >= 0.75 ? .warning : calm ?? theme
+    }
+
+    /// Each resource keeps its own ring color until it needs a look.
+    func rings(_ sample: Sample) -> [RingCluster.Ring] {
+        var rings = [
+            RingCluster.Ring("CPU", value: sample.cpu / 100, theme: tone(sample.cpu / 100)),
+            RingCluster.Ring("Memory", value: sample.memoryFraction, theme: tone(sample.memoryFraction, calm: .cyan)),
+        ]
+        if let disk { rings.append(RingCluster.Ring("Disk", value: disk.fraction, theme: tone(disk.fraction, calm: .violet))) }
+        return rings
     }
 
     static func percent(_ fraction: Double) -> String { "\(Int((fraction * 100).rounded()))%" }
@@ -236,15 +246,25 @@ final class SystemMonitor: StackbarPlugin {
         } else if let sample {
             VStack(spacing: Space.m) {
                 PanelHeader(headline(sample), subtitle: sample.load.count == 3 ? "Load " + sample.load.map { String(format: "%.2f", $0) }.joined(separator: "  ") : nil, symbol: "gauge.with.dots.needle.33percent", theme: theme)
-                HStack(spacing: Space.s) {
-                    dial("CPU", fraction: sample.cpu / 100, detail: "\(Int(sample.cpu.rounded()))% busy")
-                    dial("Memory", fraction: sample.memoryFraction, detail: "\(Self.number(sample.memoryUsed)) of \(Self.size(sample.memoryTotal))")
-                    if let disk { dial("Disk", fraction: disk.fraction, detail: "\(Self.size(disk.total - disk.used)) free") }
+                HeroCard(theme: theme, look: .glow) {
+                    HStack(spacing: Space.l) {
+                        RingCluster(rings(sample), size: 116, lineWidth: 11, gap: 3)
+                        VStack(spacing: Space.s) {
+                            legend("CPU", value: Self.percent(sample.cpu / 100), detail: "busy", theme: tone(sample.cpu / 100))
+                            legend("Memory", value: Self.percent(sample.memoryFraction), detail: "\(Self.number(sample.memoryUsed)) of \(Self.size(sample.memoryTotal))", theme: tone(sample.memoryFraction, calm: .cyan))
+                            if let disk { legend("Disk", value: Self.percent(disk.fraction), detail: "\(Self.size(disk.total - disk.used)) free", theme: tone(disk.fraction, calm: .violet)) }
+                        }
+                        .frame(fillWidth: true)
+                    }
                 }
                 if cpuHistory.count >= 3 {
-                    Card("CPU", detail: "now \(Self.percent(sample.cpu / 100))") {
-                        Chart(values: cpuHistory, kind: .area, unit: "%").foreground(tone(sample.cpu / 100).solidPaint)
-                        Text(cpuHistory.count >= 30 ? "Last 5 minutes" : "Since \(cpuHistory.count * 10 / 60 < 1 ? "\(cpuHistory.count * 10) seconds" : "\(cpuHistory.count * 10 / 60) min") ago").role(.secondary).typography(.caption)
+                    Card("CPU", detail: cpuHistory.count >= 30 ? "last 5 min" : "since \(cpuHistory.count * 10 / 60 < 1 ? "\(cpuHistory.count * 10) s" : "\(cpuHistory.count * 10 / 60) min") ago") {
+                        Sparkline(cpuHistory, theme: tone(sample.cpu / 100), height: 48, label: "CPU over time")
+                        HStack {
+                            Text("Peak \(Self.percent((cpuHistory.max() ?? 0) / 100))").role(.secondary).typography(.captionNumber)
+                            Spacer()
+                            Text("Average \(Self.percent(cpuHistory.reduce(0, +) / Double(cpuHistory.count) / 100))").role(.secondary).typography(.captionNumber)
+                        }
                     }
                 }
                 VStack(spacing: Space.xs) {
@@ -254,7 +274,7 @@ final class SystemMonitor: StackbarPlugin {
                             self.sortBy = choice
                             await self.measure()
                         }
-                        .frame(width: 130)
+                        .frame(width: 150)
                     }
                     ForEach(sample.processes.prefix(8)) { process in
                         Row(process.command, subtitle: "pid \(process.pid) · \(Self.memory(process.memory))", symbol: "gearshape", key: "\(process.pid)")
@@ -267,64 +287,49 @@ final class SystemMonitor: StackbarPlugin {
         } else {
             VStack(spacing: Space.m) {
                 PanelHeader("Measuring…", subtitle: "The first reading takes a couple of seconds", symbol: "gauge.with.dots.needle.33percent", theme: theme)
-                HStack(spacing: Space.s) {
-                    ForEach(["CPU", "Memory", "Disk"]) { name in
-                        VStack(alignment: .center, spacing: Space.xs + 2) {
-                            Circle().stroke(.hairline, lineWidth: 7).frame(width: 68, height: 68)
-                            Text(name).role(.secondary).typography(.headline)
-                        }
-                        .padding(vertical: Space.m)
-                        .frame(fillWidth: true)
-                        .background(.surface, in: .roundedRectangle(cornerRadius: Radius.large))
+                HeroCard(theme: theme, look: .glow, alignment: .center) {
+                    RingCluster([.init("CPU", value: 0, theme: theme), .init("Memory", value: 0, theme: .cyan), .init("Disk", value: 0, theme: .violet)], size: 116, lineWidth: 11) {
+                        Image(systemName: "gauge.with.dots.needle.33percent").font(size: 20, weight: .semibold).foreground(theme.textPaint).symbolEffect(.pulse)
                     }
                 }
             }
         }
     }
 
-    /// One resource as a ring with its percentage inside and what it means under it.
-    @ViewBuilder func dial(_ name: String, fraction: Double, detail: String) -> ViewContent {
-        VStack(alignment: .center, spacing: Space.xs + 2) {
-            Gauge(value: fraction, theme: tone(fraction), size: 68, lineWidth: 7) {
-                Text(Self.percent(fraction)).typography(Typography(size: 17, weight: .bold, design: .rounded, monospacedDigit: true))
+    /// One ring's key: its color, the reading large, what it means small.
+    @ViewBuilder func legend(_ name: String, value: String, detail: String, theme: Theme) -> ViewContent {
+        HStack(spacing: Space.s) {
+            Capsule().fill(theme.sweep).frame(width: 4, height: 30)
+            VStack(spacing: 0) {
+                Text(name).role(.secondary).typography(.caption)
+                HStack(alignment: .end, spacing: Space.xs) {
+                    Text(value).typography(.stat).numericTransition()
+                    if !detail.isEmpty { Text(detail).role(.secondary).typography(.caption) }
+                }
             }
-            .accessibilityLabel("\(name) \(Self.percent(fraction))")
-            VStack(alignment: .center, spacing: 0) {
-                Text(name).typography(.headline)
-                Text(detail).role(.secondary).typography(.caption)
-            }
+            Spacer(minLength: 0)
         }
-        .padding(vertical: Space.m)
-        .frame(fillWidth: true)
-        .background(.surface, in: .roundedRectangle(cornerRadius: Radius.large))
+        .accessibilityLabel("\(name) \(value), \(detail)")
     }
 
     var widget: ViewContent {
         if let sample {
-            VStack(spacing: Space.s) {
-                HStack(spacing: Space.m) {
-                    widgetDial("CPU", sample.cpu / 100)
-                    widgetDial("Memory", sample.memoryFraction)
-                    if let disk { widgetDial("Disk", disk.fraction) }
+            HStack(spacing: Space.m) {
+                RingCluster(rings(sample), size: 96, lineWidth: 9, gap: 2)
+                VStack(spacing: Space.xs) {
+                    legend("CPU", value: Self.percent(sample.cpu / 100), detail: "", theme: tone(sample.cpu / 100))
+                    if cpuHistory.count >= 3 { Sparkline(cpuHistory, theme: tone(sample.cpu / 100), height: 22) }
+                    HStack(spacing: Space.m) {
+                        Text("Mem \(Self.percent(sample.memoryFraction))").typography(.captionNumber)
+                        if let disk { Text("Disk \(Self.percent(disk.fraction))").typography(.captionNumber) }
+                    }
                 }
-                if cpuHistory.count >= 3 {
-                    Chart(values: cpuHistory, kind: .area).foreground(tone(sample.cpu / 100).solidPaint).frame(height: 30)
-                }
+                .frame(fillWidth: true)
             }
             .frame(fillWidth: true, fillHeight: true)
         } else {
             Text("Measuring…").style(.caption)
         }
-    }
-
-    @ViewBuilder func widgetDial(_ name: String, _ fraction: Double) -> ViewContent {
-        VStack(alignment: .center, spacing: Space.xs + 2) {
-            Gauge(value: fraction, theme: tone(fraction), size: 62, lineWidth: 7) {
-                Text(Self.percent(fraction)).typography(Typography(size: 15, weight: .bold, design: .rounded, monospacedDigit: true))
-            }
-            Text(name).role(.secondary).typography(.caption)
-        }
-        .frame(fillWidth: true)
     }
 
     func quit(_ process: ProcessRow) async throws {

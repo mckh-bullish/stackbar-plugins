@@ -10,11 +10,11 @@ final class WorldClock: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.world-clock",
         name: "World Clock",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "The time in the cities you work with, with offsets and working hours.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(30)), .wake],
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WorldClock"
     )
 
@@ -53,39 +53,69 @@ final class WorldClock: StackbarPlugin {
             VStack(spacing: Space.s) {
                 ForEach(validZones) { zone in card(zone) }
             }
-            Text("Tap a city to show it in the menu bar").role(.secondary).typography(.caption)
+            Text("Bars show each city's working hours across your day, and the tick is your time now. Tap a city to show it in the menu bar.").role(.secondary).typography(.caption)
         }
     }
 
-    /// One city: big time, sun or moon, and its working hours on your day.
+    /// One city as a band of its sky: dawn, day, dusk or night, with the
+    /// sun or moon, a big time, and its working hours on your day.
     @ViewBuilder func card(_ zone: TimeZone) -> ViewContent {
         let working = isWorking(zone)
-        let daylight = (6..<18).contains(Int(hour(in: zone)))
+        let sky = Sky(hour: hour(in: zone))
         let shown = zone.identifier == menuBarZone
         Button(key: "city-\(zone.identifier)", action: { self.menuBarZone = zone.identifier }) {
-            VStack(spacing: Space.s) {
-                HStack(spacing: Space.s) {
-                    Image(systemName: daylight ? "sun.max.fill" : "moon.fill").font(size: 15, weight: .semibold)
-                        .foreground((daylight ? Theme.amber : .indigo).textPaint)
+            VStack(spacing: Space.s + 2) {
+                HStack(spacing: Space.s + 2) {
+                    Image(systemName: sky.symbol).font(size: 20, weight: .semibold).symbolRendering(.multicolor)
                     VStack(spacing: 1) {
-                        Text(city(zone.identifier)).typography(.headline)
-                        Text(subtitle(for: zone)).role(.secondary).typography(.caption)
+                        HStack(spacing: Space.xs) {
+                            Text(city(zone.identifier)).typography(.headline)
+                            if shown { Image(systemName: "menubar.rectangle").font(size: 10, weight: .semibold).opacity(0.8).accessibilityLabel("Shown in the menu bar") }
+                        }
+                        Text(subtitle(for: zone) + (working ? " · working" : "")).typography(.caption).opacity(0.8)
                     }
                     Spacer()
-                    if shown {
-                        StatusDot(theme, size: 6).accessibilityLabel("Shown in the menu bar")
-                    }
-                    Text(time(now, in: zone)).typography(Typography(size: 24, weight: .semibold, design: .rounded, monospacedDigit: true))
+                    Text(time(now, in: zone)).typography(Typography(size: 28, weight: .bold, design: .rounded, monospacedDigit: true)).numericTransition()
                 }
                 .frame(fillWidth: true)
-                DayBar(workingHoursOnYourDay(zone), now: hour(in: .current) / 24, theme: theme, width: 332, height: 4)
+                hoursBar(workingHoursOnYourDay(zone), now: hour(in: .current) / 24, width: 332)
             }
+            .foreground(.onMedia)
             .padding(Space.m)
             .frame(fillWidth: true)
-            .background(.surface, in: .roundedRectangle(cornerRadius: Radius.large))
-            .opacity(working ? 1 : 0.75)
+            .background(sky.paint, in: .roundedRectangle(cornerRadius: Radius.large + 2))
+            .hover(scale: 1.015, highlight: .hex("#FFFFFF14"))
         }
         .accessibilityLabel("\(city(zone.identifier)), \(time(now, in: zone)), \(working ? "working hours" : "outside working hours")")
+    }
+
+    /// Your day as a faint line on the sky, the city's working hours bright
+    /// on it, and a tick at your now.
+    func hoursBar(_ spans: [ClosedRange<Double>], now: Double, width: Double) -> some StackbarView {
+        let tick = 2.0, height = 4.0
+        var pieces: [(width: Double, lit: Bool)] = []
+        var at = 0.0
+        for span in spans.sorted(by: { $0.lowerBound < $1.lowerBound }) {
+            let from = min(max(span.lowerBound, at), 1), to = min(max(span.upperBound, from), 1)
+            if from > at { pieces.append(((from - at) * width, false)) }
+            if to > from { pieces.append(((to - from) * width, true)) }
+            at = to
+        }
+        if at < 1 { pieces.append(((1 - at) * width, false)) }
+        return ZStack(alignment: .start) {
+            HStack(spacing: 0) {
+                ForEach(Array(pieces.enumerated())) { _, piece in
+                    Rectangle().fill(piece.lit ? .hex("#FFFFFFD9") : .hex("#FFFFFF33")).frame(width: max(piece.width, 0), height: height)
+                }
+            }
+            .clipShape(.capsule)
+            HStack(spacing: 0) {
+                Rectangle().fill(.clear).frame(width: max(0, min(now, 1) * width - tick / 2), height: 10)
+                Capsule().fill(.onMedia).frame(width: tick, height: 10).shadow(radius: 2, color: HexColor("#00000066"))
+            }
+        }
+        .frame(width: width, height: 10)
+        .accessibilityLabel("Working hours on your day")
     }
 
     /// The city's working hours, moved onto your clock, as fractions of your day.
@@ -98,28 +128,22 @@ final class WorldClock: StackbarPlugin {
     }
 
     var widget: ViewContent {
-        let shown = Array(validZones.prefix(4))
-        VStack(spacing: Space.s) {
-            ForEach(Array(stride(from: 0, to: shown.count, by: 2))) { row in
-                HStack(spacing: Space.s) {
-                    ForEach(shown[row..<min(row + 2, shown.count)]) { zone in
-                        VStack(spacing: Space.xxs) {
-                            HStack(spacing: Space.xs) {
-                                let daylight = (6..<18).contains(Int(hour(in: zone)))
-                                Image(systemName: daylight ? "sun.max.fill" : "moon.fill").font(size: 11)
-                                    .foreground((daylight ? Theme.amber : .indigo).textPaint)
-                                Text(city(zone.identifier)).role(.secondary).typography(.caption)
-                            }
-                            Text(time(now, in: zone)).typography(Typography(size: 20, weight: .semibold, design: .rounded, monospacedDigit: true))
-                        }
-                        .padding(horizontal: Space.m - 2, vertical: Space.s)
-                        .frame(fillWidth: true, alignment: .leading)
-                        .background(.surface, in: .roundedRectangle(cornerRadius: Radius.medium + 2))
+        Grid(columns: 2, spacing: Space.s) {
+            ForEach(Array(validZones.prefix(4))) { zone in
+                let sky = Sky(hour: hour(in: zone))
+                VStack(spacing: Space.xxs) {
+                    HStack(spacing: Space.xs) {
+                        Image(systemName: sky.symbol).font(size: 11).symbolRendering(.multicolor)
+                        Text(city(zone.identifier)).typography(.caption).opacity(0.85)
                     }
+                    Text(time(now, in: zone)).typography(Typography(size: 22, weight: .bold, design: .rounded, monospacedDigit: true))
                 }
+                .foreground(.onMedia)
+                .padding(horizontal: Space.m - 2, vertical: Space.s)
+                .frame(fillWidth: true, alignment: .leading)
+                .background(sky.paint, in: .roundedRectangle(cornerRadius: Radius.large))
             }
         }
-        .frame(fillWidth: true, fillHeight: true)
     }
 
     static let hours = (0...24).map { String(format: "%02d:00", $0) }

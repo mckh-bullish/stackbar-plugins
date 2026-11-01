@@ -13,12 +13,12 @@ final class Homebrew: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.homebrew",
         name: "Homebrew",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Outdated formulae and casks, with upgrades a click away.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(60), .wake],
         capabilities: [.run(commands: ["brew"])],
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew"
     )
 
@@ -185,6 +185,22 @@ final class Homebrew: StackbarPlugin {
                         }
                     }
                 }
+                HeroCard(theme: shown.isEmpty ? .success : theme, look: .glow) {
+                    HStack(spacing: Space.l) {
+                        if shown.isEmpty {
+                            Image(systemName: "checkmark.seal.fill").font(size: 30, weight: .semibold).foreground(Theme.success.textPaint).symbolEffect(.bounce, repeats: false)
+                            VStack(spacing: Space.xxs) {
+                                Text("Everything's fresh").typography(.title)
+                                Text(checkedText).role(.secondary).typography(.caption)
+                            }
+                        } else {
+                            HeroStat("Outdated", value: "\(shown.count)", theme: theme, symbol: "arrow.up.circle.fill")
+                            HeroStat("Formulae", value: "\(shown.filter { !$0.isCask }.count)", theme: theme, symbol: "terminal.fill")
+                            HeroStat("Casks", value: "\(shown.filter(\.isCask).count)", theme: theme, symbol: "macwindow")
+                        }
+                        Spacer()
+                    }
+                }
                 if let problem { Banner(problem) }
                 if let busy {
                     Banner("\(busy)… this can take a few minutes.", symbol: "arrow.triangle.2.circlepath", theme: .info)
@@ -192,9 +208,8 @@ final class Homebrew: StackbarPlugin {
                     Banner(lastResult, symbol: lastFailed ? "xmark.octagon.fill" : "checkmark.circle.fill", theme: lastFailed ? .critical : .success)
                 }
                 if shown.isEmpty {
-                    EmptyState("Everything is up to date", symbol: "checkmark.seal.fill", message: checkedText, theme: .success) {
-                        ActionButton("Update Homebrew", symbol: "arrow.down.circle", theme: theme) { _ = try await self.update() }
-                    }
+                    // The hero above already says it's all fresh.
+                    ActionButton("Update Homebrew", symbol: "arrow.down.circle", theme: theme, fillWidth: true) { _ = try await self.update() }
                 } else {
                     List(shown, searchable: shown.count > 8) { package in
                         self.row(package)

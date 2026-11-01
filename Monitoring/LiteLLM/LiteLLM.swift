@@ -14,12 +14,12 @@ final class LiteLLM: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.litellm",
         name: "LiteLLM",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Tokens, spend, budget and model mix from your LiteLLM proxy, with charts.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
         capabilities: [.userServer(secret: "LITELLM_PROXY_URL"), .secret(name: "LITELLM_API_KEY")],
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/LiteLLM"
     )
 
@@ -292,10 +292,14 @@ final class LiteLLM: StackbarPlugin {
 
     @ViewBuilder var tiles: ViewContent {
         let week = total(0...6), month = total(0...29)
-        HStack(spacing: Space.s) {
-            StatTile("Today", value: Self.compact(total(0...0).tokens), caption: Self.money(total(0...0).spend), theme: theme, emphasized: true)
-            StatTile("7 days", value: Self.compact(week.tokens), caption: "\(Self.money(week.spend)) · \(activeDays(0...6))d active", theme: theme)
-            StatTile("30 days", value: Self.compact(month.tokens), caption: "~\(Self.compact(month.tokens / Double(max(1, activeDays(0...29)))))/day", theme: theme)
+        HeroCard(theme: theme, look: .glow, spacing: Space.s) {
+            HStack(spacing: Space.l) {
+                HeroStat("Today", value: Self.compact(total(0...0).tokens), theme: theme, live: total(0...0).tokens > 0)
+                HeroStat("7 days", value: Self.compact(week.tokens), theme: theme, symbol: "calendar")
+                HeroStat("30 days", value: Self.compact(month.tokens), theme: theme, symbol: "chart.bar.fill")
+                Spacer()
+            }
+            Text("\(Self.money(total(0...0).spend)) today · \(Self.money(week.spend)) this week · ~\(Self.compact(month.tokens / Double(max(1, activeDays(0...29)))))/day").role(.secondary).typography(.captionNumber)
         }
     }
 

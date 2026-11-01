@@ -16,12 +16,12 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "Your pull requests and the ones waiting on your review, with CI and review state.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
         capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN")],
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit"
     )
 
@@ -427,6 +427,18 @@ final class PRCockpit: StackbarPlugin {
                 PanelHeader(headline, subtitle: "\(shownMine.count) of yours open" + (updatedAt.map { " · updated \($0.formatted(date: .omitted, time: .shortened))" } ?? ""), symbol: "arrow.triangle.pull", theme: theme) {
                     if (shownReview + shownMine).contains(where: isNew) {
                         IconButton("checkmark.circle", label: "Mark all as seen", theme: theme, prominence: .tinted) { (self.toReview + self.mine).forEach(self.markSeen) }
+                    }
+                }
+                HeroCard(theme: theme, look: .glow) {
+                    HStack(spacing: Space.l) {
+                        HeroStat("To review", value: "\(shownReview.count)", theme: theme, live: !shownReview.isEmpty)
+                        HeroStat("Mine", value: "\(shownMine.count)", theme: .neutral, symbol: "person.fill")
+                        if failingMine > 0 {
+                            HeroStat("Failing", value: "\(failingMine)", theme: .critical, symbol: "xmark.octagon.fill")
+                        } else {
+                            HeroStat("Ready", value: "\(shownMine.filter(\.readyToMerge).count)", theme: .success, symbol: "checkmark.seal.fill")
+                        }
+                        Spacer()
                     }
                 }
                 Picker("Show", options: tabs.map(label), selection: label(currentTab), style: .segmented) { chosen in

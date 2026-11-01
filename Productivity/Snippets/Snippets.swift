@@ -17,7 +17,7 @@ final class Snippets: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.snippets",
         name: "Snippets",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Paste text by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -25,7 +25,7 @@ final class Snippets: StackbarPlugin {
         // snippets at Raycast's 65,536-character limit.
         capabilities: [.clipboard, .context, .storage(megabytes: 16)],
         hotkey: "ctrl+option+s",
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets"
     )
 
@@ -191,7 +191,7 @@ final class Snippets: StackbarPlugin {
 
     func row(_ snippet: Snippet) -> Row {
         let preview = preview(snippet)
-        var row = Row(snippet.name, subtitle: Self.firstLine(of: preview), symbol: "text.quote", key: snippet.id.uuidString)
+        var row = Row(snippet.name, subtitle: Self.firstLine(of: preview), symbol: Self.symbol(for: snippet), key: snippet.id.uuidString)
         if let keyword = snippet.keyword { row = row.badge(keyword, role: .secondary) }
         if let tag = snippet.tags.first { row = row.badge(tag) }
         row = row.preview(text: preview, caption: "\(snippet.text.count) characters" + (snippet.keyword.map { " · keyword \($0)" } ?? ""))
@@ -396,10 +396,42 @@ final class Snippets: StackbarPlugin {
             }
             if let notice { Banner(notice, symbol: "checkmark.circle.fill", theme: .success) }
             if !allTags.isEmpty {
-                TagChips(tagsByUse, selection: panelTag.flatMap { allTags.contains($0) ? $0 : nil }, theme: theme) { self.panelTag = $0 }
+                TagChips(tagsByUse, selection: panelTag.flatMap { allTags.contains($0) ? $0 : nil }, theme: theme, limit: 3) { self.panelTag = $0 }
             }
         }
+        if panelTag == nil || !allTags.contains(panelTag ?? "") { quickPaste }
         searchView(tag: panelTag.flatMap { allTags.contains($0) ? $0 : nil })
+    }
+
+    /// The first four snippets that paste without asking anything, as
+    /// tiles: one click each. Only with enough snippets to need a shortcut.
+    @ViewBuilder var quickPaste: ViewContent {
+        let quick = snippets.filter { !arguments(of: $0).contains(where: \.required) }.prefix(4)
+        if snippets.count > 4, quick.count >= 2 {
+            Grid(columns: 2, spacing: Space.xs) {
+                ForEach(Array(quick)) { snippet in
+                    Tile(Self.clip(snippet.name, 18), subtitle: Self.clip(Self.firstLine(of: preview(snippet)), 22), symbol: Self.symbol(for: snippet), theme: theme,
+                         key: "quick-" + snippet.id.uuidString) { try await self.paste(snippet) }
+                }
+            }
+        }
+    }
+
+    /// One line short enough for a tile, so tiles in a row match.
+    static func clip(_ text: String, _ limit: Int) -> String {
+        text.count > limit ? String(text.prefix(limit - 1)) + "…" : text
+    }
+
+    /// A symbol for what the snippet holds: placeholders, a link, code,
+    /// several lines, or plain text.
+    static func symbol(for snippet: Snippet) -> String {
+        let text = snippet.text
+        if text.contains("{") && snippet.template.map({ !$0.placeholders.isEmpty }) == true { return "curlybraces" }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://") { return "link" }
+        if ["func ", "let ", "const ", "def ", "import ", "SELECT ", "#!/", "$ ", "git "].contains(where: trimmed.hasPrefix) { return "chevron.left.forwardslash.chevron.right" }
+        if trimmed.contains("\n") { return "text.alignleft" }
+        return "text.quote"
     }
 
     var settings: ViewContent {

@@ -15,14 +15,16 @@ final class Quicklinks: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.quicklinks",
         name: "Quicklinks",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Open links and folders by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
         // Any link or folder, in the app each quicklink names; the clipboard
         // and selection for {clipboard} and {selection}.
-        capabilities: [.openURLs(schemes: ["*"]), .clipboard, .context],
-        minimumStackbar: "0.13.0",
+        // Site icons come from DuckDuckGo's icon service, which sees the
+        // domain of each web link shown in the launcher (off in Settings).
+        capabilities: [.openURLs(schemes: ["*"]), .clipboard, .context, .network("icons.duckduckgo.com")],
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks"
     )
 
@@ -43,6 +45,7 @@ final class Quicklinks: StackbarPlugin {
     @Stored("quicklinks") var links: [Link] = []
     /// The tag the panel filters by; nil shows them all.
     @Stored("panelTag") var panelTag: String? = nil
+    @Stored("siteIcons") var siteIcons = true
     var draft = Draft()
     var notice: String?
 
@@ -95,6 +98,41 @@ final class Quicklinks: StackbarPlugin {
         let rest = full[start...]
         let host = rest.prefix { $0 != "/" && $0 != "?" && $0 != "#" && $0 != "{" }
         return host.isEmpty ? nil : String(host)
+    }
+
+    /// The site's icon for a web link, when site icons are on.
+    func favicon(_ link: Link) -> String? {
+        guard siteIcons, let host = Self.host(of: link.link), !host.contains("{"), host.contains(".") else { return nil }
+        return "https://icons.duckduckgo.com/ip3/\(host).ico"
+    }
+
+    /// A host without "www." and its registry suffix: "calendar.google".
+    static func shortHost(_ host: String) -> String {
+        var parts = host.replacingOccurrences(of: "www.", with: "").split(separator: ".").map(String.init)
+        if parts.count > 1 { parts.removeLast() }
+        // Still too long for a tile: drop the subdomain ("news.ycombinator").
+        if parts.count > 1, parts.joined(separator: ".").count > 15 { parts.removeFirst() }
+        return parts.joined(separator: ".")
+    }
+
+    /// One line short enough for a tile, so tiles in a row match.
+    static func clip(_ text: String, _ limit: Int) -> String {
+        text.count > limit ? String(text.prefix(limit - 1)) + "…" : text
+    }
+
+    /// The launcher: up to six links that open without asking anything, as
+    /// tiles with their site's icon.
+    @ViewBuilder func launcher(_ shown: [Link]) -> ViewContent {
+        let ready = shown.filter { !($0.template?.arguments.contains(where: \.required) ?? false) }.prefix(6)
+        if ready.count >= 3 {
+            Grid(columns: 3, spacing: Space.s) {
+                ForEach(Array(ready)) { link in
+                    Tile(Self.clip(link.name, 14), subtitle: Self.host(of: link.link).map { Self.clip(Self.shortHost($0), 17) } ?? (link.link.hasPrefix("/") || link.link.hasPrefix("~") ? "Folder" : "Link"), symbol: Self.symbol(for: link), imageURL: favicon(link), theme: theme, key: "tile-\(link.id.uuidString)") {
+                        try await self.open(link)
+                    }
+                }
+            }
+        }
     }
 
     /// Renders a link's template with what the user typed, copied and
@@ -342,12 +380,16 @@ final class Quicklinks: StackbarPlugin {
                 TagChips(tagsByUse, selection: panelTag.flatMap { allTags.contains($0) ? $0 : nil }, theme: theme) { self.panelTag = $0 }
             }
         }
-        searchView(tag: panelTag.flatMap { allTags.contains($0) ? $0 : nil })
+        let tag = panelTag.flatMap { allTags.contains($0) ? $0 : nil }
+        launcher(links.filter { tag == nil || tag == "All" || $0.tags.contains(tag!) })
+        searchView(tag: tag)
     }
 
     var settings: ViewContent {
         Section("Quicklinks") {
             LabeledContent("Saved", value: "\(links.count)")
+            Toggle("Show site icons", isOn: siteIcons) { self.siteIcons = $0 }
+            Text("Icons come from DuckDuckGo, which sees the domains of the links in the launcher.").style(.caption).role(.secondary)
             if let notice { Text(notice).style(.caption) }
             Button("Import from Raycast…", symbol: "square.and.arrow.down") { _ = try await self.importLinks() }
             Button("Export…", symbol: "square.and.arrow.up") { self.notice = try await self.exportLinks() }

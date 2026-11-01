@@ -12,13 +12,13 @@ final class UpNext: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.up-next",
         name: "Up Next",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Your next meeting in the menu bar, with a countdown and one-click join.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(30)), .wake],
         capabilities: [.calendar],
         hotkey: "ctrl+option+j",
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext"
     )
 
@@ -335,24 +335,19 @@ final class UpNext: StackbarPlugin {
             let link = Self.meetingLink(for: event)
             let dial = Self.dialIn(for: event)
             let started = event.start <= now
-            HeroCard(theme: theme, spacing: Space.s) {
-                VStack(spacing: Space.xxs) {
-                    Text(started ? "NOW" : "NEXT").typography(.overline).foreground(theme.textPaint)
-                    Text(event.title).typography(Typography(size: 17, weight: .semibold))
-                    Text(heroDetail(event)).role(.secondary).typography(.caption)
-                }
-                if started {
-                    VStack(spacing: Space.xs) {
-                        ProgressBar(timing: TimeRange(start: event.start, end: event.end)).foreground(theme.solidPaint)
-                        Text("\(Self.span(event.end.timeIntervalSince(now))) left").role(.secondary).typography(.captionNumber)
+            // Sized by its content, unlike a Backdrop, so there's no empty band.
+            VStack(spacing: Space.m) {
+                HStack(alignment: .end, spacing: Space.m) {
+                    VStack(spacing: Space.xxs) {
+                        HStack(spacing: Space.xs) {
+                            Image(systemName: started ? "record.circle.fill" : "clock.fill").font(size: 10, weight: .bold).symbolEffect(started ? .pulse : .breathe)
+                            Text(started ? "NOW" : "NEXT").typography(.overline)
+                        }
+                        Text(Self.clipped(event.title, 30)).typography(Typography(size: 18, weight: .bold))
+                        Text(heroDetail(event)).typography(.caption).opacity(0.85)
                     }
-                } else if event.start.timeIntervalSince(now) < 3600 {
-                    HStack(spacing: Space.s) {
-                        TimerText(TimeRange(start: now, end: event.start)).typography(Typography(size: 32, weight: .bold, design: .rounded, monospacedDigit: true))
-                        Text("until it starts").role(.secondary).typography(.caption)
-                    }
-                } else {
-                    Text(countdown(event, now: now)).typography(Typography(size: 32, weight: .bold, design: .rounded, monospacedDigit: true))
+                    .frame(fillWidth: true, alignment: .leading)
+                    clock(event, now: now)
                 }
                 if link != nil || dial != nil {
                     HStack(spacing: Space.s) {
@@ -360,11 +355,24 @@ final class UpNext: StackbarPlugin {
                             ActionButton("Join \(link.service)", symbol: "video.fill", theme: theme, prominent: true, fillWidth: true, key: "join-focus") { self.join(event) }
                         }
                         if let dial {
-                            ActionButton("Call in", symbol: "phone.fill", theme: theme, fillWidth: link == nil, key: "call-focus") { Stackbar.open(dial.tel) }
+                            Button(key: "call-focus", action: { Stackbar.open(dial.tel) }) {
+                                HStack(spacing: Space.xs) {
+                                    Image(systemName: "phone.fill").font(size: 12, weight: .semibold)
+                                    Text("Call in").typography(.headline)
+                                }
+                                .padding(horizontal: Space.m, vertical: Space.s)
+                                .frame(fillWidth: link == nil)
+                                .background(.material(.glass), in: .capsule)
+                            }
                         }
                     }
                 }
             }
+            .foreground(.onMedia)
+            .padding(Space.l)
+            .frame(fillWidth: true, alignment: .leading)
+            .background(.scrim, in: .roundedRectangle(cornerRadius: Radius.large + 2))
+            .background(stage(for: event), in: .roundedRectangle(cornerRadius: Radius.large + 2))
         } else if loaded {
             HeroCard(theme: theme, spacing: Space.s) {
                 HStack(spacing: Space.m) {
@@ -395,6 +403,39 @@ final class UpNext: StackbarPlugin {
         }
     }
 
+    /// The stage behind the next meeting: its calendar's color, deepening
+    /// to night, so the hero says which calendar at a glance.
+    func stage(for event: CalendarEvent) -> Paint {
+        guard let color = event.calendarColor, HexColor.components(color) != nil else { return theme.vivid }
+        return .gradient([color, "#1B1530"], angle: 45)
+    }
+
+    /// Time left as a ring once it has started, else a countdown.
+    @ViewBuilder func clock(_ event: CalendarEvent, now: Date) -> ViewContent {
+        if event.start <= now {
+            ZStack {
+                Circle().stroke(.hex("#FFFFFF40"), lineWidth: 5)
+                ProgressBar(timing: TimeRange(start: event.start, end: event.end), style: .ring(lineWidth: 5)).foreground(.onMedia)
+                VStack(alignment: .center, spacing: 0) {
+                    Text(Self.span(event.end.timeIntervalSince(now))).typography(Typography(size: 14, weight: .bold, design: .rounded, monospacedDigit: true)).numericTransition()
+                    Text("left").typography(.caption).opacity(0.8)
+                }
+            }
+            .frame(width: 62, height: 62)
+        } else if event.start.timeIntervalSince(now) < 3600 {
+            VStack(alignment: .end, spacing: 0) {
+                TimerText(TimeRange(start: now, end: event.start)).typography(Typography(size: 26, weight: .heavy, design: .rounded, monospacedDigit: true))
+                Text("until it starts").typography(.caption).opacity(0.8)
+            }
+        } else {
+            Text(countdown(event, now: now)).typography(Typography(size: 26, weight: .heavy, design: .rounded, monospacedDigit: true)).numericTransition()
+        }
+    }
+
+    static func clipped(_ text: String, _ limit: Int) -> String {
+        text.count > limit ? String(text.prefix(limit - 1)) + "…" : text
+    }
+
     func heroDetail(_ event: CalendarEvent) -> String {
         var parts = ["\(Self.time(event.start))–\(Self.time(event.end))"]
         if let link = Self.meetingLink(for: event) {
@@ -423,6 +464,7 @@ final class UpNext: StackbarPlugin {
                     Text("\(hour)").role(.secondary).typography(.captionNumber)
                 }
             }
+            .frame(width: 332)
         }
     }
 
@@ -571,25 +613,18 @@ final class UpNext: StackbarPlugin {
     var widget: ViewContent {
         let now = Date()
         if let event = focus(now: now) {
-            HStack(spacing: Space.m) {
-                VStack(spacing: Space.xxs) {
-                    Text("\(event.start <= now ? "NOW" : "NEXT") · \(Self.time(event.start))").typography(.overline).foreground(theme.textPaint)
-                    Text(event.title).typography(.title)
-                    if event.start > now, event.start.timeIntervalSince(now) < 3600 {
-                        TimerText(TimeRange(start: now, end: event.start)).typography(.stat).foreground(theme.textPaint)
-                    } else {
-                        Text(countdown(event, now: now)).typography(.stat).foreground(theme.textPaint)
+            Backdrop(paint: stage(for: event), theme: theme, height: 131) {
+                HStack(alignment: .end, spacing: Space.m) {
+                    VStack(spacing: Space.xxs) {
+                        Text("\(event.start <= now ? "NOW" : "NEXT") · \(Self.time(event.start))").typography(.overline)
+                        Text(Self.clipped(event.title, 32)).typography(.title)
+                        if let next = upcoming(now: now).first(where: { $0.id != event.id }) {
+                            Text("Then \(Self.time(next.start))  \(Self.clipped(next.title, 24))").typography(.caption).opacity(0.8)
+                        }
                     }
+                    .frame(fillWidth: true, alignment: .leading)
+                    clock(event, now: now)
                 }
-                .frame(fillWidth: true, alignment: .leading)
-                if Self.meetingLink(for: event) != nil {
-                    Image(systemName: "video.fill").font(size: 16, weight: .semibold).foreground(theme.onSolidPaint)
-                        .frame(width: 40, height: 40).background(theme.gradient, in: .circle)
-                        .accessibilityLabel("Has a call link")
-                }
-            }
-            ForEach(upcoming(now: now).filter { $0.id != event.id }.prefix(2)) { next in
-                Text("\(Self.time(next.start))  \(next.title)").role(.secondary).typography(.caption)
             }
         } else {
             HStack(spacing: Space.m) {

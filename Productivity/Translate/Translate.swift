@@ -13,14 +13,14 @@ final class Translate: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.translate",
         name: "Translate",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Translate the selected text, in your browser or in place with DeepL.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
         // The selection; the clipboard as a fallback and for pasting the
         // result; DeepL's two API hosts (free and paid keys).
         capabilities: [.context, .clipboard, .network("api-free.deepl.com", "api.deepl.com"), .secret(name: "DEEPL_API_KEY")],
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate"
     )
 
@@ -234,10 +234,21 @@ final class Translate: StackbarPlugin {
         if let problem {
             Banner(problem)
         } else if let result, useDeepL {
-            HeroCard(theme: theme, spacing: Space.s) {
-                Text(([result.detected.map { "from \(Self.languageName($0))" }, "into \(result.target)"].compactMap { $0 }).joined(separator: " · ").uppercased())
-                    .typography(.overline).foreground(theme.textPaint)
-                Text(result.text).typography(Typography(size: 15))
+            // Two cards: what went in, quiet, and what came out, lit.
+            VStack(spacing: Space.xxs) {
+                Text((result.detected.map { Self.languageName($0) + " · detected" } ?? "Original").uppercased())
+                    .role(.secondary).typography(.overline)
+                Text(Self.clipped(result.source, 220)).role(.secondary).typography(.body)
+            }
+            .padding(Space.m)
+            .frame(fillWidth: true, alignment: .leading)
+            .background(.surface, in: .roundedRectangle(cornerRadius: Radius.large))
+            HeroCard(theme: theme, look: .glow, spacing: Space.s) {
+                HStack(spacing: Space.xs) {
+                    Image(systemName: "sparkles").font(size: 10, weight: .bold).foreground(theme.textPaint).symbolEffect(.bounce)
+                    Text(result.target.uppercased()).typography(.overline).foreground(theme.textPaint)
+                }
+                Text(result.text).typography(Typography(size: 17, weight: .semibold))
                 HStack(spacing: Space.s) {
                     ActionButton("Paste", symbol: "doc.on.clipboard.fill", theme: theme, prominent: true) {
                         try await Stackbar.paste(.text(result.text), restoringClipboard: true)
@@ -250,6 +261,11 @@ final class Translate: StackbarPlugin {
                 }
             }
         }
+    }
+
+    /// The text cut to `limit` characters, with an ellipsis.
+    static func clipped(_ text: String, _ limit: Int) -> String {
+        text.count > limit ? String(text.prefix(limit - 1)) + "…" : text
     }
 
     /// DeepL's source code ("DE") as a name ("German").

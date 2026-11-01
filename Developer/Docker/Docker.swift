@@ -12,12 +12,12 @@ final class Docker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.docker",
         name: "Docker",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Your containers, with start, stop, restart and logs a click away.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.run(commands: ["docker"])],
-        minimumStackbar: "0.13.0",
+        minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker"
     )
 
@@ -164,6 +164,21 @@ final class Docker: StackbarPlugin {
                 PanelHeader(running.isEmpty ? "Nothing running" : "\(running.count) running", subtitle: summary, symbol: "shippingbox.fill", theme: theme) {
                     Picker("Show", options: ["Running", "All"], selection: showStopped ? "All" : "Running", style: .segmented) { self.showStopped = $0 == "All" }
                         .frame(width: 124)
+                }
+                if !containers.isEmpty {
+                    let unhealthy = containers.filter(\.isUnhealthy).count
+                    HeroCard(theme: theme, look: .glow) {
+                        HStack(spacing: Space.l) {
+                            HeroStat("Running", value: "\(running.count)", theme: theme, live: !running.isEmpty)
+                            HeroStat("Stopped", value: "\(containers.count - running.count)", theme: .neutral, symbol: "stop.fill")
+                            if unhealthy > 0 {
+                                HeroStat("Unhealthy", value: "\(unhealthy)", theme: .critical, symbol: "cross.case.fill")
+                            } else if projects > 0 {
+                                HeroStat("Projects", value: "\(projects)", theme: theme, symbol: "square.stack.3d.up.fill")
+                            }
+                            Spacer()
+                        }
+                    }
                 }
                 if let problem { Banner(problem) }
                 if let busyText { Banner(busyText, symbol: "arrow.triangle.2.circlepath", theme: .info) }
