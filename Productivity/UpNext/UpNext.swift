@@ -12,13 +12,13 @@ final class UpNext: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.up-next",
         name: "Up Next",
-        version: "1.0.1",
+        version: "1.1.0",
         summary: "Your next meeting in the menu bar, with a countdown and one-click join.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(30)), .wake],
         capabilities: [.calendar],
         hotkey: "ctrl+option+j",
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext"
     )
 
@@ -277,13 +277,25 @@ final class UpNext: StackbarPlugin {
 
     // MARK: Surfaces
 
+    let theme = Theme.red
+
     var menuBar: ViewContent {
         if lastError != nil && !loaded {
             Label("", symbol: "calendar.badge.exclamationmark").role(.warning)
         } else if let event = focus(), menuBarHours == 0 || event.start.timeIntervalSinceNow <= menuBarHours * 3600 {
-            let soon = event.start.timeIntervalSinceNow < 5 * 60
-            let title = showTitle ? "\(shortTitle(event.title)) · \(countdown(event))" : countdown(event)
-            Label(title, symbol: Self.meetingLink(for: event) != nil ? "video" : "calendar").role(event.start <= Date() ? .accent : soon ? .warning : .primary)
+            let symbol = Self.meetingLink(for: event) != nil ? "video" : "calendar"
+            let until = event.start.timeIntervalSinceNow
+            if until > 0, until <= 10 * 60 {
+                // The host counts down, so it never says "in 1m" as the call starts.
+                HStack(spacing: Space.xs) {
+                    Image(systemName: symbol)
+                    if showTitle { Text(shortTitle(event.title) + " ·") }
+                    TimerText(TimeRange(start: Date(), end: event.start))
+                }
+                .foreground(.role(.warning))
+            } else {
+                Label(showTitle ? "\(shortTitle(event.title)) · \(countdown(event))" : countdown(event), symbol: symbol).role(.primary)
+            }
         } else {
             Label("", symbol: "calendar").role(.secondary)
         }
@@ -291,34 +303,126 @@ final class UpNext: StackbarPlugin {
 
     var panel: ViewContent {
         let now = Date()
-        if let lastError {
-            Text(lastError).role(.warning)
-        }
-        if let event = focus(now: now) {
-            Text(event.start <= now ? "Now" : "Next").style(.caption).role(.secondary)
-            Text(event.title).style(.headline)
-            Text("\(subtitle(event)) · \(countdown(event, now: now))").style(.caption).role(.secondary)
-            if event.start <= now, event.end > event.start {
-                ProgressBar("\(Int((event.end.timeIntervalSince(now) / 60).rounded(.up))) min left", value: now.timeIntervalSince(event.start), total: event.end.timeIntervalSince(event.start), role: event.end.timeIntervalSince(now) < 300 ? .warning : .accent)
+        if let lastError, !loaded {
+            EmptyState("Allow calendar access", symbol: "calendar.badge.exclamationmark", message: lastError, theme: theme) {
+                ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme, prominent: true) { try await self.refresh() }
             }
-            if let link = Self.meetingLink(for: event) {
-                Button("Join on \(link.service)", symbol: "video.fill", role: .accent, key: "join-focus") { self.join(event) }
+        } else {
+            header(now: now)
+            if let lastError { Banner(lastError) }
+            hero(now: now)
+            if loaded, !meetings(on: now).isEmpty { dayCard(now: now) }
+            List(searchable: true) {
+                day("Today", now, now: now)
+                if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now) {
+                    day("Tomorrow", tomorrow, now: now)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder func header(now: Date) -> ViewContent {
+        let count = meetings(on: now).count
+        let hours = meetingHours(on: now)
+        PanelHeader(now.formatted(.dateTime.weekday(.wide).day().month(.wide)),
+                    subtitle: !loaded ? "Reading your calendars…" : count == 0 ? "No meetings today" : "\(count) meeting\(count == 1 ? "" : "s") today · \(Self.hours(hours))",
+                    symbol: "calendar", theme: theme)
+    }
+
+    /// What's on now or next, as big as the panel gets.
+    @ViewBuilder func hero(now: Date) -> ViewContent {
+        if let event = focus(now: now) {
+            let link = Self.meetingLink(for: event)
+            let dial = Self.dialIn(for: event)
+            let started = event.start <= now
+            HeroCard(theme: theme, spacing: Space.s) {
+                VStack(spacing: Space.xxs) {
+                    Text(started ? "NOW" : "NEXT").typography(.overline).foreground(theme.textPaint)
+                    Text(event.title).typography(Typography(size: 17, weight: .semibold))
+                    Text(heroDetail(event)).role(.secondary).typography(.caption)
+                }
+                if started {
+                    VStack(spacing: Space.xs) {
+                        ProgressBar(timing: TimeRange(start: event.start, end: event.end)).foreground(theme.solidPaint)
+                        Text("\(Self.span(event.end.timeIntervalSince(now))) left").role(.secondary).typography(.captionNumber)
+                    }
+                } else if event.start.timeIntervalSince(now) < 3600 {
+                    HStack(spacing: Space.s) {
+                        TimerText(TimeRange(start: now, end: event.start)).typography(Typography(size: 32, weight: .bold, design: .rounded, monospacedDigit: true))
+                        Text("until it starts").role(.secondary).typography(.caption)
+                    }
+                } else {
+                    Text(countdown(event, now: now)).typography(Typography(size: 32, weight: .bold, design: .rounded, monospacedDigit: true))
+                }
+                if link != nil || dial != nil {
+                    HStack(spacing: Space.s) {
+                        if let link {
+                            ActionButton("Join \(link.service)", symbol: "video.fill", theme: theme, prominent: true, fillWidth: true, key: "join-focus") { self.join(event) }
+                        }
+                        if let dial {
+                            ActionButton("Call in", symbol: "phone.fill", theme: theme, fillWidth: link == nil, key: "call-focus") { Stackbar.open(dial.tel) }
+                        }
+                    }
+                }
             }
         } else if loaded {
-            ContentUnavailableView("No more meetings today", symbol: "calendar", message: "Enjoy the focus time.")
-        }
-        List(searchable: true) {
-            day("Today", now, now: now)
-            if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now) {
-                day("Tomorrow", tomorrow, now: now)
+            HeroCard(theme: theme, spacing: Space.s) {
+                HStack(spacing: Space.m) {
+                    IconTile("sun.max.fill", theme: .amber, size: 40)
+                    VStack(spacing: Space.xxs) {
+                        Text("Nothing else today").typography(.title)
+                        Text("Enjoy the focus time").role(.secondary).typography(.caption)
+                    }
+                    .frame(fillWidth: true, alignment: .leading)
+                }
+                startChips
             }
         }
-        if loaded {
-            let hours = meetingHours(on: now)
-            ProgressBar("\(Self.hours(hours)) in meetings today", value: min(hours, Self.workday), total: Self.workday, role: hours > 6 ? .warning : .accent)
+        if focus(now: now) != nil || !loaded {
+            startChips
         }
-        Picker("Start a meeting now", options: Self.instantMeetings.map(\.name), selection: nil) { name in
-            if let meeting = Self.instantMeetings.first(where: { $0.name == name }) { Stackbar.open(meeting.url) }
+    }
+
+    /// Start an instant call: chips, so picking the same one twice works.
+    @ViewBuilder var startChips: ViewContent {
+        HStack(spacing: Space.xs + 2) {
+            Text("Start a call").role(.secondary).typography(.caption)
+            ForEach(Self.instantMeetings) { meeting in
+                Chip(meeting.name == "Google Meet" ? "Meet" : meeting.name,
+                     theme: theme, key: "start-\(meeting.name)") { Stackbar.open(meeting.url) }
+            }
+            Spacer()
+        }
+    }
+
+    func heroDetail(_ event: CalendarEvent) -> String {
+        var parts = ["\(Self.time(event.start))–\(Self.time(event.end))"]
+        if let link = Self.meetingLink(for: event) {
+            parts.append(link.service)
+        } else if let location = event.location, !location.isEmpty {
+            parts.append(location.count > 30 ? String(location.prefix(29)) + "…" : location)
+        }
+        if event.attendees > 1 { parts.append("\(event.attendees) people") }
+        return parts.joined(separator: " · ")
+    }
+
+    /// Today's meetings on a bar from the morning to the evening, with now marked.
+    @ViewBuilder func dayCard(now: Date) -> ViewContent {
+        let start = Calendar.current.startOfDay(for: now)
+        let todays = meetings(on: now)
+        let first = min(8, todays.map { Int($0.start.timeIntervalSince(start) / 3600) }.min() ?? 8)
+        let last = max(20, todays.map { Int(($0.end.timeIntervalSince(start) / 3600).rounded(.up)) }.max() ?? 20)
+        let from = start.addingTimeInterval(Double(max(0, first)) * 3600)
+        let span = Double(min(24, last) - max(0, first)) * 3600
+        let fraction = { (date: Date) in date.timeIntervalSince(from) / span }
+        Card(spacing: Space.xs + 2) {
+            DayBar(todays.map { fraction($0.start)...max(fraction($0.start), fraction($0.end)) }, now: (0...1).contains(fraction(now)) ? fraction(now) : nil, theme: theme)
+            HStack {
+                ForEach(Array(stride(from: max(0, first), through: min(24, last), by: max(1, (min(24, last) - max(0, first)) / 3)).enumerated())) { index, hour in
+                    if index > 0 { Spacer() }
+                    Text("\(hour)").role(.secondary).typography(.captionNumber)
+                }
+            }
         }
     }
 
@@ -326,15 +430,17 @@ final class UpNext: StackbarPlugin {
     var window: ViewContent {
         panel
         if loaded {
-            Section("Meeting load") {
-                let calendar = Calendar.current
-                let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: Date()) }
-                let load = days.map { (meetingHours(on: $0) * 10).rounded() / 10 }
-                Chart("Hours in meetings, next 7 days", values: load, kind: .bar, labels: days.map { calendar.shortWeekdaySymbols[calendar.component(.weekday, from: $0) - 1] }, unit: "h", goal: 4, highlight: 0)
-                LabeledContent("This week", value: Self.hours(load.reduce(0, +)))
-                let today = byCalendar(on: Date())
-                if today.count > 1 {
-                    Chart("Today by calendar", values: today.map(\.hours), kind: .donut, labels: today.map(\.name), unit: "h")
+            let calendar = Calendar.current
+            let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: Date()) }
+            let load = days.map { (meetingHours(on: $0) * 10).rounded() / 10 }
+            Card("Meeting load", detail: "\(Self.hours(load.reduce(0, +))) in the next 7 days", spacing: Space.s) {
+                Chart(values: load, kind: .bar, labels: days.map { calendar.shortWeekdaySymbols[calendar.component(.weekday, from: $0) - 1] }, unit: "h", goal: 4, highlight: 0)
+                    .foreground(theme.solidPaint)
+            }
+            let today = byCalendar(on: Date())
+            if today.count > 1 {
+                Card("Today by calendar", spacing: Space.s) {
+                    Chart(values: today.map(\.hours), kind: .donut, labels: today.map(\.name), unit: "h")
                 }
             }
         }
@@ -401,7 +507,7 @@ final class UpNext: StackbarPlugin {
         case .pending: row = row.badge("Invited", role: .warning)
         default:
             if past {
-                row = row.badge("Done", role: .secondary)
+                break
             } else if !event.isAllDay, event.start <= now {
                 row = row.badge("Now", role: .accent)
             } else if !event.isAllDay, event.start.timeIntervalSince(now) < 3600 {
@@ -424,20 +530,26 @@ final class UpNext: StackbarPlugin {
         }
     }
 
+    static let remindChoices: [(title: String, minutes: Double)] = [("Off", 0), ("1 min before", 1), ("2 min before", 2), ("5 min before", 5), ("10 min before", 10)]
+    static let titleChoices: [(title: String, length: Double)] = [("Hidden", 0), ("Short", 16), ("Medium", 24), ("Long", 32)]
+
     /// Stackbar's Settings window, so the panel stays about the day.
     var settings: ViewContent {
         Section("Reminders and joining") {
-            Slider(remindMinutes > 0 ? "Remind \(Int(remindMinutes)) min before" : "No reminders", value: remindMinutes, in: 0...15, step: 1, key: "remind") { self.remindMinutes = $0 }
+            Picker("Remind me", options: Self.remindChoices.map(\.title), selection: Self.remindChoices.first { $0.minutes == remindMinutes }?.title ?? "\(Int(remindMinutes)) min before", key: "remind") { title in
+                self.remindMinutes = Self.remindChoices.first { $0.title == title }?.minutes ?? self.remindMinutes
+            }
             Toggle("Open the call when it starts", isOn: autoJoin) { self.autoJoin = $0 }
             Toggle("Open Zoom and Teams in their apps", isOn: openInApps) { self.openInApps = $0 }
             Toggle("Cover the screen when a meeting starts", isOn: fullScreenAlert) { self.fullScreenAlert = $0 }
         }
         Section("Menu bar") {
-            Toggle("Show the title in the menu bar", isOn: showTitle) { self.showTitle = $0 }
-            Slider(menuBarHours == 0 ? "Menu bar: any meeting today" : "Menu bar: meetings within \(Int(menuBarHours))h", value: menuBarHours, in: 0...8, step: 1, key: "menu-hours") { self.menuBarHours = $0 }
-            if showTitle {
-                Slider("Menu bar title: \(Int(titleLength)) characters", value: titleLength, in: 8...60, step: 4, key: "title-length") { self.titleLength = $0 }
+            Picker("Title", options: Self.titleChoices.map(\.title), selection: showTitle ? Self.titleChoices.first { $0.length == titleLength }?.title ?? "\(Int(titleLength))" : "Hidden", style: .segmented, key: "title-length") { title in
+                guard let choice = Self.titleChoices.first(where: { $0.title == title }) else { return }
+                self.showTitle = choice.length > 0
+                if choice.length > 0 { self.titleLength = choice.length }
             }
+            Slider(menuBarHours == 0 ? "Menu bar: any meeting today" : "Menu bar: meetings within \(Int(menuBarHours))h", value: menuBarHours, in: 0...8, step: 1, key: "menu-hours") { self.menuBarHours = $0 }
         }
         Section("Which events") {
             Toggle("Show all-day events", isOn: showAllDay) { self.showAllDay = $0 }
@@ -457,15 +569,37 @@ final class UpNext: StackbarPlugin {
     }
 
     var widget: ViewContent {
-        if let event = focus() {
-            Text(event.title).style(.headline)
-            Text("\(Self.time(event.start)) · \(countdown(event))").style(.caption)
-            if let link = Self.meetingLink(for: event) { Label(link.service, symbol: "video") }
+        let now = Date()
+        if let event = focus(now: now) {
+            HStack(spacing: Space.m) {
+                VStack(spacing: Space.xxs) {
+                    Text("\(event.start <= now ? "NOW" : "NEXT") · \(Self.time(event.start))").typography(.overline).foreground(theme.textPaint)
+                    Text(event.title).typography(.title)
+                    if event.start > now, event.start.timeIntervalSince(now) < 3600 {
+                        TimerText(TimeRange(start: now, end: event.start)).typography(.stat).foreground(theme.textPaint)
+                    } else {
+                        Text(countdown(event, now: now)).typography(.stat).foreground(theme.textPaint)
+                    }
+                }
+                .frame(fillWidth: true, alignment: .leading)
+                if Self.meetingLink(for: event) != nil {
+                    Image(systemName: "video.fill").font(size: 16, weight: .semibold).foreground(theme.onSolidPaint)
+                        .frame(width: 40, height: 40).background(theme.gradient, in: .circle)
+                        .accessibilityLabel("Has a call link")
+                }
+            }
+            ForEach(upcoming(now: now).filter { $0.id != event.id }.prefix(2)) { next in
+                Text("\(Self.time(next.start))  \(next.title)").role(.secondary).typography(.caption)
+            }
         } else {
-            Label("No more meetings today", symbol: "calendar")
-        }
-        ForEach(upcoming().dropFirst().prefix(3)) { event in
-            LabeledContent(Self.time(event.start), value: event.title)
+            HStack(spacing: Space.m) {
+                IconTile("sun.max.fill", theme: .amber, size: 36)
+                VStack(spacing: Space.xxs) {
+                    Text("Nothing else today").typography(.headline)
+                    Text("Enjoy the focus time").role(.secondary).typography(.caption)
+                }
+                .frame(fillWidth: true, alignment: .leading)
+            }
         }
     }
 

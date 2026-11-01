@@ -14,12 +14,12 @@ final class LiteLLM: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.litellm",
         name: "LiteLLM",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Tokens, spend, budget and model mix from your LiteLLM proxy, with charts.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
         capabilities: [.userServer(secret: "LITELLM_PROXY_URL"), .secret(name: "LITELLM_API_KEY")],
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/LiteLLM"
     )
 
@@ -44,7 +44,7 @@ final class LiteLLM: StackbarPlugin {
     }
 
     enum Range: String, CaseIterable {
-        case week = "Week", month = "Month", halfYear = "6 Months"
+        case week = "Week", month = "Month", halfYear = "6M"
     }
 
     enum Measure: String, CaseIterable {
@@ -52,7 +52,7 @@ final class LiteLLM: StackbarPlugin {
     }
 
     enum MenuBarShows: String, CaseIterable {
-        case spend = "Spend today", tokens = "Tokens today", budget = "Budget used"
+        case spend = "Spend", tokens = "Tokens", budget = "Budget"
     }
 
     @Stored("days") var days: [String: Day] = [:]
@@ -199,9 +199,11 @@ final class LiteLLM: StackbarPlugin {
 
     // MARK: - Surfaces
 
+    let theme = Theme.pink
+
     var menuBar: ViewContent {
         if proxy == nil || (days.isEmpty && budget == nil) {
-            Label("LiteLLM", symbol: "gauge.with.dots.needle.0percent")
+            Label("", symbol: "gauge.with.dots.needle.0percent").role(.secondary)
         } else {
             Label(menuBarText, symbol: budgetUsed.map { $0 >= 90 ? "exclamationmark.triangle.fill" : $0 >= 50 ? "gauge.with.dots.needle.50percent" : "gauge.with.dots.needle.33percent" } ?? "gauge.with.dots.needle.33percent")
                 .role(budgetUsed.map { $0 >= 90 ? .critical : $0 >= 75 ? .warning : .primary } ?? .primary)
@@ -209,71 +211,127 @@ final class LiteLLM: StackbarPlugin {
     }
 
     var panel: ViewContent {
-        if proxy == nil {
-            ContentUnavailableView("Connect your LiteLLM proxy", symbol: "server.rack",
-                                   message: "Enter its URL as LITELLM_PROXY_URL and a key as LITELLM_API_KEY. Nothing is contacted until you do.")
-        } else if days.isEmpty, let problem {
-            ContentUnavailableView("Can't reach the proxy", symbol: "exclamationmark.triangle", message: problem)
-        } else if days.isEmpty {
-            ContentUnavailableView("Loading", symbol: "hourglass", message: "Fetching your usage from \(proxy ?? "the proxy").")
-        } else {
-            dashboard
+        VStack(spacing: Space.m) {
+            if proxy == nil {
+                EmptyState("Connect your LiteLLM proxy", symbol: "server.rack",
+                           message: "Paste its URL as LITELLM_PROXY_URL and a key as LITELLM_API_KEY. Nothing is contacted until you do.", theme: theme)
+            } else if days.isEmpty, let problem {
+                EmptyState("Can't reach the proxy", symbol: "exclamationmark.triangle", message: problem, theme: .warning) {
+                    ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme, prominent: true) { try await self.refresh() }
+                }
+            } else if days.isEmpty {
+                loading
+            } else {
+                header
+                staleBanner
+                tiles
+                budgetCard
+                trendCard
+            }
+        }
+        .frame(fillWidth: true)
+    }
+
+    /// The full dashboard: the panel, then the half year, the model mix and today's request health.
+    var window: ViewContent {
+        VStack(spacing: Space.m) {
+            if days.isEmpty {
+                panel
+            } else {
+                header
+                staleBanner
+                tiles
+                budgetCard
+                trendCard
+                Card("Activity", detail: "\(activeDays(0...181)) active days in 6 months") {
+                    Chart(values: series(days: 182, measure: .tokens), kind: .heatmap, labels: dayLabels(182, format: "EEE d MMM"), unit: " tokens")
+                        .foreground(theme.solidPaint)
+                }
+                if !models.isEmpty {
+                    Card("Models", detail: "last 30 days, by \(currentMeasure == .spend ? "spend" : "tokens")") {
+                        Chart(values: modelSlices.map(\.value), kind: .donut, labels: modelSlices.map(\.name), unit: currentMeasure == .spend ? "$" : nil)
+                    }
+                }
+                if let today = todayDetail, today.requests > 0 {
+                    Card("Today's requests") {
+                        HStack(spacing: Space.s) {
+                            StatTile("Requests", value: Self.compact(today.requests), theme: theme)
+                            StatTile("Succeeded", value: String(format: "%.1f%%", (today.requests - today.failed) / today.requests * 100),
+                                     caption: today.failed > 0 ? "\(Self.compact(today.failed)) failed" : nil, theme: today.failed > 0 ? .warning : .success)
+                            if today.promptTokens > 0 {
+                                StatTile("From cache", value: "\(Int((today.cacheReadTokens / today.promptTokens * 100).rounded()))%",
+                                         caption: today.cacheSavings > 0 ? "saved \(Self.money(today.cacheSavings))" : "of input", theme: theme)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .frame(fillWidth: true)
+    }
+
+    @ViewBuilder var header: ViewContent {
+        let today = total(0...0)
+        let title: String = switch MenuBarShows(rawValue: menuBarShows) ?? .spend {
+        case .tokens: "\(Self.compact(today.tokens)) tokens today"
+        case .budget: budgetUsed.map { "\(Int($0.rounded()))% of budget" } ?? "\(Self.money(today.spend)) today"
+        case .spend: "\(Self.money(today.spend)) today"
+        }
+        let other = MenuBarShows(rawValue: menuBarShows) == .tokens ? Self.money(today.spend) : "\(Self.compact(today.tokens)) tokens"
+        PanelHeader(title, subtitle: "\(other) · updated \(lastSuccess.map(Self.relative) ?? "never")",
+                    symbol: "gauge.with.dots.needle.67percent", theme: theme) {
+            IconButton("arrow.up.right.square", label: "Open Dashboard", theme: theme) { if let proxy = self.proxy { Stackbar.open(proxy + "/ui") } }
         }
     }
 
-    @ViewBuilder var dashboard: ViewContent {
+    @ViewBuilder var staleBanner: ViewContent {
         if let problem {
-            Label("Showing numbers from \(lastSuccess.map(Self.relative) ?? "earlier"): \(problem)", symbol: "exclamationmark.triangle").role(.warning)
+            Banner("Showing numbers from \(lastSuccess.map(Self.relative) ?? "earlier"). \(problem)")
         }
-        HStack {
-            Section("Today") {
-                Text(Self.compact(total(0...0).tokens)).style(.title)
-                Text(Self.money(total(0...0).spend)).style(.caption).role(.secondary)
-            }
-            Section("7 days") {
-                Text(Self.compact(total(0...6).tokens)).style(.title)
-                Text("\(Self.money(total(0...6).spend)) · \(activeDays(0...6)) active days").style(.caption).role(.secondary)
-            }
-            Section("30 days") {
-                Text(Self.compact(total(0...29).tokens)).style(.title)
-                Text("~\(Self.compact(total(0...29).tokens / Double(max(1, activeDays(0...29)))))/day").style(.caption).role(.secondary)
-            }
+    }
+
+    @ViewBuilder var tiles: ViewContent {
+        let week = total(0...6), month = total(0...29)
+        HStack(spacing: Space.s) {
+            StatTile("Today", value: Self.compact(total(0...0).tokens), caption: Self.money(total(0...0).spend), theme: theme, emphasized: true)
+            StatTile("7 days", value: Self.compact(week.tokens), caption: "\(Self.money(week.spend)) · \(activeDays(0...6))d active", theme: theme)
+            StatTile("30 days", value: Self.compact(month.tokens), caption: "~\(Self.compact(month.tokens / Double(max(1, activeDays(0...29)))))/day", theme: theme)
         }
+    }
+
+    @ViewBuilder var budgetCard: ViewContent {
         if let budget, let max = budget.max {
-            Section("Budget") {
-                ProgressBar("\(Self.money(budget.spend)) of \(Self.money(max))" + (budget.resetAt.map { " · resets \(Self.relative($0))" } ?? ""),
-                            value: budget.spend, total: max, role: budget.spend >= max * 0.9 ? .critical : budget.spend >= max * 0.75 ? .warning : .accent)
-            }
-        }
-        Section("Activity") {
-            Chart("\(activeDays(0...181)) active days in 6 months", values: series(days: 182, measure: .tokens), kind: .heatmap, labels: dayLabels(182, format: "EEE d MMM"), unit: " tokens")
-        }
-        Section("Trend") {
-            HStack {
-                Picker("Range", options: Range.allCases.map(\.rawValue), selection: range) { self.range = $0 }
-                Picker("Show", options: Measure.allCases.map(\.rawValue), selection: measure) { self.measure = $0 }
-            }
-            trendChart
-        }
-        if !models.isEmpty {
-            Section("Models, last 30 days") {
-                Chart(values: modelSlices.map(\.value), kind: .donut, labels: modelSlices.map(\.name), unit: currentMeasure == .spend ? "$" : nil)
-            }
-        }
-        if let today = todayDetail, today.requests > 0 {
-            Section("Today's requests") {
-                LabeledContent("Requests", value: Self.compact(today.requests))
-                LabeledContent("Succeeded", value: String(format: "%.1f%%", (today.requests - today.failed) / today.requests * 100))
-                if today.promptTokens > 0 {
-                    LabeledContent("Read from cache", value: "\(Int((today.cacheReadTokens / today.promptTokens * 100).rounded()))% of input")
+            let used = budget.spend / max
+            Card(spacing: Space.xs) {
+                Meter("Budget", reading: "\(Self.money(budget.spend)) of \(Self.money(max))", value: min(used, 1),
+                      theme: used >= 0.9 ? .critical : used >= 0.75 ? .warning : theme)
+                if let reset = budget.resetAt {
+                    Text("Resets \(Self.relative(reset))").role(.secondary).typography(.caption)
                 }
-                if today.cacheSavings > 0 { LabeledContent("Saved by caching", value: Self.money(today.cacheSavings)) }
             }
         }
-        HStack {
-            Button("Open Dashboard", symbol: "rectangle.on.rectangle") { if let proxy = self.proxy { Stackbar.open(proxy + "/ui") } }
-            Button("Refresh", symbol: "arrow.clockwise") { try await self.refresh() }
+    }
+
+    @ViewBuilder var trendCard: ViewContent {
+        Card(spacing: Space.s) {
+            HStack(spacing: Space.s) {
+                Picker("Range", options: Range.allCases.map(\.rawValue), selection: range, style: .segmented) { self.range = $0 }
+                Spacer()
+                Picker("Show", options: Measure.allCases.map(\.rawValue), selection: measure, style: .segmented) { self.measure = $0 }
+                    .frame(width: 130)
+            }
+            trendChart.foreground(theme.solidPaint)
         }
+    }
+
+    @ViewBuilder var loading: ViewContent {
+        PanelHeader("Checking…", subtitle: "Fetching your usage from \(proxy ?? "the proxy")", symbol: "gauge.with.dots.needle.67percent", theme: theme)
+        HStack(spacing: Space.s) {
+            ForEach(["Today", "7 days", "30 days"]) { name in
+                StatTile(name, value: "–", theme: .neutral)
+            }
+        }
+        Rectangle().fill(.surface).frame(height: 160).clipShape(.roundedRectangle(cornerRadius: Radius.large))
     }
 
     @ViewBuilder var trendChart: ViewContent {
@@ -292,13 +350,24 @@ final class LiteLLM: StackbarPlugin {
 
     var widget: ViewContent {
         if proxy == nil || days.isEmpty {
-            Label("LiteLLM: not connected", symbol: "server.rack")
-        } else {
-            LabeledContent("Today", value: "\(Self.compact(total(0...0).tokens)) · \(Self.money(total(0...0).spend))")
-            if let budget, let max = budget.max {
-                ProgressBar("Budget \(Int((budget.spend / max * 100).rounded()))%", value: budget.spend, total: max)
+            VStack(alignment: .center, spacing: Space.xs) {
+                IconTile("server.rack", theme: theme)
+                Text("Not connected").role(.secondary).typography(.caption)
             }
-            Chart(values: series(days: 14, measure: .tokens), kind: .area, unit: nil)
+            .frame(fillWidth: true, fillHeight: true)
+        } else {
+            VStack(spacing: Space.s) {
+                HStack(spacing: Space.m) {
+                    Metric(Self.money(total(0...0).spend), caption: "today · \(Self.compact(total(0...0).tokens)) tokens", type: .metric)
+                    Spacer()
+                    Chart(values: series(days: 14, measure: .tokens), kind: .area).foreground(theme.solidPaint).frame(width: 120, height: 48)
+                }
+                if let budget, let max = budget.max {
+                    let used = budget.spend / max
+                    Meter("Budget", reading: "\(Int((used * 100).rounded()))%", value: min(used, 1), theme: used >= 0.9 ? .critical : used >= 0.75 ? .warning : theme)
+                }
+            }
+            .frame(fillWidth: true, fillHeight: true)
         }
     }
 
@@ -309,7 +378,7 @@ final class LiteLLM: StackbarPlugin {
             if let problem { Text(problem).style(.caption).role(.warning) }
         }
         Section("Menu bar") {
-            Picker("Shows", options: MenuBarShows.allCases.map(\.rawValue), selection: menuBarShows) { self.menuBarShows = $0 }
+            Picker("Shows", options: MenuBarShows.allCases.map(\.rawValue), selection: menuBarShows, style: .segmented) { self.menuBarShows = $0 }
         }
         Section("Notifications") {
             Toggle("Tell me at 90% and 100% of the budget", isOn: notifyBudget) { self.notifyBudget = $0 }
@@ -366,7 +435,7 @@ final class LiteLLM: StackbarPlugin {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = format
-        return (0..<count).reversed().map { formatter.string(from: Date().addingTimeInterval(-Double($0) * 86400)) }
+        return (0..<count).reversed().map { formatter.string(from: Calendar.current.date(byAdding: .day, value: -$0, to: Date()) ?? Date()) }
     }
 
     /// Keeps every `every`th label, counted back from the last, and blanks the
@@ -418,7 +487,7 @@ final class LiteLLM: StackbarPlugin {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date().addingTimeInterval(Double(offset) * 86400))
+        return formatter.string(from: Calendar.current.date(byAdding: .day, value: offset, to: Date()) ?? Date())
     }
 
     static func compact(_ value: Double) -> String {

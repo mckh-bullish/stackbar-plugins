@@ -16,12 +16,12 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.1.1",
+        version: "1.2.0",
         summary: "Your pull requests and the ones waiting on your review, with CI and review state.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
         capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN")],
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit"
     )
 
@@ -175,6 +175,7 @@ final class PRCockpit: StackbarPlugin {
     var mine: [PullRequest] = []
     var lastError: String?
     var updatedAt: Date?
+    var loaded = false
     @Stored("tab") var tab = Tab.review.rawValue
     @Stored("includeTeams") var includeTeams = true
     @Stored("includeDrafts") var includeDrafts = false
@@ -192,7 +193,8 @@ final class PRCockpit: StackbarPlugin {
     var recentlyClosed: [PullRequest] = []
 
     func refresh() async throws {
-        guard let token = try await Stackbar.secret("GITHUB_TOKEN") else {
+        defer { loaded = true }
+        guard let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else {
             lastError = "Add a GitHub token to see your pull requests."
             return
         }
@@ -256,10 +258,10 @@ final class PRCockpit: StackbarPlugin {
 
     func markRead(_ item: InboxItem) async {
         guard let token = try? await Stackbar.secret("GITHUB_TOKEN") else { return }
-        inbox.removeAll { $0.id == item.id }
-        _ = try? await Stackbar.http(HTTPRequest(url: "https://api.github.com/notifications/threads/\(item.id)", method: "PATCH", headers: [
+        let response = try? await Stackbar.http(HTTPRequest(url: "https://api.github.com/notifications/threads/\(item.id)", method: "PATCH", headers: [
             "Authorization": "Bearer \(token)", "Accept": "application/vnd.github+json",
         ]))
+        if let response, (200..<300).contains(response.status) { inbox.removeAll { $0.id == item.id } }
     }
 
     func inboxRow(_ item: InboxItem) -> Row {
@@ -354,25 +356,10 @@ final class PRCockpit: StackbarPlugin {
 
     func row(_ pr: PullRequest, showAuthor: Bool) -> Row {
         let size = pr.additions.map { "+\($0) −\(pr.deletions ?? 0)" }
-        let comments = (pr.comments?.totalCount ?? 0) > 0 ? "\(pr.comments?.totalCount ?? 0) comments" : nil
+        let comments = (pr.comments?.totalCount ?? 0) >= 5 ? "\(pr.comments?.totalCount ?? 0) comments" : nil
         let subtitle = [pr.id, showAuthor ? pr.author.map { "by \($0.login)" } : nil, size, comments, Self.ago(pr.updatedAt)].compactMap { $0 }.joined(separator: " · ")
         var row = Row(pr.title, subtitle: subtitle, symbol: isNew(pr) ? "circle.fill" : pr.isDraft ? "pencil.circle" : "arrow.triangle.pull", key: pr.url)
-        if isNew(pr) { row = row.badge("New", role: .accent) }
-        if !showAuthor, pr.readyToMerge { row = row.badge("Ready to merge", role: .success) }
-        switch pr.checks {
-        case "SUCCESS": row = row.badge("Checks pass", role: .success)
-        case "FAILURE", "ERROR": row = row.badge("Checks fail", role: .critical)
-        case "PENDING", "EXPECTED": row = row.badge("Checks running", role: .warning)
-        default: break
-        }
-        switch pr.reviewDecision {
-        case "APPROVED": row = row.badge("Approved", role: .success)
-        case "CHANGES_REQUESTED": row = row.badge("Changes requested", role: .critical)
-        case "REVIEW_REQUIRED": if !showAuthor { row = row.badge("Needs review", role: .secondary) }
-        default: break
-        }
-        if pr.mergeable == "CONFLICTING" { row = row.badge("Conflicts", role: .warning) }
-        if pr.isDraft { row = row.badge("Draft") }
+        for badge in badges(pr, mine: !showAuthor).prefix(2) { row = row.badge(badge.text, role: badge.role) }
         row = row.action("Open in browser", shortcut: "cmd+return") { self.open(pr) }
             .action("Open files changed") { self.open(pr, path: "/files") }
             .action(isNew(pr) ? "Mark as seen" : "Mark as new", shortcut: "cmd+u") {
@@ -387,54 +374,83 @@ final class PRCockpit: StackbarPlugin {
         return row.action("Copy as Markdown") { Stackbar.copy("[\(pr.title) (\(pr.id))](\(pr.url))") }
     }
 
+    /// What a pull request needs you to know, most urgent first. Green is
+    /// the normal state, so "checks pass" is never said on its own.
+    func badges(_ pr: PullRequest, mine: Bool) -> [(text: String, role: Role)] {
+        var found: [(String, Role)] = []
+        if pr.checksFailed { found.append(("Checks fail", .critical)) }
+        if pr.reviewDecision == "CHANGES_REQUESTED" { found.append(("Changes requested", .critical)) }
+        if pr.mergeable == "CONFLICTING" { found.append(("Conflicts", .warning)) }
+        if mine, pr.readyToMerge { found.append(("Ready to merge", .success)) } else if pr.reviewDecision == "APPROVED" { found.append(("Approved", .success)) }
+        if pr.checks == "PENDING" || pr.checks == "EXPECTED" { found.append(("Checks running", .warning)) }
+        if pr.isDraft { found.append(("Draft", .secondary)) }
+        return found
+    }
+
     var failingMine: Int { shownMine.filter(\.checksFailed).count }
+
+    let theme = Theme.violet
 
     // MARK: Surfaces
 
     var menuBar: ViewContent {
         if lastError != nil && toReview.isEmpty && mine.isEmpty {
-            Label("PRs", symbol: "exclamationmark.triangle").role(.warning)
+            Label("", symbol: "arrow.triangle.pull").role(.warning)
         } else if failingMine > 0 {
-            Label("\(shownReview.count) · \(failingMine) failing", symbol: "arrow.triangle.pull").role(.critical)
+            Label("\(shownReview.count) · \(failingMine)✕", symbol: "arrow.triangle.pull").role(.critical)
+        } else if shownReview.isEmpty {
+            Label("", symbol: "arrow.triangle.pull").role(.secondary)
         } else {
-            Label("\(shownReview.count)", symbol: "arrow.triangle.pull").role(shownReview.isEmpty ? .secondary : shownReview.contains(where: isNew) ? .accent : .primary)
+            Label("\(shownReview.count)", symbol: "arrow.triangle.pull")
         }
     }
 
+    var headline: String {
+        if failingMine > 0 { return "\(failingMine) PR\(failingMine == 1 ? "" : "s") failing checks" }
+        if !shownReview.isEmpty { return "\(shownReview.count) waiting on you" }
+        return "All caught up"
+    }
+
     var panel: ViewContent {
-        VStack(spacing: 8) {
-            Picker("Show", options: tabs.map(label), selection: label(currentTab)) { chosen in
-                self.tab = (self.tabs.first { chosen.hasPrefix($0.rawValue) } ?? .review).rawValue
-            }
-            if let lastError {
-                Text(lastError).role(.warning)
-            }
-            if currentTab == .inbox {
-                if let inboxError { Text(inboxError).style(.caption).role(.warning) }
-                if inbox.isEmpty {
-                    if inboxError == nil { ContentUnavailableView("Inbox zero", symbol: "tray", message: "No GitHub notifications.") }
+        VStack(spacing: Space.m) {
+            if !loaded {
+                PanelHeader("Pull requests", subtitle: "Checking…", symbol: "arrow.triangle.pull", theme: theme)
+            } else if let lastError, toReview.isEmpty, mine.isEmpty, updatedAt == nil {
+                if lastError.contains("Add a GitHub token") {
+                    EmptyState("Paste a GitHub token above", symbol: "key.fill", message: "A fine-grained token with read access to pull requests is enough. The GitHub plugin uses the same one.", theme: theme)
                 } else {
-                    List(inbox, searchable: true) { item in inboxRow(item) }
+                    EmptyState("Can't reach GitHub", symbol: "exclamationmark.triangle.fill", message: lastError, theme: .critical) {
+                        ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh() }
+                    }
                 }
-            } else if currentTab == .mine {
-                list(shownMine, showAuthor: false, empty: ("No open pull requests", "You have nothing open right now."))
             } else {
-                if history.count > 1 { Chart("Review queue", values: history, kind: .area, role: shownReview.isEmpty ? .success : .accent) }
-                list(shownReview, showAuthor: true, empty: ("Nothing to review", "You're all caught up."))
-            }
-            HStack {
-                if (shownReview + shownMine).contains(where: isNew) {
-                    Button("Mark all as seen", symbol: "checkmark.circle") { (self.toReview + self.mine).forEach(self.markSeen) }
+                PanelHeader(headline, subtitle: "\(shownMine.count) of yours open" + (updatedAt.map { " · updated \($0.formatted(date: .omitted, time: .shortened))" } ?? ""), symbol: "arrow.triangle.pull", theme: theme) {
+                    if (shownReview + shownMine).contains(where: isNew) {
+                        IconButton("checkmark.circle", label: "Mark all as seen", theme: theme, prominence: .tinted) { (self.toReview + self.mine).forEach(self.markSeen) }
+                    }
+                }
+                Picker("Show", options: tabs.map(label), selection: label(currentTab), style: .segmented) { chosen in
+                    self.tab = (self.tabs.first { chosen.hasPrefix($0.rawValue) } ?? .review).rawValue
+                }
+                if let lastError { Banner(lastError) }
+                if currentTab == .inbox {
+                    if let inboxError { Banner(inboxError) }
+                    if inbox.isEmpty {
+                        if inboxError == nil { EmptyState("Inbox zero", symbol: "tray", message: "No GitHub notifications.", theme: .success) }
+                    } else {
+                        List(inbox, searchable: true) { item in inboxRow(item) }
+                    }
+                } else if currentTab == .mine {
+                    list(shownMine, showAuthor: false, empty: ("Nothing of yours open", "Pull requests you open show up here."))
+                } else {
+                    list(shownReview, showAuthor: true, empty: ("No reviews waiting", "Pull requests that ask for your review show up here."))
                 }
                 if hiddenCount > 0 || !hiddenRepos.isEmpty {
-                    Button("Show \(hiddenCount) hidden", symbol: "eye", key: "unhide") {
+                    ActionButton("Show \(hiddenCount) hidden", symbol: "eye", theme: theme, key: "unhide") {
                         self.snoozed = [:]
                         self.hiddenRepos = []
                     }
                 }
-            }
-            if let updatedAt {
-                Text("Updated \(updatedAt.formatted(date: .omitted, time: .shortened))").style(.caption).role(.secondary)
             }
         }
     }
@@ -539,10 +555,24 @@ final class PRCockpit: StackbarPlugin {
     }
 
     var widget: ViewContent {
-        LabeledContent("To review", value: "\(shownReview.count)")
-        LabeledContent("Mine open", value: "\(shownMine.count)")
-        if failingMine > 0 { LabeledContent("Failing checks", value: "\(failingMine)").role(.critical) }
-        ForEach(shownReview.prefix(3)) { pr in Text(pr.title).style(.caption) }
+        VStack(spacing: Space.s) {
+            HStack(spacing: Space.s) {
+                StatTile("To review", value: "\(shownReview.count)", theme: theme, emphasized: !shownReview.isEmpty)
+                StatTile("Mine", value: "\(shownMine.count)")
+                if failingMine > 0 {
+                    StatTile("Failing", value: "\(failingMine)", theme: .critical, emphasized: true)
+                } else {
+                    StatTile("Ready", value: "\(shownMine.filter(\.readyToMerge).count)", theme: .success, emphasized: shownMine.contains(where: \.readyToMerge))
+                }
+            }
+            if let pr = shownReview.first {
+                VStack(spacing: 0) {
+                    Text(pr.title).typography(.headline)
+                    Text("\(pr.repo.split(separator: "/").last.map(String.init) ?? pr.repo)\(pr.author.map { " · by \($0.login)" } ?? "") · \(Self.ago(pr.updatedAt))").role(.secondary).typography(.caption)
+                }
+            }
+        }
+        .frame(fillWidth: true, fillHeight: true)
     }
 
     var tabs: [Tab] { showInbox ? Tab.allCases : [.review, .mine] }
@@ -562,7 +592,7 @@ final class PRCockpit: StackbarPlugin {
 
     @ViewBuilder func list(_ prs: [PullRequest], showAuthor: Bool, empty: (String, String)) -> ViewContent {
         if prs.isEmpty {
-            if lastError == nil { ContentUnavailableView(empty.0, symbol: "checkmark.circle", message: empty.1) }
+            if lastError == nil { EmptyState(empty.0, symbol: "checkmark", message: empty.1, theme: .success) }
         } else {
             List(prs, searchable: true) { pr in row(pr, showAuthor: showAuthor) }
         }

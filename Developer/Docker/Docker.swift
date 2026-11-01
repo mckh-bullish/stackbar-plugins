@@ -12,12 +12,12 @@ final class Docker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.docker",
         name: "Docker",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Your containers, with start, stop, restart and logs a click away.",
-        surfaces: [.menuBar, .panel, .settings],
+        surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.run(commands: ["docker"])],
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker"
     )
 
@@ -37,6 +37,11 @@ final class Docker: StackbarPlugin {
 
         var name: String { names.split(separator: ",").first.map(String.init) ?? names }
         var isRunning: Bool { state == "running" || state == "restarting" }
+        var isUnhealthy: Bool { status.contains("(unhealthy)") }
+        /// `nginx:latest`, without Docker Hub's `docker.io/library/`.
+        var shortImage: String {
+            image.hasPrefix("docker.io/library/") ? String(image.dropFirst("docker.io/library/".count)) : image
+        }
         /// The compose project, from its label.
         var project: String? {
             labels?.split(separator: ",").first { $0.hasPrefix("com.docker.compose.project=") }
@@ -57,6 +62,8 @@ final class Docker: StackbarPlugin {
     var loaded = false
     var problem: String?
     var busy: Set<String> = []
+    /// What is running now, like "Restarting api…".
+    var busyText: String?
     var logs: [String: String] = [:]
     var lastSlowCheck = Date.distantPast
 
@@ -77,8 +84,8 @@ final class Docker: StackbarPlugin {
         do {
             let result = try await Stackbar.run("docker", ["ps", "--all", "--no-trunc", "--format", "{{json .}}"], timeout: .seconds(20))
             guard result.succeeded else {
+                // The last list stays on screen under a banner.
                 problem = Self.explain(result)
-                containers = []
                 loaded = true
                 return
             }
@@ -105,7 +112,11 @@ final class Docker: StackbarPlugin {
 
     func act(_ verb: String, _ container: Container) async throws {
         busy.insert(container.id)
-        defer { busy.remove(container.id) }
+        busyText = "\(["stop": "Stopping", "start": "Starting", "restart": "Restarting", "rm": "Removing"][verb] ?? verb) \(container.name)…"
+        defer {
+            busy.remove(container.id)
+            busyText = nil
+        }
         let result = try await Stackbar.run("docker", [verb, container.id], timeout: .seconds(90))
         guard result.succeeded else { throw HostError("\(verb) \(container.name): " + Self.explain(result)) }
         await load()
@@ -124,37 +135,109 @@ final class Docker: StackbarPlugin {
 
     // MARK: Surfaces
 
+    let theme = Theme.cyan
+
+    var projects: Int { Set(containers.compactMap(\.project)).count }
+
     var menuBar: ViewContent {
         if problem != nil, loaded {
+            Label("", symbol: "shippingbox").role(.warning)
+        } else if running.isEmpty {
             Label("", symbol: "shippingbox").role(.secondary)
         } else {
-            Label(running.isEmpty ? "" : "\(running.count)", symbol: running.isEmpty ? "shippingbox" : "shippingbox.fill").role(running.isEmpty ? .secondary : .accent)
+            Label("\(running.count)", symbol: "shippingbox.fill")
         }
     }
 
     var panel: ViewContent {
-        if let problem {
-            ContentUnavailableView("Docker isn't available", symbol: "shippingbox", message: problem)
-            Button("Try Again", symbol: "arrow.clockwise") { await self.load() }
-        } else if !loaded {
-            ContentUnavailableView("Loading…", symbol: "shippingbox")
-        } else if shown.isEmpty {
-            ContentUnavailableView(containers.isEmpty ? "No containers" : "Nothing running", symbol: "shippingbox", message: containers.isEmpty ? "Containers you create show up here." : "\(containers.count) stopped; show them in Settings.")
-        } else if groupByProject {
-            let groups = Dictionary(grouping: shown) { $0.project ?? "" }
-            ForEach(groups.keys.sorted { ($0.isEmpty ? 1 : 0, $0) < ($1.isEmpty ? 1 : 0, $1) }) { project in
-                Section(project.isEmpty ? "Containers" : project) {
-                    ForEach(groups[project] ?? []) { container in self.row(container) }
+        VStack(spacing: Space.m) {
+            if !loaded {
+                PanelHeader("Containers", subtitle: "Checking…", symbol: "shippingbox.fill", theme: theme)
+            } else if let problem, containers.isEmpty {
+                let missing = problem.contains("isn't installed")
+                EmptyState(missing ? "Docker isn't installed" : "Docker isn't running", symbol: missing ? "shippingbox" : "exclamationmark.triangle.fill",
+                           message: problem.hasPrefix("Docker isn't running. ") ? String(problem.dropFirst("Docker isn't running. ".count)) : problem, theme: missing ? theme : .critical) {
+                    ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { await self.load() }
+                }
+                if missing { Link("Get OrbStack", url: "https://orbstack.dev") }
+            } else {
+                PanelHeader(running.isEmpty ? "Nothing running" : "\(running.count) running", subtitle: summary, symbol: "shippingbox.fill", theme: theme) {
+                    Picker("Show", options: ["Running", "All"], selection: showStopped ? "All" : "Running", style: .segmented) { self.showStopped = $0 == "All" }
+                        .frame(width: 124)
+                }
+                if let problem { Banner(problem) }
+                if let busyText { Banner(busyText, symbol: "arrow.triangle.2.circlepath", theme: .info) }
+                if containers.isEmpty {
+                    EmptyState("No containers yet", symbol: "shippingbox", message: "Containers you create or start with Compose show up here.", theme: theme)
+                } else if shown.isEmpty {
+                    EmptyState("Nothing running", symbol: "moon.zzz", message: "\(containers.count) stopped.", theme: theme) {
+                        ActionButton("Show All", theme: theme) { self.showStopped = true }
+                    }
+                } else if groupByProject {
+                    let groups = Dictionary(grouping: shown) { $0.project ?? "" }
+                    VStack(spacing: Space.s) {
+                        ForEach(groups.keys.sorted { ($0.isEmpty ? 1 : 0, $0) < ($1.isEmpty ? 1 : 0, $1) }) { project in
+                            let members = groups[project] ?? []
+                            let up = containers.filter { ($0.project ?? "") == project && $0.isRunning }.count
+                            let all = containers.filter { ($0.project ?? "") == project }.count
+                            Section(project.isEmpty ? (groups.count > 1 ? "Other containers" : "Containers") : "\(project) · \(up)/\(all) running") {
+                                ForEach(members) { container in self.row(container) }
+                            }
+                        }
+                    }
+                } else {
+                    List(shown, searchable: shown.count > 8) { container in self.row(container) }
                 }
             }
+        }
+    }
+
+    var summary: String {
+        let count = "\(containers.count) container\(containers.count == 1 ? "" : "s")"
+        return projects > 0 ? "\(count) · \(projects) project\(projects == 1 ? "" : "s")" : count
+    }
+
+    var widget: ViewContent {
+        if problem != nil, containers.isEmpty {
+            VStack(alignment: .center, spacing: Space.xs) {
+                IconTile("shippingbox", theme: .neutral, size: 32)
+                Text("Docker isn't running").role(.secondary).typography(.caption)
+            }
+            .frame(fillWidth: true, fillHeight: true)
         } else {
-            List(shown, searchable: shown.count > 8) { container in self.row(container) }
+            VStack(spacing: Space.s) {
+                HStack(spacing: Space.s) {
+                    StatTile("Running", value: "\(running.count)", symbol: "play.fill", theme: theme, emphasized: !running.isEmpty)
+                    StatTile("Stopped", value: "\(containers.count - running.count)", symbol: "stop.fill")
+                    let unhealthy = containers.filter(\.isUnhealthy).count
+                    StatTile("Unhealthy", value: "\(unhealthy)", symbol: "cross.case.fill", theme: unhealthy > 0 ? .critical : .neutral, emphasized: unhealthy > 0)
+                }
+                ForEach(running.prefix(2)) { container in
+                    HStack(spacing: Space.xs + 2) {
+                        StatusDot(container.isUnhealthy ? .critical : .success, size: 6)
+                        Text(container.name).typography(.caption)
+                        Spacer()
+                        Text(container.status).role(.secondary).typography(.caption)
+                    }
+                }
+            }
         }
     }
 
     func row(_ container: Container) -> Row {
-        var row = Row(container.name, subtitle: "\(container.image) · \(container.status)", symbol: container.isRunning ? "play.circle.fill" : "stop.circle", key: container.id)
-            .badge(busy.contains(container.id) ? "…" : container.state, role: container.isRunning ? .success : .secondary)
+        var row = Row(container.name, subtitle: "\(container.shortImage) · \(container.status.replacingOccurrences(of: " (unhealthy)", with: "").replacingOccurrences(of: " (healthy)", with: ""))", symbol: container.isRunning ? "circle.fill" : "circle", key: container.id)
+        if busy.contains(container.id) {
+            row = row.badge("…")
+        } else if container.isUnhealthy {
+            row = row.badge("unhealthy", role: .critical)
+        } else if container.state == "restarting" {
+            row = row.badge("restarting", role: .warning)
+        } else if container.state == "paused" {
+            row = row.badge("paused")
+        }
+        if container.isRunning, let url = container.localURLs.first {
+            row = row.badge(String(url.dropFirst("http://".count)))
+        }
         if let url = container.localURLs.first {
             row = row.action("Open \(url.dropFirst("http://".count))") { Stackbar.open(url) }
         }
@@ -177,7 +260,6 @@ final class Docker: StackbarPlugin {
 
     var settings: ViewContent {
         Section("Show") {
-            Toggle("Stopped containers", isOn: showStopped) { self.showStopped = $0 }
             Toggle("Group by Compose project", isOn: groupByProject) { self.groupByProject = $0 }
         }
         Section("Cleanup") {
@@ -216,11 +298,13 @@ final class Docker: StackbarPlugin {
                 if let container = self.find(invocation["container"]) { await self.loadLogs(container.id) }
             }) { invocation in
                 if let container = self.find(invocation["container"]) {
+                    HStack {
+                        Button("Refresh", symbol: "arrow.clockwise") { await self.loadLogs(container.id) }
+                        Button("Copy", symbol: "doc.on.doc") { Stackbar.copy(self.logs[container.id] ?? "") }
+                    }
                     Section("\(container.name) · last 200 lines") {
                         Text(String((self.logs[container.id] ?? "Loading…").suffix(20_000))).style(.monospaced)
                     }
-                    Button("Refresh", symbol: "arrow.clockwise") { await self.loadLogs(container.id) }
-                    Button("Copy", symbol: "doc.on.doc") { Stackbar.copy(self.logs[container.id] ?? "") }
                 } else {
                     ContentUnavailableView("No container \(invocation["container"] ?? "")", symbol: "shippingbox")
                 }

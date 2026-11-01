@@ -13,14 +13,14 @@ final class Translate: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.translate",
         name: "Translate",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Translate the selected text, in your browser or in place with DeepL.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
         // The selection; the clipboard as a fallback and for pasting the
         // result; DeepL's two API hosts (free and paid keys).
         capabilities: [.context, .clipboard, .network("api-free.deepl.com", "api.deepl.com"), .secret(name: "DEEPL_API_KEY")],
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate"
     )
 
@@ -177,31 +177,103 @@ final class Translate: StackbarPlugin {
                 Text("Add a DeepL API key in Settings to translate here instead.").style(.caption)
             }
         } else {
-            ContentUnavailableView("Translating…", symbol: "character.bubble")
+            ContentUnavailableView(useDeepL ? "Translating…" : "Reading the selection…", symbol: "character.bubble")
         }
     }
 
     // MARK: Panel and settings
 
+    let theme = Theme.teal
+
+    /// Translates what was typed or picked up in the panel: in place with
+    /// DeepL, or by opening Google Translate.
+    func translateHere(_ text: String) async {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        problem = nil
+        if useDeepL {
+            do { try await translate(text, to: nil) } catch { problem = "\(error)" }
+        } else {
+            Stackbar.open(Self.googleURL(text, to: Self.language(target)))
+        }
+    }
+
     var panel: ViewContent {
-        Text("Select text in any app, then run Translate Selection from the palette, or give it a hotkey in Settings > Commands.").style(.caption)
-        LabeledContent("Engine", value: engine)
-        LabeledContent("Into", value: "\(target), or \(second) when the text is already in \(target)")
+        PanelHeader("Translate", subtitle: useDeepL ? "DeepL" + (formality == "Default" ? "" : " · \(formality.lowercased())") : "Google Translate · opens in your browser",
+                    symbol: "character.bubble.fill", theme: theme)
+        HStack(spacing: Space.s) {
+            Pill("Detect", theme: .neutral)
+            Image(systemName: "arrow.right").font(size: 11, weight: .semibold).foreground(.role(.secondary))
+            Picker("Into", options: Self.languages.map(\.name), selection: target) { self.target = $0 }
+            Spacer()
+            IconButton("arrow.left.arrow.right", label: "Swap languages", theme: theme, prominence: .tinted) {
+                (self.target, self.second) = (self.second, self.target)
+            }
+        }
+        TextField("Type or paste, then Return") { text in await self.translateHere(text) }
+        if useDeepL, problem != nil, result == nil {
+            Text("Or switch to Google Translate in Settings.").role(.secondary).typography(.caption)
+        }
+        HStack(spacing: Space.xs + 2) {
+            Chip("Translate clipboard", symbol: "doc.on.clipboard", theme: theme) {
+                guard let copied = try await Stackbar.clipboard(), !copied.concealed, let text = copied.text else {
+                    self.problem = "The clipboard has no text"
+                    return
+                }
+                await self.translateHere(text)
+            }
+            Chip("Translate selection", symbol: "text.cursor", theme: theme) {
+                guard let text = try await Stackbar.context().selectedText, !text.isEmpty else {
+                    self.problem = "Nothing is selected in the app you were in"
+                    return
+                }
+                await self.translateHere(text)
+            }
+            Spacer()
+        }
+        if let problem {
+            Banner(problem)
+        } else if let result, useDeepL {
+            HeroCard(theme: theme, spacing: Space.s) {
+                Text(([result.detected.map { "from \(Self.languageName($0))" }, "into \(result.target)"].compactMap { $0 }).joined(separator: " · ").uppercased())
+                    .typography(.overline).foreground(theme.textPaint)
+                Text(result.text).typography(Typography(size: 15))
+                HStack(spacing: Space.s) {
+                    ActionButton("Paste", symbol: "doc.on.clipboard.fill", theme: theme, prominent: true) {
+                        try await Stackbar.paste(.text(result.text), restoringClipboard: true)
+                    }
+                    ActionButton("Copy", symbol: "doc.on.doc", theme: theme) { Stackbar.copy(result.text) }
+                    Spacer()
+                    IconButton("globe", label: "Open in Google Translate", theme: theme) {
+                        Stackbar.open(Self.googleURL(result.source, to: Self.language(result.target)))
+                    }
+                }
+            }
+        }
+    }
+
+    /// DeepL's source code ("DE") as a name ("German").
+    static func languageName(_ code: String) -> String {
+        languages.first { $0.deepl.hasPrefix(code.uppercased()) }?.name.replacingOccurrences(of: " (UK)", with: "") ?? code
     }
 
     var settings: ViewContent {
         Section("Engine") {
-            Picker("Translate with", options: ["Google Translate (browser)", "DeepL"], selection: engine) { self.engine = $0 }
+            Picker("Translate with", options: ["Google", "DeepL"], selection: useDeepL ? "DeepL" : "Google", style: .segmented) { choice in
+                self.engine = choice == "DeepL" ? "DeepL" : "Google Translate (browser)"
+                self.result = nil
+                self.problem = nil
+            }
             if useDeepL {
                 Text("DeepL needs an API key: the free plan at deepl.com/pro-api covers 500,000 characters a month. Stackbar asks for it the first time and keeps it in your Keychain.").style(.caption)
-                Picker("Formality", options: ["Default", "Formal", "Informal"], selection: formality) { self.formality = $0 }
+                Picker("Formality", options: ["Default", "Formal", "Informal"], selection: formality, style: .segmented) { self.formality = $0 }
             } else {
                 Text("Opens translate.google.com with the text filled in. Nothing is sent until you look at it there.").style(.caption)
             }
         }
         Section("Languages") {
-            Picker("Into", options: Self.languages.map(\.name), selection: target) { self.target = $0 }
-            Picker("Or, when it's already in that", options: Self.languages.map(\.name), selection: second) { self.second = $0 }
+            Picker("When it's already in \(target), into", options: Self.languages.map(\.name), selection: second) { self.second = $0 }
+            Text("Pick the main language in the panel.").style(.caption).role(.secondary)
         }
     }
 }

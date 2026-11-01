@@ -5,19 +5,18 @@ import Foundation
 ///
 /// "Kill Port 3000" from the palette ends whatever holds the port that a dev
 /// server forgot to let go of. The panel lists every listening TCP port with
-/// its process, from `lsof`, run through Stackbar every 30 seconds while the
-/// panel is open. Stopping sends SIGTERM, and SIGKILL only when you ask.
+/// its process, from `lsof`, run through Stackbar every 30 seconds. Stopping sends SIGTERM, and SIGKILL only when you ask.
 @main
 final class Ports: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.ports",
         name: "Ports",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Which process is listening on which port, and a way to stop it.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .every(.seconds(30))],
         capabilities: [.run(commands: ["lsof", "kill"])],
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports"
     )
 
@@ -35,6 +34,7 @@ final class Ports: StackbarPlugin {
     var loaded = false
     var problem: String?
     var notice: String?
+    var noticeOK = true
 
     @Stored("hideSystem") var hideSystem = true
     @Stored("minimumPort") var minimumPort = 1024
@@ -43,7 +43,19 @@ final class Ports: StackbarPlugin {
         listeners.filter { $0.port >= (hideSystem ? minimumPort : 0) }
     }
 
+    static let ranges = ["All", "1024+", "3000+"]
+    var range: String { !hideSystem || minimumPort <= 1 ? "All" : minimumPort >= 3000 ? "3000+" : "1024+" }
+
+    func setRange(_ choice: String) {
+        switch choice {
+        case "All": hideSystem = false
+        case "3000+": hideSystem = true; minimumPort = 3000
+        default: hideSystem = true; minimumPort = 1024
+        }
+    }
+
     func refresh() async throws {
+        notice = nil
         await load()
     }
 
@@ -101,29 +113,48 @@ final class Ports: StackbarPlugin {
         }
         try? await Task.sleep(for: .milliseconds(400))
         await load()
-        let message = (listeners.contains { $0.pid == listener.pid } ? "Asked \(listener.process) to stop; it is still listening" : "Stopped \(listener.process) on port \(listener.port)")
+        let stillThere = listeners.contains { $0.pid == listener.pid }
+        let message = stillThere ? "Asked \(listener.process) to stop; it is still listening" : "Stopped \(listener.process) on :\(listener.port)"
         notice = message
+        noticeOK = !stillThere
         return message
     }
 
     // MARK: Surfaces
 
+    let theme = Theme.teal
+
     var panel: ViewContent {
-        if let problem {
-            ContentUnavailableView("Can't list ports", symbol: "exclamationmark.triangle", message: problem)
-        } else if !loaded {
-            ContentUnavailableView("Loading…", symbol: "network")
-        } else if shown.isEmpty {
-            ContentUnavailableView("Nothing is listening", symbol: "network", message: hideSystem ? "Ports under \(minimumPort) are hidden in Settings." : nil)
-        } else {
-            List(shown, searchable: true) { listener in self.row(listener) }
-            if let notice { Text(notice).style(.caption) }
+        VStack(spacing: Space.m) {
+            if let problem {
+                EmptyState("Can't list ports", symbol: "exclamationmark.triangle.fill", message: problem, theme: .critical) {
+                    ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { await self.load() }
+                }
+            } else if !loaded {
+                PanelHeader("Ports", subtitle: "Checking…", symbol: "network", theme: theme)
+            } else {
+                let open = shown.filter { !$0.isLocalOnly }.count
+                PanelHeader(shown.isEmpty ? "Nothing listening" : "\(shown.count) listening", subtitle: open > 0 ? "\(open) open to the network" : "All local", symbol: "network", theme: theme) {
+                    Picker("Show ports", options: Self.ranges, selection: range, style: .segmented) { self.setRange($0) }
+                        .frame(width: 150)
+                }
+                if let notice { Banner(notice, symbol: noticeOK ? "checkmark.circle.fill" : "exclamationmark.triangle.fill", theme: noticeOK ? .success : .warning) }
+                if shown.isEmpty {
+                    EmptyState("Nothing is listening", symbol: "network", message: range == "All" ? nil : "Showing ports from \(minimumPort) up.", theme: theme) {
+                        if range != "All" { ActionButton("Show All Ports", theme: theme) { self.setRange("All") } }
+                    }
+                } else {
+                    List(shown, searchable: true) { listener in self.row(listener) }
+                }
+            }
         }
     }
 
     func row(_ listener: Listener) -> Row {
-        Row(":\(listener.port)", subtitle: "\(listener.process) · pid \(listener.pid) · \(listener.address)", symbol: "network", key: listener.id)
-            .badge(listener.isLocalOnly ? "local" : "open", role: listener.isLocalOnly ? .secondary : .warning)
+        let address = listener.isLocalOnly || listener.address == "all interfaces" ? "" : " · \(listener.address)"
+        var row = Row(":\(listener.port)", subtitle: "\(listener.process) · pid \(listener.pid)\(address)", symbol: listener.isLocalOnly ? "lock.fill" : "network", key: listener.id)
+        if !listener.isLocalOnly { row = row.badge("LAN", role: .warning) }
+        return row
             .action("Open in Browser") { Stackbar.open("http://localhost:\(listener.port)") }
             .action("Stop Process", shortcut: "cmd+.", role: .critical) { _ = try await self.stop(listener, force: false) }
             .action("Force Quit Process", shortcut: "cmd+shift+.", role: .critical) { _ = try await self.stop(listener, force: true) }
@@ -132,8 +163,7 @@ final class Ports: StackbarPlugin {
 
     var settings: ViewContent {
         Section("Show") {
-            Toggle("Hide ports under \(minimumPort)", isOn: hideSystem) { self.hideSystem = $0 }
-            Picker("Lowest port shown", options: ["1", "1024", "3000"], selection: "\(minimumPort)") { self.minimumPort = Int($0) ?? 1024 }
+            Picker("Show ports", options: Self.ranges, selection: range, style: .segmented) { self.setRange($0) }
         }
         Section("About") {
             Text("Ports lists TCP ports that processes you can see are listening on. Stopping one sends it SIGTERM, so it can clean up; Force Quit sends SIGKILL. A process owned by another user (like a system service) can't be stopped from here.").style(.caption)

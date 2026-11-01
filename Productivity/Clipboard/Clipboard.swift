@@ -15,13 +15,13 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.1.1",
+        version: "1.2.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         triggers: [.launch, .clipboard],
         capabilities: [.clipboard],
         hotkey: "cmd+shift+v",
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard"
     )
 
@@ -132,6 +132,8 @@ final class Clipboard: StackbarPlugin {
     /// writes don't count as new copies from whichever app is frontmost.
     private var lastWrite: Date?
     var lastError: String?
+    /// A pattern typed in Settings that isn't a regex, shown where it was typed.
+    var settingsError: String?
 
     var entries: [Entry] {
         get {
@@ -282,42 +284,46 @@ final class Clipboard: StackbarPlugin {
         Label("", symbol: paused ? "pause.circle" : "list.clipboard").role(paused ? .warning : .primary)
     }
 
+    let theme = Theme.blue
+
     var panel: ViewContent {
         let all = sorted
         let pinned = all.filter(\.pinned)
         let history = all.filter { !$0.pinned }
-        HStack {
-            Text("Clipboard").style(.headline)
-            Badge("\(all.count)")
-            if paused { Badge("Paused", role: .warning) }
+        let detail = ["⌘⇧V anywhere", pinned.isEmpty ? nil : "\(pinned.count) pinned"].compactMap { $0 }.joined(separator: " · ")
+        PanelHeader(paused ? "Paused" : all.count == 1 ? "1 item" : "\(all.count) items", subtitle: detail,
+                    symbol: paused ? "pause.circle.fill" : "list.clipboard.fill", theme: paused ? .warning : theme) {
+            HStack(spacing: Space.xs) {
+                IconButton("eye.slash", label: ignoreNext ? "Next copy will be ignored" : "Ignore next copy", theme: theme,
+                           prominence: ignoreNext ? .filled : .plain) { self.ignoreNext.toggle() }
+                IconButton(paused ? "play.fill" : "pause.fill", label: paused ? "Resume recording" : "Pause recording",
+                           theme: paused ? .warning : theme, prominence: paused ? .filled : .plain) { self.paused.toggle() }
+            }
         }
         if let lastError {
-            Text(lastError).style(.caption).role(.warning)
+            Banner(lastError)
         }
         if all.isEmpty {
-            ContentUnavailableView("Nothing copied yet", symbol: "list.clipboard", message: paused ? "Recording is paused." : "Copy something in any app and it shows up here.")
+            if paused {
+                EmptyState("Recording is paused", symbol: "pause.circle", message: "Copies aren't kept until you resume.", theme: .warning) {
+                    ActionButton("Resume", symbol: "play.fill", theme: theme, prominent: true) { self.paused = false }
+                }
+            } else {
+                EmptyState("Nothing copied yet", symbol: "list.clipboard", message: "Copy something in any app and it shows up here.", theme: theme)
+            }
         } else {
             List(searchable: true) {
                 if !pinned.isEmpty {
                     Section("Pinned") {
-                        ForEach(Array(pinned.enumerated())) { index, entry in
-                            row(entry)
-                        }
+                        ForEach(pinned) { entry in row(entry) }
                     }
                 }
-                if pinned.isEmpty {
-                    ForEach(history) { entry in row(entry) }
-                } else {
-                    Section("History") {
+                if !history.isEmpty {
+                    Section(pinned.isEmpty ? nil : "History") {
                         ForEach(history) { entry in row(entry) }
                     }
                 }
             }
-        }
-        HStack {
-            Button(paused ? "Resume" : "Pause", symbol: paused ? "play.fill" : "pause.fill") { self.paused.toggle() }
-            Button("Ignore next copy", symbol: "eye.slash") { self.ignoreNext = true }
-            Button("Clear history", symbol: "trash", role: .critical) { self.clear() }
         }
     }
 
@@ -330,7 +336,7 @@ final class Clipboard: StackbarPlugin {
     @ViewBuilder var insights: ViewContent {
         let all = entries
         if !all.isEmpty {
-            Section("Insights") {
+            Card("Insights") {
                 let calendar = Calendar.current
                 let dates = (0..<14).reversed().map { Date().addingTimeInterval(Double(-$0) * 86400) }
                 Chart("Copies, last 14 days", values: dates.map { Double(copiesByDay[Self.day($0)] ?? 0) }, kind: .bar, labels: dates.map { String(calendar.component(.day, from: $0)) }, highlight: 13)
@@ -351,12 +357,13 @@ final class Clipboard: StackbarPlugin {
             Toggle("Always paste as plain text", isOn: plainByDefault) { self.plainByDefault = $0 }
         }
         Section("History") {
-            Picker("Order", options: Order.allCases.map(\.rawValue), selection: order.rawValue) { self.order = Order(rawValue: $0) ?? .recent }
+            Picker("Order", options: Order.allCases.map(\.rawValue), selection: order.rawValue, style: .segmented) { self.order = Order(rawValue: $0) ?? .recent }
             Slider("Keep \(Int(limit)) items", value: limit, in: 25...1000, step: 25) { value in
                 self.limit = value
                 self.entries = self.trimmed(self.entries)
             }
             Toggle("Keep images", isOn: keepImages) { self.keepImages = $0 }
+            Button("Clear history (keeps pinned)", symbol: "trash", role: .critical) { self.clear() }
         }
         Section("Ignored apps") {
             ignoredAppsContent
@@ -389,12 +396,14 @@ final class Clipboard: StackbarPlugin {
             let pattern = pattern.trimmingCharacters(in: .whitespaces)
             guard !pattern.isEmpty, !self.ignoredPatterns.contains(pattern) else { return }
             guard (try? Regex(pattern)) != nil else {
-                self.lastError = "\"\(pattern)\" isn't a valid regular expression"
+                self.settingsError = "\"\(pattern)\" isn't a valid regular expression"
                 return
             }
+            self.settingsError = nil
             self.ignoredPatterns.append(pattern)
             self.entries = self.entries.filter { $0.pinned || !self.matchesIgnoredPattern($0.text ?? "") }
         }
+        if let settingsError { Text(settingsError).style(.caption).role(.warning) }
         ForEach(ignoredPatterns) { pattern in
             Row(pattern, subtitle: "Copies matching this aren't recorded", symbol: "line.3.horizontal.decrease", key: "pattern-\(pattern)")
                 .action("Remove") { self.ignoredPatterns.removeAll { $0 == pattern } }
@@ -410,7 +419,7 @@ final class Clipboard: StackbarPlugin {
     func row(_ entry: Entry, paste pasteDirectly: Bool) -> Row {
         let source = [entry.appName, Self.relative(entry.lastCopied), entry.count > 1 ? "×\(entry.count)" : nil, entry.kind == .text ? "\(entry.text?.count ?? 0) chars" : nil]
             .compactMap { $0 }.joined(separator: " · ")
-        var row = Row(entry.title, subtitle: source, symbol: entry.pinned ? "pin.fill" : entry.symbol, key: entry.id)
+        var row = Row(entry.title, subtitle: source, symbol: entry.pinned ? "pin.fill" : entry.symbol, key: entry.id).appIcon(entry.appID)
         if let preview = preview(entry) { row = preview(row) }
         row = row.action(pasteDirectly ? "Paste" : "Copy") { await self.use(entry, paste: self.pasteDirectly) }
         if entry.plainText != nil, entry.contentID != nil || entry.kind == .files {

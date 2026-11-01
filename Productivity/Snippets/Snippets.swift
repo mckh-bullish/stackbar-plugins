@@ -17,7 +17,7 @@ final class Snippets: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.snippets",
         name: "Snippets",
-        version: "1.0.1",
+        version: "1.1.0",
         summary: "Paste text by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -25,7 +25,7 @@ final class Snippets: StackbarPlugin {
         // snippets at Raycast's 65,536-character limit.
         capabilities: [.clipboard, .context, .storage(megabytes: 16)],
         hotkey: "ctrl+option+s",
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets"
     )
 
@@ -45,6 +45,8 @@ final class Snippets: StackbarPlugin {
     }
 
     @Stored("snippets") var snippets: [Snippet] = []
+    /// The tag the panel filters by; nil shows them all.
+    @Stored("panelTag") var panelTag: String? = nil
     var draft = Draft()
     var notice: String?
 
@@ -124,6 +126,12 @@ final class Snippets: StackbarPlugin {
         Array(Set(snippets.flatMap(\.tags))).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
+    /// Tags, the most used first, for the panel's chips.
+    var tagsByUse: [String] {
+        let counts = Dictionary(snippets.flatMap(\.tags).map { ($0, 1) }, uniquingKeysWith: +)
+        return allTags.sorted { (counts[$0] ?? 0, $1) > (counts[$1] ?? 0, $0) }
+    }
+
     var commands: [Command] {
         for snippet in snippets { command(for: snippet) }
         Command("search", title: "Search Snippets", subtitle: "Paste, copy or edit a snippet", symbol: "text.quote", keywords: ["snippet", "text", "paste"])
@@ -170,7 +178,10 @@ final class Snippets: StackbarPlugin {
         let shown = snippets.filter { tag == nil || tag == "All" || $0.tags.contains(tag!) }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         if snippets.isEmpty {
-            ContentUnavailableView("No snippets yet", symbol: "text.quote", message: "Create one, or import a Raycast export from Settings.")
+            EmptyState("No snippets yet", symbol: "text.quote", message: "Save text you type often, with placeholders for what changes.", theme: theme) {
+                ActionButton("Create Snippet", symbol: "plus", theme: theme, prominent: true) { self.openCommand("create") }
+                ActionButton("Import from Raycast", symbol: "square.and.arrow.down", theme: theme) { self.notice = try await self.importSnippets() }
+            }
         } else {
             List(searchable: true) {
                 ForEach(shown) { snippet in self.row(snippet) }
@@ -179,9 +190,10 @@ final class Snippets: StackbarPlugin {
     }
 
     func row(_ snippet: Snippet) -> Row {
-        var row = Row(snippet.name, subtitle: snippet.keyword, symbol: "text.quote", key: snippet.id.uuidString)
-        for tag in snippet.tags { row = row.badge(tag) }
         let preview = preview(snippet)
+        var row = Row(snippet.name, subtitle: Self.firstLine(of: preview), symbol: "text.quote", key: snippet.id.uuidString)
+        if let keyword = snippet.keyword { row = row.badge(keyword, role: .secondary) }
+        if let tag = snippet.tags.first { row = row.badge(tag) }
         row = row.preview(text: preview, caption: "\(snippet.text.count) characters" + (snippet.keyword.map { " · keyword \($0)" } ?? ""))
         let needsInput = arguments(of: snippet).contains(where: \.required)
         // With arguments to fill in, Return opens the snippet's own command,
@@ -198,7 +210,8 @@ final class Snippets: StackbarPlugin {
             .action("Duplicate", shortcut: "cmd+d") {
                 var copy = snippet
                 copy.id = UUID()
-                copy.name = snippet.name + " copy"
+                // "Name 2" sorts next to the original.
+                copy.name = snippet.name + " 2"
                 copy.keyword = nil
                 self.snippets.append(copy)
             }
@@ -370,8 +383,23 @@ final class Snippets: StackbarPlugin {
 
     // MARK: Panel and settings
 
+    let theme = Theme.indigo
+
+    func openCommand(_ command: String) {
+        Stackbar.open("stackbar://commands/\(Self.manifest.id)/\(command)")
+    }
+
     var panel: ViewContent {
-        searchView(tag: nil)
+        if !snippets.isEmpty {
+            PanelHeader(snippets.count == 1 ? "1 snippet" : "\(snippets.count) snippets", subtitle: "⌃⌥S to search and paste", symbol: "text.quote", theme: theme) {
+                IconButton("plus", label: "New Snippet", theme: theme, prominence: .tinted) { self.openCommand("create") }
+            }
+            if let notice { Banner(notice, symbol: "checkmark.circle.fill", theme: .success) }
+            if !allTags.isEmpty {
+                TagChips(tagsByUse, selection: panelTag.flatMap { allTags.contains($0) ? $0 : nil }, theme: theme) { self.panelTag = $0 }
+            }
+        }
+        searchView(tag: panelTag.flatMap { allTags.contains($0) ? $0 : nil })
     }
 
     var settings: ViewContent {
@@ -382,8 +410,8 @@ final class Snippets: StackbarPlugin {
             Button("Export…", symbol: "square.and.arrow.up") { self.notice = try await self.exportSnippets() }
         }
         Section("Pasting") {
-            Text("⌃⌥S opens Search Snippets. Give a snippet you use often its own alias or hotkey in Settings > Commands. Pasting needs Accessibility access for Stackbar, and puts back what you had copied about half a second later. Snippet pastes don't go into Clipboard History.").style(.caption)
-            Text("Keywords are kept, but not expanded as you type: that needs a keyboard monitor Stackbar doesn't run. For plain text, macOS expands keywords itself in System Settings > Keyboard > Text Replacements.").style(.caption)
+            Text("⌃⌥S opens Search Snippets; give one you use often its own hotkey in Settings › Commands. Pasting needs Accessibility access and puts your clipboard back after.").style(.caption)
+            Text("Keywords are searchable but not expanded as you type. For plain text, macOS can expand them in System Settings › Keyboard › Text Replacements.").style(.caption)
         }
     }
 }

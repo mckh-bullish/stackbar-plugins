@@ -13,12 +13,12 @@ final class Homebrew: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.homebrew",
         name: "Homebrew",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Outdated formulae and casks, with upgrades a click away.",
-        surfaces: [.menuBar, .panel, .settings],
+        surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(60), .wake],
         capabilities: [.run(commands: ["brew"])],
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew"
     )
 
@@ -63,6 +63,7 @@ final class Homebrew: StackbarPlugin {
     /// What is running now, like "Upgrading node".
     var busy: String?
     var lastResult: String?
+    var lastFailed = false
 
     @Stored("includeCasks") var includeCasks = true
     @Stored("hidePinned") var hidePinned = true
@@ -74,6 +75,7 @@ final class Homebrew: StackbarPlugin {
     }
 
     func refresh() async throws {
+        if busy == nil { lastResult = nil }
         await check()
     }
 
@@ -129,6 +131,7 @@ final class Homebrew: StackbarPlugin {
         defer { busy = nil }
         let result = try await Stackbar.run("brew", ["upgrade"] + names, environment: Self.quiet, timeout: .seconds(600))
         lastResult = result.succeeded ? "\(label): done" : Self.failure(result, doing: label)
+        lastFailed = !result.succeeded
         await check()
         if !result.succeeded { throw HostError(lastResult!) }
     }
@@ -140,43 +143,76 @@ final class Homebrew: StackbarPlugin {
         let result = try await Stackbar.run("brew", ["update"], environment: ["HOMEBREW_NO_ENV_HINTS": "1", "HOMEBREW_NO_COLOR": "1"], timeout: .seconds(300))
         guard result.succeeded else { throw HostError(Self.failure(result, doing: "brew update")) }
         await check()
-        lastResult = "Updated; \(shown.count) outdated"
+        lastResult = "Homebrew updated; \(shown.count) outdated"
+        lastFailed = false
         return lastResult!
     }
 
     // MARK: Surfaces
 
+    let theme = Theme.amber
+
     var menuBar: ViewContent {
         if busy != nil {
-            Label("…", symbol: "arrow.triangle.2.circlepath")
+            Label("", symbol: "arrow.triangle.2.circlepath")
         } else if problem != nil {
-            Label("!", symbol: "mug").role(.warning)
+            Label("", symbol: "mug").role(.warning)
+        } else if shown.isEmpty {
+            Label("", symbol: "mug").role(.secondary)
         } else {
-            Label(shown.isEmpty ? "" : "\(shown.count)", symbol: "mug").role(shown.isEmpty ? .secondary : .accent)
+            Label("\(shown.count)", symbol: "mug.fill")
         }
     }
 
+    var upgradable: [Package] { shown.filter { !$0.pinned } }
+
     var panel: ViewContent {
-        if let problem {
-            ContentUnavailableView("Can't check Homebrew", symbol: "exclamationmark.triangle", message: problem)
-            Button("Try Again", symbol: "arrow.clockwise") { await self.check() }
-        } else if checked == nil {
-            ContentUnavailableView("Checking…", symbol: "mug")
-        } else if shown.isEmpty {
-            ContentUnavailableView("Everything is up to date", symbol: "checkmark.seal", message: checkedText)
-            Button("Update Homebrew", symbol: "arrow.down.circle") { _ = try await self.update() }
-        } else {
-            if let busy { Label(busy, symbol: "arrow.triangle.2.circlepath").role(.accent) }
-            List(shown, searchable: shown.count > 8) { package in
-                self.row(package)
-            }
-            HStack {
-                Button("Upgrade All", symbol: "arrow.up.circle", role: .accent) {
-                    try await self.upgrade(self.shown.map(\.name), label: "Upgrading everything")
+        VStack(spacing: Space.m) {
+            if checked == nil && problem == nil {
+                PanelHeader("Homebrew", subtitle: "Checking…", symbol: "mug.fill", theme: theme)
+            } else if let problem, checked == nil {
+                let missing = problem.contains("isn't installed")
+                EmptyState(missing ? "Homebrew isn't installed" : "Can't check Homebrew", symbol: missing ? "mug" : "exclamationmark.triangle.fill", message: problem, theme: missing ? theme : .critical) {
+                    ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { await self.check() }
                 }
-                Button("Update Homebrew", symbol: "arrow.down.circle") { _ = try await self.update() }
+                if missing { Link("Get Homebrew at brew.sh", url: "https://brew.sh") }
+            } else {
+                PanelHeader(shown.isEmpty ? "Up to date" : "\(shown.count) update\(shown.count == 1 ? "" : "s")", subtitle: checkedText, symbol: "mug.fill", theme: theme) {
+                    IconButton("arrow.down.circle", label: "Update Homebrew", theme: theme, prominence: .tinted) { _ = try await self.update() }
+                    if upgradable.count >= 2 {
+                        ActionButton("Upgrade All", theme: theme, prominent: true) {
+                            try await self.upgrade(self.upgradable.map(\.name), label: "Upgrading everything")
+                        }
+                    }
+                }
+                if let problem { Banner(problem) }
+                if let busy {
+                    Banner("\(busy)… this can take a few minutes.", symbol: "arrow.triangle.2.circlepath", theme: .info)
+                } else if let lastResult {
+                    Banner(lastResult, symbol: lastFailed ? "xmark.octagon.fill" : "checkmark.circle.fill", theme: lastFailed ? .critical : .success)
+                }
+                if shown.isEmpty {
+                    EmptyState("Everything is up to date", symbol: "checkmark.seal.fill", message: checkedText, theme: .success) {
+                        ActionButton("Update Homebrew", symbol: "arrow.down.circle", theme: theme) { _ = try await self.update() }
+                    }
+                } else {
+                    List(shown, searchable: shown.count > 8) { package in
+                        self.row(package)
+                    }
+                }
             }
-            Text(checkedText + (lastResult.map { " · \($0)" } ?? "")).style(.caption)
+        }
+    }
+
+    var widget: ViewContent {
+        HStack(alignment: .start, spacing: Space.l) {
+            Metric("\(shown.count)", unit: shown.count == 1 ? "update" : "updates", caption: checkedText, type: .metric)
+            VStack(spacing: Space.xxs) {
+                ForEach(shown.prefix(4)) { package in
+                    Text(package.name).typography(.caption)
+                }
+            }
+            Spacer()
         }
     }
 
@@ -186,8 +222,7 @@ final class Homebrew: StackbarPlugin {
     }
 
     func row(_ package: Package) -> Row {
-        var row = Row(package.name, subtitle: "\(package.installed) → \(package.current)", symbol: package.isCask ? "macwindow" : "shippingbox", key: package.id)
-        if package.isCask { row = row.badge("cask") }
+        var row = Row(package.name, subtitle: "\(package.installed) → \(package.current)", symbol: package.isCask ? "macwindow" : "terminal", key: package.id)
         if package.pinned { row = row.badge("pinned", role: .warning) }
         return row
             .action("Upgrade") { try await self.upgrade([package.name], label: "Upgrading \(package.name)") }
@@ -203,7 +238,7 @@ final class Homebrew: StackbarPlugin {
         Section("Show") {
             Toggle("Casks", isOn: includeCasks) { self.includeCasks = $0 }
             Toggle("Hide pinned formulae", isOn: hidePinned) { self.hidePinned = $0 }
-            Toggle("Casks that update themselves (--greedy)", isOn: greedy) { value in
+            Toggle("Include casks that update themselves", isOn: greedy) { value in
                 self.greedy = value
                 await self.check()
             }
@@ -219,7 +254,7 @@ final class Homebrew: StackbarPlugin {
     var commands: [Command] {
         Command("upgrade-all", title: "Upgrade All Homebrew Packages", symbol: "arrow.up.circle", keywords: ["brew", "homebrew", "upgrade"]) { _ in
             await self.check()
-            let names = self.shown.map(\.name)
+            let names = self.shown.filter { !$0.pinned }.map(\.name)
             guard !names.isEmpty else { return .message("Everything is up to date") }
             try await self.upgrade(names, label: "Upgrading \(names.count) package\(names.count == 1 ? "" : "s")")
             return .message("Upgraded \(names.count)")

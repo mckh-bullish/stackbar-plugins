@@ -13,12 +13,12 @@ final class GitHub: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.github",
         name: "GitHub",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Your repositories and issues from the palette, and new issues without a browser.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .minutes(30), .wake],
         capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN")],
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/GitHub"
     )
 
@@ -58,6 +58,8 @@ final class GitHub: StackbarPlugin {
     var issues: [Issue] = []
     var searchResults: [Repo] = []
     var problem: String?
+    var loaded = false
+    var updated: Date?
     var formError: String?
     var created: String?
 
@@ -100,9 +102,11 @@ final class GitHub: StackbarPlugin {
             try await loadRepos()
             try await loadIssues()
             problem = nil
+            updated = Date()
         } catch {
             problem = "\(error)"
         }
+        loaded = true
     }
 
     /// Your repositories and those of your organizations, most recently
@@ -161,9 +165,9 @@ final class GitHub: StackbarPlugin {
     // MARK: Rows
 
     func row(_ repo: Repo) -> Row {
-        var row = Row(repo.full_name, subtitle: repo.description, symbol: repo.private ? "lock" : "book.closed", key: "repo-\(repo.id)")
-        if repo.archived { row = row.badge("archived") }
-        if repo.fork { row = row.badge("fork") }
+        let fallback = "★ \(repo.stargazers_count) · \(repo.open_issues_count) open issue\(repo.open_issues_count == 1 ? "" : "s")"
+        var row = Row(repo.full_name, subtitle: repo.description.flatMap { $0.isEmpty ? nil : $0 } ?? fallback, symbol: repo.private ? "lock" : "book.closed", key: "repo-\(repo.id)")
+        if repo.archived { row = row.badge("archived") } else if repo.fork { row = row.badge("fork") }
         return row
             .action("Open") { self.opened(repo); Stackbar.open(repo.html_url) }
             .action("Issues", shortcut: "cmd+i") { self.opened(repo); Stackbar.open(repo.html_url + "/issues") }
@@ -175,8 +179,8 @@ final class GitHub: StackbarPlugin {
     }
 
     func row(_ issue: Issue) -> Row {
-        var row = Row(issue.title, subtitle: "\(issue.repository?.full_name ?? "")#\(issue.number)", symbol: "smallcircle.filled.circle", key: "issue-\(issue.id)")
-        for label in issue.labels.prefix(2) { row = row.badge(label.name) }
+        var row = Row(issue.title, subtitle: "\(issue.repository?.full_name ?? "") #\(issue.number) · \(Self.ago(issue.updated_at))", symbol: "smallcircle.filled.circle", key: "issue-\(issue.id)")
+        if let label = issue.labels.first { row = row.badge(label.name) }
         return row
             .action("Open") { Stackbar.open(issue.html_url) }
             .action("Copy Link", shortcut: "cmd+c") { Stackbar.copy(issue.html_url) }
@@ -230,7 +234,7 @@ final class GitHub: StackbarPlugin {
             } onSubmit: { values in
                 try await self.createIssue(values)
             }
-            if let created { Text(created).style(.caption) }
+            if let created { Banner(created, symbol: "checkmark.circle.fill", theme: .success) }
         }
     }
 
@@ -253,19 +257,43 @@ final class GitHub: StackbarPlugin {
 
     // MARK: Panel and settings
 
+    let theme = Theme.graphite
+
+    static func ago(_ date: Date, now: Date = Date()) -> String {
+        let seconds = now.timeIntervalSince(date)
+        if seconds < 3600 { return "\(max(1, Int(seconds / 60)))m" }
+        if seconds < 86400 { return "\(Int(seconds / 3600))h" }
+        return "\(Int(seconds / 86400))d"
+    }
+
     var panel: ViewContent {
-        if let problem, repos.isEmpty {
-            ContentUnavailableView("Can't reach GitHub", symbol: "exclamationmark.triangle", message: problem)
-        } else {
-            if !issues.isEmpty {
-                Section("Assigned to you") {
-                    ForEach(issues.prefix(5)) { issue in self.row(issue) }
+        VStack(spacing: Space.m) {
+            if !loaded && repos.isEmpty {
+                PanelHeader("GitHub", subtitle: "Checking…", symbol: "book.closed.fill", theme: theme)
+            } else if let problem, repos.isEmpty {
+                if problem.contains("Add a GitHub token") {
+                    EmptyState("Paste a GitHub token above", symbol: "key.fill", message: "A fine-grained token with read access to metadata and issues works. PR Cockpit uses the same one.", theme: theme)
+                } else {
+                    EmptyState("Can't reach GitHub", symbol: "exclamationmark.triangle.fill", message: problem, theme: .critical) {
+                        ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh() }
+                    }
+                }
+            } else {
+                PanelHeader(issues.isEmpty ? "Nothing assigned" : "\(issues.count) issue\(issues.count == 1 ? "" : "s") assigned", subtitle: "\(shownRepos.count) repositories" + (updated.map { " · updated \($0.formatted(date: .omitted, time: .shortened))" } ?? ""), symbol: "book.closed.fill", theme: theme)
+                if let problem { Banner(problem) }
+                List(searchable: true) {
+                    if !issues.isEmpty {
+                        Section("Assigned to you") {
+                            ForEach(issues) { issue in self.row(issue) }
+                        }
+                    }
+                    if !ordered.isEmpty {
+                        Section("Repositories") {
+                            ForEach(ordered.prefix(12)) { repo in self.row(repo) }
+                        }
+                    }
                 }
             }
-            Section("Repositories") {
-                ForEach(ordered.prefix(8)) { repo in self.row(repo) }
-            }
-            Text("Search all \(shownRepos.count) with Search GitHub Repositories in the palette.").style(.caption)
         }
     }
 
@@ -277,7 +305,7 @@ final class GitHub: StackbarPlugin {
             Button("Reload", symbol: "arrow.clockwise") { try await self.refresh() }
         }
         Section("Token") {
-            Text("Uses GITHUB_TOKEN, shared with PR Cockpit. A fine-grained token with read access to metadata and issues works; creating issues needs write access to issues.").style(.caption)
+            Text("GITHUB_TOKEN, shared with PR Cockpit. Creating issues needs write access to issues.").style(.caption)
             if let problem { Text(problem).role(.warning).style(.caption) }
         }
     }

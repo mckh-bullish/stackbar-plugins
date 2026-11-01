@@ -25,9 +25,12 @@ final class StayAwakeTests: XCTestCase {
         let supervisor = try await host.start("StayAwake", policy: fast)
         XCTAssertTrue(host.system.keptAwake.isEmpty)
 
-        let rows = await supervisor.views[.panel]?.rows ?? []
-        let hour = try XCTUnwrap(rows.first { $0.key == "for-60" })
-        await supervisor.press(try XCTUnwrap(hour.actions.first).id)
+        // The durations are chips: buttons keyed by their minutes.
+        let hour = await supervisor.views[.panel]?.tree.lazy.compactMap { node -> ActionID? in
+            if case .tappable(_, let action) = node, action.rawValue == "button/for-60" { return action }
+            return nil
+        }.first
+        await supervisor.press(try XCTUnwrap(hour, "no one-hour chip"))
         let held = await waitUntil(10) { host.system.keptAwake[self.id] != nil }
         XCTAssertTrue(held)
         let status = await supervisor.callTool("awake_status")
@@ -85,10 +88,18 @@ final class StayAwakeTests: XCTestCase {
     }
 
     func testChartsTheWeek() async throws {
-        let supervisor = try await Host(self).start("StayAwake")
-        let rendered = await supervisor.views[.panel]
-        let panel = try XCTUnwrap(rendered)
-        XCTAssertTrue(panel.charts.contains { $0.kind == .bar && $0.values.count == 7 }, "the panel charts hours awake per day")
+        let host = Host(self)
+        let supervisor = try await host.start("StayAwake")
+        let empty = await supervisor.views[.panel]
+        XCTAssertFalse(try XCTUnwrap(empty).charts.contains { $0.kind == .bar }, "no week to chart before the Mac is ever kept awake")
+        // Time awake counts from one refresh to the next.
+        await supervisor.press("button/for-60")
+        let held = await waitUntil(10) { host.system.keptAwake[self.id] != nil }
+        XCTAssertTrue(held)
+        try await Task.sleep(nanoseconds: 1_100_000_000)
+        await supervisor.refresh()
+        let charted = await waitUntil(10) { await supervisor.views[.panel]?.charts.contains { $0.kind == .bar && $0.values.count == 7 } == true }
+        XCTAssertTrue(charted, "the panel charts hours awake per day")
         await supervisor.stop()
     }
 }

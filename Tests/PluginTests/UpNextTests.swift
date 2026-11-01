@@ -77,11 +77,11 @@ final class UpNextTests: XCTestCase {
         XCTAssertEqual(week.values.count, 7)
         if today {
             XCTAssertEqual(week.values.first, 1.5)
-            let gauge = await supervisor.views[.panel]?.tree.contains { node in
-                if case .progress(let value, _, _, _, _, _) = node { return value == 1.5 }
+            let header = await supervisor.views[.panel]?.tree.contains { node in
+                if case .text(let text, _, _) = node { return text.hasSuffix("· 1h 30m") }
                 return false
             }
-            XCTAssertEqual(gauge, true, "the panel's gauge shows today's hours")
+            XCTAssertEqual(header, true, "the panel's header says today's hours")
             let byCalendar = window.charts.first { $0.kind == .donut }
             XCTAssertEqual(byCalendar?.values.sorted(), [1, 1], "today split by calendar")
         }

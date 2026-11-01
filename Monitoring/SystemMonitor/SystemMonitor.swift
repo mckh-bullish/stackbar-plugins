@@ -12,12 +12,12 @@ final class SystemMonitor: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.system-monitor",
         name: "System Monitor",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "CPU, memory and disk in the menu bar, with the processes using the most.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(10)), .wake],
         capabilities: [.run(commands: ["top", "vm_stat", "df", "kill"])],
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor"
     )
 
@@ -172,13 +172,46 @@ final class SystemMonitor: StackbarPlugin {
         }
     }
 
+    /// top's `1129M-` or `6337K+` as `1.1 GB` or `6 MB`.
+    static func memory(_ text: String) -> String {
+        guard let bytes = bytes(text) else { return text }
+        let megabytes = bytes / pow(1024, 2)
+        return megabytes >= 1000 ? String(format: "%.1f GB", megabytes / 1024) : String(format: "%.0f MB", max(1, megabytes))
+    }
+
     static func size(_ bytes: Double) -> String {
         let gigabytes = bytes / pow(1024, 3)
-        return gigabytes >= 100 ? String(format: "%.0f GB", gigabytes) : String(format: "%.1f GB", gigabytes)
+        return gigabytes >= 10 || gigabytes == gigabytes.rounded() ? String(format: "%.0f GB", gigabytes) : String(format: "%.1f GB", gigabytes)
+    }
+
+    /// The menu bar stays quiet until something needs a look.
+    /// `9.8`: gigabytes without the unit, for "9.8 of 16 GB".
+    static func number(_ bytes: Double) -> String {
+        let gigabytes = bytes / pow(1024, 3)
+        return gigabytes >= 100 ? String(format: "%.0f", gigabytes) : String(format: "%.1f", gigabytes)
     }
 
     static func role(_ fraction: Double) -> Role {
-        fraction >= 0.9 ? .critical : fraction >= 0.75 ? .warning : .accent
+        fraction >= 0.9 ? .critical : fraction >= 0.75 ? .warning : .primary
+    }
+
+    // MARK: Look
+
+    let theme = Theme.green
+
+    /// Green while there is room, amber when it's getting full, red when it's not.
+    func tone(_ fraction: Double) -> Theme {
+        fraction >= 0.9 ? .critical : fraction >= 0.75 ? .warning : theme
+    }
+
+    static func percent(_ fraction: Double) -> String { "\(Int((fraction * 100).rounded()))%" }
+
+    /// What a glance should take away: the two readings, or the one in trouble.
+    func headline(_ sample: Sample) -> String {
+        if sample.cpu >= 75 { return "CPU busy: \(Self.percent(sample.cpu / 100))" }
+        if sample.memoryFraction >= 0.9 { return "Memory nearly full: \(Self.percent(sample.memoryFraction))" }
+        if let disk, disk.fraction >= 0.9 { return "Disk nearly full: \(Self.size(disk.total - disk.used)) free" }
+        return "CPU \(Self.percent(sample.cpu / 100)) · Memory \(Self.percent(sample.memoryFraction))"
     }
 
     // MARK: Surfaces
@@ -186,9 +219,9 @@ final class SystemMonitor: StackbarPlugin {
     var menuBar: ViewContent {
         if let sample {
             switch menuBarShows {
-            case "CPU": Label("\(Int(sample.cpu.rounded()))%", symbol: "cpu").role(Self.role(sample.cpu / 100))
-            case "Memory": Label("\(Int((sample.memoryFraction * 100).rounded()))%", symbol: "memorychip").role(Self.role(sample.memoryFraction))
-            default: Label("\(Int(sample.cpu.rounded()))% · \(Int((sample.memoryFraction * 100).rounded()))%", symbol: "gauge.with.dots.needle.33percent").role(Self.role(max(sample.cpu / 100, sample.memoryFraction)))
+            case "CPU": Label(Self.percent(sample.cpu / 100), symbol: "cpu").role(Self.role(sample.cpu / 100))
+            case "Memory": Label(Self.percent(sample.memoryFraction), symbol: "memorychip").role(Self.role(sample.memoryFraction))
+            default: Label("\(Self.percent(sample.cpu / 100)) · \(Self.percent(sample.memoryFraction))", symbol: "gauge.with.dots.needle.33percent").role(Self.role(max(sample.cpu / 100, sample.memoryFraction)))
             }
         } else {
             Label("", symbol: "gauge.with.dots.needle.33percent").role(.secondary)
@@ -197,42 +230,101 @@ final class SystemMonitor: StackbarPlugin {
 
     var panel: ViewContent {
         if let problem, sample == nil {
-            ContentUnavailableView("Can't read the system", symbol: "exclamationmark.triangle", message: problem)
+            EmptyState("Can't read the system", symbol: "exclamationmark.triangle", message: problem, theme: .critical) {
+                ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme, prominent: true) { await self.measure() }
+            }
         } else if let sample {
-            Section("CPU") {
-                Chart("CPU", values: cpuHistory, kind: .area, role: Self.role(sample.cpu / 100), unit: "%")
-                LabeledContent("Now", value: "\(Int(sample.cpu.rounded()))%")
-                if sample.load.count == 3 {
-                    LabeledContent("Load", value: sample.load.map { String(format: "%.2f", $0) }.joined(separator: "  "))
+            VStack(spacing: Space.m) {
+                PanelHeader(headline(sample), subtitle: sample.load.count == 3 ? "Load " + sample.load.map { String(format: "%.2f", $0) }.joined(separator: "  ") : nil, symbol: "gauge.with.dots.needle.33percent", theme: theme)
+                HStack(spacing: Space.s) {
+                    dial("CPU", fraction: sample.cpu / 100, detail: "\(Int(sample.cpu.rounded()))% busy")
+                    dial("Memory", fraction: sample.memoryFraction, detail: "\(Self.number(sample.memoryUsed)) of \(Self.size(sample.memoryTotal))")
+                    if let disk { dial("Disk", fraction: disk.fraction, detail: "\(Self.size(disk.total - disk.used)) free") }
                 }
-            }
-            Section("Memory and disk") {
-                ProgressBar("Memory \(Self.size(sample.memoryUsed)) of \(Self.size(sample.memoryTotal))", value: sample.memoryFraction, role: Self.role(sample.memoryFraction))
-                if let disk {
-                    ProgressBar("Disk \(Self.size(disk.used)) of \(Self.size(disk.total))", value: disk.fraction, role: Self.role(disk.fraction))
+                if cpuHistory.count >= 3 {
+                    Card("CPU", detail: "now \(Self.percent(sample.cpu / 100))") {
+                        Chart(values: cpuHistory, kind: .area, unit: "%").foreground(tone(sample.cpu / 100).solidPaint)
+                        Text(cpuHistory.count >= 30 ? "Last 5 minutes" : "Since \(cpuHistory.count * 10 / 60 < 1 ? "\(cpuHistory.count * 10) seconds" : "\(cpuHistory.count * 10 / 60) min") ago").role(.secondary).typography(.caption)
+                    }
                 }
-            }
-            Section("Top processes by \(sortBy == "Memory" ? "memory" : "CPU")") {
-                ForEach(sample.processes.prefix(8)) { process in
-                    Row(process.command, subtitle: "pid \(process.pid) · \(process.memory)", symbol: "app", key: "\(process.pid)")
-                        .badge(String(format: "%.1f%%", process.cpu), role: process.cpu > 80 ? .warning : .secondary)
-                        .action("Copy PID") { Stackbar.copy("\(process.pid)") }
-                        .action("Quit Process", role: .critical) { try await self.quit(process) }
+                VStack(spacing: Space.xs) {
+                    HStack(spacing: Space.s) {
+                        CardTitle("Top processes")
+                        Picker("Sort by", options: ["CPU", "Memory"], selection: sortBy, style: .segmented) { choice in
+                            self.sortBy = choice
+                            await self.measure()
+                        }
+                        .frame(width: 130)
+                    }
+                    ForEach(sample.processes.prefix(8)) { process in
+                        Row(process.command, subtitle: "pid \(process.pid) · \(Self.memory(process.memory))", symbol: "gearshape", key: "\(process.pid)")
+                            .badge(sortBy == "Memory" ? Self.memory(process.memory) : String(format: "%.1f%%", process.cpu), role: process.cpu > 80 ? .warning : .secondary)
+                            .action("Copy PID") { Stackbar.copy("\(process.pid)") }
+                            .action("Quit Process", role: .critical) { try await self.quit(process) }
+                    }
                 }
             }
         } else {
-            ContentUnavailableView("Measuring…", symbol: "gauge.with.dots.needle.33percent")
+            VStack(spacing: Space.m) {
+                PanelHeader("Measuring…", subtitle: "The first reading takes a couple of seconds", symbol: "gauge.with.dots.needle.33percent", theme: theme)
+                HStack(spacing: Space.s) {
+                    ForEach(["CPU", "Memory", "Disk"]) { name in
+                        VStack(alignment: .center, spacing: Space.xs + 2) {
+                            Circle().stroke(.hairline, lineWidth: 7).frame(width: 68, height: 68)
+                            Text(name).role(.secondary).typography(.headline)
+                        }
+                        .padding(vertical: Space.m)
+                        .frame(fillWidth: true)
+                        .background(.surface, in: .roundedRectangle(cornerRadius: Radius.large))
+                    }
+                }
+            }
         }
+    }
+
+    /// One resource as a ring with its percentage inside and what it means under it.
+    @ViewBuilder func dial(_ name: String, fraction: Double, detail: String) -> ViewContent {
+        VStack(alignment: .center, spacing: Space.xs + 2) {
+            Gauge(value: fraction, theme: tone(fraction), size: 68, lineWidth: 7) {
+                Text(Self.percent(fraction)).typography(Typography(size: 17, weight: .bold, design: .rounded, monospacedDigit: true))
+            }
+            .accessibilityLabel("\(name) \(Self.percent(fraction))")
+            VStack(alignment: .center, spacing: 0) {
+                Text(name).typography(.headline)
+                Text(detail).role(.secondary).typography(.caption)
+            }
+        }
+        .padding(vertical: Space.m)
+        .frame(fillWidth: true)
+        .background(.surface, in: .roundedRectangle(cornerRadius: Radius.large))
     }
 
     var widget: ViewContent {
         if let sample {
-            ProgressBar("CPU \(Int(sample.cpu.rounded()))%", value: sample.cpu / 100, role: Self.role(sample.cpu / 100))
-            ProgressBar("Memory \(Int((sample.memoryFraction * 100).rounded()))%", value: sample.memoryFraction, role: Self.role(sample.memoryFraction))
-            if let disk { ProgressBar("Disk \(Int((disk.fraction * 100).rounded()))%", value: disk.fraction, role: Self.role(disk.fraction)) }
+            VStack(spacing: Space.s) {
+                HStack(spacing: Space.m) {
+                    widgetDial("CPU", sample.cpu / 100)
+                    widgetDial("Memory", sample.memoryFraction)
+                    if let disk { widgetDial("Disk", disk.fraction) }
+                }
+                if cpuHistory.count >= 3 {
+                    Chart(values: cpuHistory, kind: .area).foreground(tone(sample.cpu / 100).solidPaint).frame(height: 30)
+                }
+            }
+            .frame(fillWidth: true, fillHeight: true)
         } else {
             Text("Measuring…").style(.caption)
         }
+    }
+
+    @ViewBuilder func widgetDial(_ name: String, _ fraction: Double) -> ViewContent {
+        VStack(alignment: .center, spacing: Space.xs + 2) {
+            Gauge(value: fraction, theme: tone(fraction), size: 62, lineWidth: 7) {
+                Text(Self.percent(fraction)).typography(Typography(size: 15, weight: .bold, design: .rounded, monospacedDigit: true))
+            }
+            Text(name).role(.secondary).typography(.caption)
+        }
+        .frame(fillWidth: true)
     }
 
     func quit(_ process: ProcessRow) async throws {
@@ -245,13 +337,7 @@ final class SystemMonitor: StackbarPlugin {
 
     var settings: ViewContent {
         Section("Menu bar") {
-            Picker("Show", options: ["CPU and memory", "CPU", "Memory"], selection: menuBarShows) { self.menuBarShows = $0 }
-        }
-        Section("Processes") {
-            Picker("Sort by", options: ["CPU", "Memory"], selection: sortBy) { choice in
-                self.sortBy = choice
-                await self.measure()
-            }
+            Picker("Show", options: ["CPU and memory", "CPU", "Memory"], selection: menuBarShows, style: .segmented) { self.menuBarShows = $0 }
         }
     }
 

@@ -10,12 +10,12 @@ final class StayAwake: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.stay-awake",
         name: "Stay Awake",
-        version: "1.0.1",
+        version: "1.1.0",
         summary: "Keeps your Mac awake for a while, until a time, while an app runs or on a schedule.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.power],
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake"
     )
 
@@ -56,6 +56,8 @@ final class StayAwake: StackbarPlugin {
     @Stored("scheduleWeekdaysOnly") var scheduleWeekdaysOnly = true
     /// Seconds awake per day (yyyy-MM-dd), for the last two weeks.
     @Stored("awakeByDay") var awakeByDay: [String: Double] = [:]
+    /// The automatic rules (plugged in, schedule and so on) hold off until then.
+    @Stored("pausedUntil") var pausedUntil: Date? = nil
 
     var status = SystemStatus()
     /// What the host is holding for us right now. The host drops it when the
@@ -64,6 +66,10 @@ final class StayAwake: StackbarPlugin {
     var heldReason: String?
     var lastTick: Date?
     var lastError: String?
+    /// A duration or time typed in the panel that didn't parse, shown under the field.
+    var inputError: String?
+    /// A schedule time typed in Settings that didn't parse, shown there.
+    var settingsError: String?
     var lastEnded: String?
     /// The end time the 5-minute warning was sent for.
     var warnedFor: Date?
@@ -118,6 +124,7 @@ final class StayAwake: StackbarPlugin {
     var reason: String? {
         if blocker != nil { return nil }
         if let session { return describe(session.mode) }
+        if let pausedUntil, pausedUntil > Date() { return nil }
         if scheduleOn, inSchedule(Date()) { return "Schedule until \(scheduleEnd)" }
         if whilePluggedIn, status.onACPower { return "While plugged in" }
         if whileExternalDisplay, (status.externalDisplays ?? 0) > 0 { return "While a display is connected" }
@@ -290,9 +297,25 @@ final class StayAwake: StackbarPlugin {
         }
     }
 
+    let theme = Theme.amber
+
+    /// The timed session's span, for host-counted rings and clocks.
+    var range: TimeRange? {
+        guard let session, case .until(let end) = session.mode else { return nil }
+        return TimeRange(start: session.started, end: end)
+    }
+
+    /// Held by a rule rather than a session the user started.
+    var heldByRule: Bool { held != nil && session == nil }
+
     var menuBar: ViewContent {
-        if held != nil {
-            Label(remaining.map(Self.clock) ?? "", symbol: "cup.and.heat.waves.fill").role(.accent)
+        if held != nil, let range {
+            HStack(spacing: Space.xs) {
+                Image(systemName: "cup.and.heat.waves.fill")
+                ProgressBar(timing: range, style: .ring(lineWidth: 2)).frame(width: 13, height: 13)
+            }
+        } else if held != nil {
+            Label("", symbol: "cup.and.heat.waves.fill").role(.primary)
         } else if session != nil, blocker != nil {
             Label("", symbol: "cup.and.saucer").role(.warning)
         } else {
@@ -300,52 +323,105 @@ final class StayAwake: StackbarPlugin {
         }
     }
 
+    /// The cup in a ring that drains as a timed session runs out.
+    @ViewBuilder func dial(size: Double, lineWidth: Double) -> ViewContent {
+        let awake = held != nil
+        let cup = Image(systemName: awake ? "cup.and.heat.waves.fill" : "moon.zzz.fill")
+            .font(size: (size * 0.36).rounded(), weight: .semibold).foreground((awake ? theme : .neutral).textPaint)
+        if awake, let range {
+            Gauge(timing: range, theme: theme, size: size, lineWidth: lineWidth) { cup }
+        } else {
+            Gauge(value: awake ? 1 : 0, theme: awake ? theme : .neutral, size: size, lineWidth: lineWidth) { cup }
+        }
+    }
+
+    var caption: String {
+        if let reason, held != nil { return reason + (keepDisplayOn ? " · display on" : " · display may sleep") }
+        if let blocker, session != nil { return "Paused: \(blocker)" }
+        if let pausedUntil, pausedUntil > Date() { return "Rules paused until \(pausedUntil.formatted(date: .omitted, time: .shortened))" }
+        if let lastEnded { return "Last session: \(lastEnded)" }
+        return "Pick how long below"
+    }
+
+    /// The chip that matches the running session, if any.
+    var activeChip: Double? {
+        guard let session else { return nil }
+        switch session.mode {
+        case .indefinitely: return 0
+        case .until: return session.total.map { ($0 / 60).rounded() }
+        case .whileRunning: return nil
+        }
+    }
+
+    static let chips: [[(title: String, minutes: Double)]] = [[("∞", 0), ("15m", 15), ("30m", 30), ("1h", 60)], [("2h", 120), ("4h", 240), ("8h", 480)]]
+
     var panel: ViewContent {
-        if let reason, held != nil {
-            Label("Staying awake", symbol: "cup.and.heat.waves.fill").role(.accent)
-            Text(reason + (keepDisplayOn ? ", display on" : ", display may sleep")).style(.caption).role(.secondary)
-            if let session, let total = session.total, let remaining {
-                ProgressBar("\(Self.clock(remaining)) left", value: total - remaining, total: total, role: .accent)
-            }
-            if session != nil {
-                HStack {
-                    Button("Stop", symbol: "stop.fill", role: .critical) { await self.stop() }
-                    if let remaining {
-                        Button("+30 min", symbol: "plus") { await self.start(.until(Date().addingTimeInterval(remaining + 1800))) }
-                    }
+        let awake = held != nil
+        HeroCard(theme: awake ? theme : .neutral) {
+            HStack(spacing: Space.m) {
+                dial(size: 64, lineWidth: 5)
+                VStack(spacing: Space.xxs) {
+                    Text(awake ? "Awake" : "Sleeps normally").typography(Typography(size: 22, weight: .bold, design: .rounded))
+                    Text(caption).role(.secondary).typography(.caption)
+                }
+                .frame(fillWidth: true, alignment: .leading)
+                IconButton("display", label: keepDisplayOn ? "Display stays on" : "Keep display on", theme: theme,
+                           prominence: keepDisplayOn ? .filled : .tinted, key: "display") {
+                    self.keepDisplayOn.toggle()
+                    await self.apply()
                 }
             }
-        } else {
-            Label("Your Mac sleeps normally", symbol: "moon.zzz").role(.secondary)
+            if awake, let range {
+                TimerText(range).typography(.hero)
+            }
             if let blocker, session != nil {
-                Text("Paused: \(blocker)").role(.warning)
-            } else if let lastEnded {
-                Text("Last session ended: \(lastEnded)").style(.caption).role(.secondary)
+                Banner("Paused: \(blocker)")
+            }
+            if awake || session != nil {
+                HStack(spacing: Space.s) {
+                    if session != nil {
+                        ActionButton("Stop", symbol: "stop.fill", theme: .critical, prominent: true) { await self.stop() }
+                    }
+                    if let remaining {
+                        ActionButton("+30 min", symbol: "plus", theme: theme) { await self.start(.until(Date().addingTimeInterval(remaining + 1800))) }
+                    }
+                    if heldByRule {
+                        ActionButton("Pause for 1 hour", symbol: "pause.fill", theme: theme) {
+                            self.pausedUntil = Date().addingTimeInterval(3600)
+                            await self.apply()
+                        }
+                    }
+                    Spacer()
+                }
             }
         }
         if let lastError {
-            Text(lastError).style(.caption).role(.warning)
+            Banner(lastError)
         }
-        Section("Keep awake") {
-            Row("Until I stop it", symbol: "infinity", key: "indefinitely")
-                .action("Start") { await self.start(.indefinitely) }
-            ForEach(Self.durations) { option in
-                Row("For \(option.title)", symbol: "timer", key: "for-\(Int(option.minutes))")
-                    .action("Start") { await self.start(.until(Date().addingTimeInterval(option.minutes * 60))) }
-            }
-            TextField("For a while, like 90m or 1h30") { text in
-                guard let seconds = Self.duration(text) else {
-                    self.lastError = "\"\(text)\" isn't a duration; try 45m, 2h or 1h30"
-                    return
+        Card("Keep awake", spacing: Space.s) {
+            ForEach(Array(Self.chips.enumerated())) { _, row in
+                HStack(spacing: Space.xs + 2) {
+                    ForEach(row) { option in
+                        Chip(option.title, theme: theme, selected: activeChip == option.minutes, key: "for-\(Int(option.minutes))") {
+                            await self.start(option.minutes == 0 ? .indefinitely : .until(Date().addingTimeInterval(option.minutes * 60)))
+                        }
+                    }
+                    Spacer()
                 }
-                await self.start(.until(Date().addingTimeInterval(seconds)))
             }
-            TextField("Until a time, like 17:30") { text in
-                guard let end = Self.next(text) else {
-                    self.lastError = "\"\(text)\" isn't a time; try 17:30 or 5:30pm"
-                    return
+            TextField("Or type 90m, 1h30 or 17:30") { text in
+                if let seconds = Self.duration(text) {
+                    self.inputError = nil
+                    await self.start(.until(Date().addingTimeInterval(seconds)))
+                } else if let end = Self.next(text) {
+                    self.inputError = nil
+                    await self.start(.until(end))
+                } else {
+                    self.inputError = "\"\(text)\" isn't a duration or a time; try 45m, 1h30 or 17:30"
                 }
-                await self.start(.until(end))
+            }
+            if let inputError {
+                Banner(inputError)
             }
             let apps = status.runningApps.filter { $0.id != "io.navbytes.stackbar" }.sorted { $0.name < $1.name }
             if !apps.isEmpty {
@@ -355,27 +431,22 @@ final class StayAwake: StackbarPlugin {
                 }
             }
         }
-        Toggle("Keep the display on", isOn: keepDisplayOn) { on in
-            self.keepDisplayOn = on
-            await self.apply()
-        }
-        Section("This week") {
-            let week = hoursAwake(days: 7)
-            Chart("Hours awake", values: week.values, kind: .bar, labels: week.labels, unit: "h", highlight: 6)
-            HStack {
-                LabeledContent("Today", value: Self.clock(awakeByDay[Self.day(Date())] ?? 0))
-                LabeledContent("Average", value: Self.clock(week.values.reduce(0, +) / 7 * 3600))
+        let week = hoursAwake(days: 7)
+        if awakeByDay.values.contains(where: { $0 > 0 }) {
+            Card("This week", detail: "today \(Self.clock(awakeByDay[Self.day(Date())] ?? 0)) · average \(Self.clock(week.values.reduce(0, +) / 7 * 3600))", spacing: Space.s) {
+                Chart(values: week.values, kind: .bar, labels: week.labels, unit: "h", highlight: 6).foreground(theme.solidPaint)
             }
         }
-        if whileDownloading, rateTrail.count >= 3, rateTrail.contains(where: { $0 >= Self.downloadThreshold }) {
-            Chart("Download speed", values: rateTrail.map { ($0 / 10_000).rounded() / 100 }, kind: .area, role: downloading ? .accent : .secondary, unit: "MB/s", goal: Self.downloadThreshold / 1_000_000)
-            Text(downloading ? "Downloading at \(Self.rate(rateTrail.last ?? 0)); staying awake until it's quiet for 2 minutes" : "No download running").style(.caption).role(.secondary)
+        if awake, whileDownloading, rateTrail.count >= 3, rateTrail.contains(where: { $0 >= Self.downloadThreshold }) {
+            Card("Download speed", detail: downloading ? Self.rate(rateTrail.last ?? 0) : "quiet", spacing: Space.s) {
+                Chart(values: rateTrail.map { ($0 / 10_000).rounded() / 100 }, kind: .area, unit: "MB/s", goal: Self.downloadThreshold / 1_000_000)
+                    .foreground((downloading ? theme : .neutral).solidPaint)
+                Text(downloading ? "Staying awake until it's quiet for 2 minutes" : "No download running").role(.secondary).typography(.caption)
+            }
         }
-        if let level = status.batteryLevel {
-            if held != nil, batteryTrail.count >= 3 {
-                Chart("Battery while awake", values: batteryTrail, kind: .area, role: level < 0.2 ? .critical : status.onACPower ? .success : .accent, unit: "%")
-            } else {
-                LabeledContent("Battery", value: "\(Int((level * 100).rounded()))%" + (status.onACPower ? ", on power" : ""))
+        if awake, !status.onACPower, let level = status.batteryLevel, batteryTrail.count >= 3 {
+            Card("Battery while awake", detail: "\(Int((level * 100).rounded()))%", spacing: Space.s) {
+                Chart(values: batteryTrail, kind: .area, unit: "%").foreground((level < 0.2 ? Theme.critical : .success).solidPaint)
             }
         }
     }
@@ -436,26 +507,27 @@ final class StayAwake: StackbarPlugin {
                 self.scheduleOn = on
                 await self.apply()
             }
-            TextField("Schedule starts (\(scheduleStart))", key: "schedule-start") { text in await self.setSchedule(start: text) }
-            TextField("Schedule ends (\(scheduleEnd))", key: "schedule-end") { text in await self.setSchedule(end: text) }
+            TextField("Starts, like 09:00", text: scheduleStart, key: "schedule-start") { text in await self.setSchedule(start: text) }
+            TextField("Ends, like 18:00", text: scheduleEnd, key: "schedule-end") { text in await self.setSchedule(end: text) }
+            if let settingsError { Text(settingsError).style(.caption).role(.warning) }
             Toggle("Weekdays only", isOn: scheduleWeekdaysOnly) { on in
                 self.scheduleWeekdaysOnly = on
                 await self.apply()
             }
         }
-        let fortnight = hoursAwake(days: 14)
-        if fortnight.values.contains(where: { $0 > 0 }) {
-            Section("Activity") {
-                Chart("Hours awake, last 14 days", values: fortnight.values, kind: .area, labels: fortnight.labels, unit: "h", highlight: 13)
-                LabeledContent("In all", value: Self.clock(fortnight.values.reduce(0, +) * 3600))
-            }
-        }
     }
 
     var widget: ViewContent {
-        Label(held != nil ? "Awake" : "Sleeps normally", symbol: held != nil ? "cup.and.heat.waves.fill" : "cup.and.saucer")
-        if let reason, held != nil { Text(reason).style(.caption) }
-        LabeledContent("Today", value: Self.clock(awakeByDay[Self.day(Date())] ?? 0))
+        HStack(spacing: Space.m) {
+            dial(size: 72, lineWidth: 6)
+            VStack(spacing: Space.xxs) {
+                Text(held != nil ? "Awake" : "Sleeps normally").typography(.title)
+                if held != nil, let range { TimerText(range).typography(Typography(size: 24, weight: .bold, design: .rounded, monospacedDigit: true)) }
+                Text(held != nil ? reason ?? "" : "Today \(Self.clock(awakeByDay[Self.day(Date())] ?? 0)) awake").role(.secondary).typography(.caption)
+            }
+            .frame(fillWidth: true, alignment: .leading)
+        }
+        .frame(fillWidth: true, fillHeight: true)
     }
 
     var whileRunningName: String? {
@@ -465,12 +537,12 @@ final class StayAwake: StackbarPlugin {
 
     func setSchedule(start: String? = nil, end: String? = nil) async {
         for text in [start, end].compactMap({ $0 }) where Self.minutes(text) == nil {
-            lastError = "\"\(text)\" isn't a time; try 09:00 or 6pm"
+            settingsError = "\"\(text)\" isn't a time; try 09:00 or 6pm"
             return
         }
         if let start { scheduleStart = start.trimmingCharacters(in: .whitespaces) }
         if let end { scheduleEnd = end.trimmingCharacters(in: .whitespaces) }
-        lastError = nil
+        settingsError = nil
         await apply()
     }
 

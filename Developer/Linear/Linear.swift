@@ -13,12 +13,12 @@ final class Linear: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.linear",
         name: "Linear",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Your assigned Linear issues, branch names, search and new issues from the palette.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("api.linear.app"), .secret(name: "LINEAR_API_KEY")],
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear"
     )
 
@@ -140,8 +140,10 @@ final class Linear: StackbarPlugin {
     var inProgress: [Issue] { assigned.filter { $0.state.type == "started" } }
 
     func row(_ issue: Issue) -> Row {
-        var row = Row(issue.title, subtitle: "\(issue.identifier) · \(issue.state.name)", symbol: issue.state.type == "started" ? "circle.lefthalf.filled" : "circle", key: issue.id)
-        if let priority = Self.priorityName(issue.priority) { row = row.badge(priority, role: issue.priority == 1 ? .critical : issue.priority == 2 ? .warning : .secondary) }
+        var row = Row(issue.title, subtitle: "\(issue.identifier) · \(issue.state.name)", symbol: Self.symbol(issue.state.type), key: issue.id)
+        if issue.priority == 1 || issue.priority == 2, let priority = Self.priorityName(issue.priority) {
+            row = row.badge(priority, role: issue.priority == 1 ? .critical : .warning)
+        }
         return row
             .action("Open") { Stackbar.open(issue.url) }
             .action("Copy Branch Name", shortcut: "cmd+shift+b") { Stackbar.copy(issue.branchName) }
@@ -151,26 +153,54 @@ final class Linear: StackbarPlugin {
 
     // MARK: Surfaces
 
+    static func symbol(_ type: String) -> String {
+        switch type {
+        case "started": return "circle.lefthalf.filled"
+        case "backlog": return "circle.dotted"
+        case "triage": return "exclamationmark.circle"
+        default: return "circle"
+        }
+    }
+
+    let theme = Theme.indigo
+    var urgent: Int { assigned.filter { $0.priority == 1 }.count }
+
     var menuBar: ViewContent {
         let count = menuBarCount == "All assigned" ? assigned.count : inProgress.count
         if problem != nil, loaded {
+            Label("", symbol: "checklist").role(.warning)
+        } else if count == 0 {
             Label("", symbol: "checklist").role(.secondary)
         } else {
-            Label(count == 0 ? "" : "\(count)", symbol: "checklist").role(count == 0 ? .secondary : .primary)
+            Label("\(count)", symbol: "checklist").role(urgent > 0 ? .warning : .primary)
         }
     }
 
     var panel: ViewContent {
-        if let problem {
-            ContentUnavailableView("Can't reach Linear", symbol: "exclamationmark.triangle", message: problem)
-        } else if !loaded {
-            ContentUnavailableView("Loading…", symbol: "checklist")
-        } else if assigned.isEmpty {
-            ContentUnavailableView("Nothing assigned to you", symbol: "checkmark.circle")
-        } else {
-            ForEach(groups) { group in
-                Section(group.state) {
-                    ForEach(group.issues) { issue in self.row(issue) }
+        VStack(spacing: Space.m) {
+            if !loaded {
+                PanelHeader("Linear", subtitle: "Checking…", symbol: "checklist", theme: theme)
+            } else if let problem, assigned.isEmpty {
+                if problem.contains("LINEAR_API_KEY") && !problem.contains("401") {
+                    EmptyState("Paste a Linear API key above", symbol: "key.fill", message: "Create a personal API key in Linear under Settings > Security & access.", theme: theme)
+                } else {
+                    EmptyState("Can't reach Linear", symbol: "exclamationmark.triangle.fill", message: problem, theme: .critical) {
+                        ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh() }
+                    }
+                }
+            } else {
+                PanelHeader(inProgress.isEmpty ? (assigned.isEmpty ? "Nothing assigned" : "Nothing in progress") : "\(inProgress.count) in progress", subtitle: "\(assigned.count) assigned" + (urgent > 0 ? " · \(urgent) urgent" : ""), symbol: "checklist", theme: theme)
+                if let problem { Banner(problem) }
+                if assigned.isEmpty {
+                    EmptyState("Nothing assigned to you", symbol: "checkmark", theme: .success)
+                } else {
+                    VStack(spacing: Space.s) {
+                        ForEach(groups) { group in
+                            Section("\(group.state) · \(group.issues.count)") {
+                                ForEach(group.issues) { issue in self.row(issue) }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -178,7 +208,7 @@ final class Linear: StackbarPlugin {
 
     var settings: ViewContent {
         Section("Menu bar") {
-            Picker("Count", options: ["In progress", "All assigned"], selection: menuBarCount) { self.menuBarCount = $0 }
+            Picker("Count", options: ["In progress", "All assigned"], selection: menuBarCount, style: .segmented) { self.menuBarCount = $0 }
         }
         Section("New issues") {
             if teams.isEmpty {
@@ -232,7 +262,7 @@ final class Linear: StackbarPlugin {
             } onSubmit: { values in
                 try await self.create(values)
             }
-            if let created { Text(created).style(.caption) }
+            if let created { Banner(created, symbol: "checkmark.circle.fill", theme: .success) }
         }
     }
 
@@ -255,7 +285,7 @@ final class Linear: StackbarPlugin {
         do {
             let reply = try await query("mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { identifier url } } }", variables: ["input": input], as: Created.self)
             guard let issue = reply.issueCreate.issue else { formError = "Linear didn't create it"; return }
-            created = "Created \(issue.identifier)"
+            created = "Created \(issue.identifier) · link copied"
             Stackbar.copy(issue.url)
             try await refresh()
         } catch {

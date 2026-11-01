@@ -15,14 +15,14 @@ final class Quicklinks: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.quicklinks",
         name: "Quicklinks",
-        version: "1.0.1",
+        version: "1.1.0",
         summary: "Open links and folders by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
         // Any link or folder, in the app each quicklink names; the clipboard
         // and selection for {clipboard} and {selection}.
         capabilities: [.openURLs(schemes: ["*"]), .clipboard, .context],
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks"
     )
 
@@ -41,6 +41,8 @@ final class Quicklinks: StackbarPlugin {
     }
 
     @Stored("quicklinks") var links: [Link] = []
+    /// The tag the panel filters by; nil shows them all.
+    @Stored("panelTag") var panelTag: String? = nil
     var draft = Draft()
     var notice: String?
 
@@ -115,6 +117,27 @@ final class Quicklinks: StackbarPlugin {
         Array(Set(links.flatMap(\.tags))).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
+    /// Tags, the most used first, for the panel's chips.
+    var tagsByUse: [String] {
+        let counts = Dictionary(links.flatMap(\.tags).map { ($0, 1) }, uniquingKeysWith: +)
+        return allTags.sorted { (counts[$0] ?? 0, $1) > (counts[$1] ?? 0, $0) }
+    }
+
+    /// The host and path, without the template's placeholders.
+    static func readable(_ link: Link) -> String {
+        let arguments = link.template?.arguments.map(\.name) ?? []
+        guard kind(of: link.link) == .web else { return link.link }
+        let shown = host(of: link.link) ?? link.link
+        return arguments.isEmpty ? shown + pathHint(link.link) : "\(shown) · asks for \(arguments.joined(separator: ", "))"
+    }
+
+    static func pathHint(_ link: String) -> String {
+        let full = target(link)
+        guard let start = full.range(of: "://")?.upperBound, let slash = full[start...].firstIndex(of: "/") else { return "" }
+        let path = full[slash...]
+        return path.count <= 1 ? "" : path.count > 24 ? String(path.prefix(23)) + "…" : String(path)
+    }
+
     var commands: [Command] {
         for link in links { command(for: link) }
         Command("search", title: "Search Quicklinks", subtitle: "Open, edit or copy a quicklink", symbol: "link", keywords: ["quicklink", "bookmark", "url"])
@@ -153,7 +176,10 @@ final class Quicklinks: StackbarPlugin {
         let shown = links.filter { tag == nil || tag == "All" || $0.tags.contains(tag!) }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         if links.isEmpty {
-            ContentUnavailableView("No quicklinks yet", symbol: "link", message: "Create one, or import a Raycast export from Settings.")
+            EmptyState("No quicklinks yet", symbol: "link", message: "Open links, folders and apps by name, with placeholders filled in. Import brings in a Raycast export.", theme: theme) {
+                ActionButton("Create Quicklink", symbol: "plus", theme: theme, prominent: true) { self.openCommand("create") }
+                ActionButton("Import", symbol: "square.and.arrow.down", theme: theme) { self.notice = try await self.importLinks() }
+            }
         } else {
             List(searchable: true) {
                 ForEach(shown) { link in self.row(link) }
@@ -162,8 +188,8 @@ final class Quicklinks: StackbarPlugin {
     }
 
     func row(_ link: Link) -> Row {
-        var row = Row(link.name, subtitle: link.link, symbol: Self.symbol(for: link), key: link.id.uuidString).appIcon(link.openWith)
-        for tag in link.tags { row = row.badge(tag) }
+        var row = Row(link.name, subtitle: Self.readable(link), symbol: Self.symbol(for: link), key: link.id.uuidString).appIcon(link.openWith)
+        if let tag = link.tags.first { row = row.badge(tag) }
         let needsInput = link.template?.arguments.contains(where: \.required) ?? false
         // With arguments to fill in, Return opens the quicklink's own
         // command, which asks for them.
@@ -178,7 +204,8 @@ final class Quicklinks: StackbarPlugin {
             .action("Duplicate", shortcut: "cmd+d") {
                 var copy = link
                 copy.id = UUID()
-                copy.name = link.name + " copy"
+                // "Name 2" sorts next to the original.
+                copy.name = link.name + " 2"
                 self.links.append(copy)
             }
             .action("Delete", shortcut: "ctrl+x", role: .critical) {
@@ -195,7 +222,7 @@ final class Quicklinks: StackbarPlugin {
             FormField.text("Link", name: "link", value: existing?.link ?? "", placeholder: #"https://github.com/search?q={argument name="query"}"#, error: draft.linkError)
             FormField.application("Open with", name: "app", bundleID: existing?.openWith)
             FormField.text("Tags", name: "tags", value: existing?.tags.joined(separator: ", ") ?? "", placeholder: "work, docs")
-            FormField.text("Symbol", name: "symbol", value: existing?.symbol ?? "", placeholder: "An SF Symbol, like star")
+            FormField.picker("Symbol", name: "symbol", options: Self.symbols, selection: existing?.symbol.flatMap { Self.symbols.contains($0) ? $0 : nil } ?? "Automatic")
         } onSubmit: { values in
             self.save(values, editing: id)
         }
@@ -213,7 +240,7 @@ final class Quicklinks: StackbarPlugin {
         guard draft.nameError == nil, draft.linkError == nil else { return }
         let tags = (values.string("tags") ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         let app = values.string("app").flatMap { $0.isEmpty ? nil : $0 }
-        let symbol = values.string("symbol").flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0.trimmingCharacters(in: .whitespaces) }
+        let symbol = values.string("symbol").flatMap { $0.isEmpty || $0 == "Automatic" ? nil : $0 }
         if let id, let index = links.firstIndex(where: { $0.id == id }) {
             links[index].name = name
             links[index].link = text
@@ -295,8 +322,27 @@ final class Quicklinks: StackbarPlugin {
 
     // MARK: Panel and settings
 
+    let theme = Theme.cyan
+
+    /// "Automatic" is the link kind's own symbol.
+    static let symbols = ["Automatic", "star", "globe", "folder", "doc.text", "book", "magnifyingglass", "chevron.left.forwardslash.chevron.right",
+                          "terminal", "server.rack", "cloud", "envelope", "calendar", "person.2", "cart", "music.note", "map"]
+
+    func openCommand(_ command: String) {
+        Stackbar.open("stackbar://commands/\(Self.manifest.id)/\(command)")
+    }
+
     var panel: ViewContent {
-        searchView(tag: nil)
+        if !links.isEmpty {
+            PanelHeader(links.count == 1 ? "1 quicklink" : "\(links.count) quicklinks", subtitle: "Type a name in the palette to open one", symbol: "link", theme: theme) {
+                IconButton("plus", label: "New Quicklink", theme: theme, prominence: .tinted) { self.openCommand("create") }
+            }
+            if let notice { Banner(notice, symbol: "checkmark.circle.fill", theme: .success) }
+            if !allTags.isEmpty {
+                TagChips(tagsByUse, selection: panelTag.flatMap { allTags.contains($0) ? $0 : nil }, theme: theme) { self.panelTag = $0 }
+            }
+        }
+        searchView(tag: panelTag.flatMap { allTags.contains($0) ? $0 : nil })
     }
 
     var settings: ViewContent {

@@ -12,12 +12,12 @@ final class Jira: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.jira",
         name: "Jira",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Your assigned Jira Cloud issues, search and new issues from the palette.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("*.atlassian.net"), .secret(name: "JIRA_API_TOKEN")],
-        minimumStackbar: "0.11.0",
+        minimumStackbar: "0.13.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira"
     )
 
@@ -144,10 +144,10 @@ final class Jira: StackbarPlugin {
     // MARK: Rows
 
     func row(_ issue: Issue) -> Row {
-        var row = Row(issue.fields.summary, subtitle: "\(issue.key) · \(issue.fields.status?.name ?? "")", symbol: issue.category == "indeterminate" ? "circle.lefthalf.filled" : issue.category == "done" ? "checkmark.circle" : "circle", key: issue.id)
-        if let type = issue.fields.issuetype?.name { row = row.badge(type) }
+        let subtitle = [issue.key, issue.fields.issuetype?.name, issue.fields.status?.name].compactMap { $0 }.joined(separator: " · ")
+        var row = Row(issue.fields.summary, subtitle: subtitle, symbol: issue.category == "indeterminate" ? "circle.lefthalf.filled" : issue.category == "done" ? "checkmark.circle" : "circle", key: issue.id)
         if let priority = issue.fields.priority?.name, ["Highest", "High", "Blocker", "Critical"].contains(priority) {
-            row = row.badge(priority, role: .warning)
+            row = row.badge(priority, role: ["Highest", "Blocker"].contains(priority) ? .critical : .warning)
         }
         let link = url(for: issue)
         return row
@@ -167,53 +167,89 @@ final class Jira: StackbarPlugin {
 
     var inProgress: [Issue] { assigned.filter { $0.category == "indeterminate" } }
 
+    let theme = Theme.blue
+    var needsSetup: Bool { Self.host(of: site) == nil || email.isEmpty }
+
     var menuBar: ViewContent {
-        if problem != nil, loaded {
+        if problem != nil, loaded, !needsSetup {
+            Label("", symbol: "square.stack.3d.up").role(.warning)
+        } else if inProgress.isEmpty {
             Label("", symbol: "square.stack.3d.up").role(.secondary)
         } else {
-            Label(inProgress.isEmpty ? "" : "\(inProgress.count)", symbol: "square.stack.3d.up").role(inProgress.isEmpty ? .secondary : .primary)
+            Label("\(inProgress.count)", symbol: "square.stack.3d.up.fill")
         }
     }
 
     var panel: ViewContent {
-        if let problem {
-            ContentUnavailableView("Can't reach Jira", symbol: "exclamationmark.triangle", message: problem)
-        } else if !loaded {
-            ContentUnavailableView("Loading…", symbol: "square.stack.3d.up")
-        } else if assigned.isEmpty {
-            ContentUnavailableView("Nothing assigned to you", symbol: "checkmark.circle")
-        } else {
-            let inProgress = assigned.filter { $0.category == "indeterminate" }
-            let toDo = assigned.filter { $0.category != "indeterminate" }
-            if !inProgress.isEmpty {
-                Section("In progress") { ForEach(inProgress) { issue in self.row(issue) } }
-            }
-            if !toDo.isEmpty {
-                Section("To do") { ForEach(toDo) { issue in self.row(issue) } }
+        VStack(spacing: Space.m) {
+            if needsSetup {
+                EmptyState("Connect Jira", symbol: "link", message: "Your Jira Cloud site and the email you sign in with. Then paste an API token from id.atlassian.com when Stackbar asks.", theme: theme)
+                Card {
+                    TextField("yourteam.atlassian.net", text: site, key: "site") { value in await self.setSite(value) }
+                    TextField("you@example.com", text: email, key: "email") { value in await self.setEmail(value) }
+                }
+            } else if !loaded {
+                PanelHeader("Jira", subtitle: "Checking…", symbol: "square.stack.3d.up.fill", theme: theme)
+            } else if let problem, assigned.isEmpty {
+                EmptyState("Can't reach Jira", symbol: "exclamationmark.triangle.fill", message: problem, theme: .critical) {
+                    ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh() }
+                }
+            } else {
+                let toDo = assigned.filter { $0.category == "new" }
+                let done = assigned.filter { $0.category == "done" }
+                PanelHeader(inProgress.isEmpty ? (assigned.isEmpty ? "Nothing assigned" : "Nothing in progress") : "\(inProgress.count) in progress", subtitle: "\(toDo.count) to do · \(Self.host(of: site) ?? site)", symbol: "square.stack.3d.up.fill", theme: theme)
+                if let problem { Banner(problem) }
+                if assigned.isEmpty {
+                    EmptyState("Nothing assigned to you", symbol: "checkmark", theme: .success)
+                } else {
+                    VStack(spacing: Space.s) {
+                        if !inProgress.isEmpty {
+                            Section("In progress · \(inProgress.count)") { ForEach(inProgress) { issue in self.row(issue) } }
+                        }
+                        if !toDo.isEmpty {
+                            Section("To do · \(toDo.count)") { ForEach(toDo) { issue in self.row(issue) } }
+                        }
+                        if !done.isEmpty {
+                            Section("Done · \(done.count)") { ForEach(done) { issue in self.row(issue) } }
+                        }
+                    }
+                }
             }
         }
     }
 
+    func setSite(_ value: String) async {
+        site = Self.host(of: value) ?? value
+        projects = []
+        try? await refresh()
+    }
+
+    func setEmail(_ value: String) async {
+        email = value.trimmingCharacters(in: .whitespaces)
+        try? await refresh()
+    }
+
     var settings: ViewContent {
         Section("Account") {
-            TextField("yourteam.atlassian.net", text: site, key: "site") { value in
-                self.site = Self.host(of: value) ?? value
-                self.projects = []
-                try await self.refresh()
-            }
-            TextField("you@example.com", text: email, key: "email") { value in
-                self.email = value.trimmingCharacters(in: .whitespaces)
-                try await self.refresh()
-            }
+            LabeledContent("Site", value: Self.host(of: site) ?? "Not set")
+            TextField("yourteam.atlassian.net", text: site, key: "site") { value in await self.setSite(value) }
+            LabeledContent("Email", value: email.isEmpty ? "Not set" : email)
+            TextField("you@example.com", text: email, key: "email") { value in await self.setEmail(value) }
             Text("Create an API token at id.atlassian.com > Security > API tokens. Stackbar asks for it the first time and keeps it in your Keychain as JIRA_API_TOKEN.").style(.caption)
             if let problem { Text(problem).role(.warning).style(.caption) }
         }
         Section("Issues") {
-            TextField(Self.defaultJQL, text: jql, key: "jql") { value in
+            TextField("JQL for the panel", text: jql, key: "jql") { value in
                 self.jql = value.trimmingCharacters(in: .whitespaces).isEmpty ? Self.defaultJQL : value
                 try await self.refresh()
             }
-            Text("The JQL for the menu bar and panel. Leave it empty for open issues assigned to you.").style(.caption)
+            if jql != Self.defaultJQL {
+                Button("Reset to Open Issues Assigned to Me", symbol: "arrow.uturn.backward") {
+                    self.jql = Self.defaultJQL
+                    try await self.refresh()
+                }
+            }
+            Text("Which issues the menu bar and panel show, as JQL.").style(.caption)
             if !projects.isEmpty {
                 Picker("Default project for new issues", options: projects.map(\.name), selection: projects.first { $0.key == defaultProject }?.name ?? projects[0].name) { name in
                     self.defaultProject = self.projects.first { $0.name == name }?.key ?? ""
@@ -258,7 +294,7 @@ final class Jira: StackbarPlugin {
             } onSubmit: { values in
                 try await self.create(values)
             }
-            if let created { Text(created).style(.caption) }
+            if let created { Banner(created, symbol: "checkmark.circle.fill", theme: .success) }
         }
     }
 

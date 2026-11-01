@@ -10,7 +10,7 @@ final class Pomodoro: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.pomodoro",
         name: "Pomodoro",
-        version: "1.0.0",
+        version: "1.0.1",
         summary: "A focus timer with presets, a progress ring, tags and today's sessions.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(1)), .wake],
@@ -84,15 +84,14 @@ final class Pomodoro: StackbarPlugin {
                 TimerText(range)
             }
         } else {
-            Label(session == nil ? "" : clock(session?.remaining ?? 0), symbol: "timer")
+            Label(session == nil ? "" : clock(session?.remaining ?? 0), symbol: "timer").role(session == nil ? .secondary : .primary)
         }
     }
 
     var panel: ViewContent {
-        VStack(alignment: .center, spacing: 14) {
+        VStack(alignment: .center, spacing: 12) {
             modeToggle
             presets
-            Text(mode.rawValue).font(size: 13, weight: .semibold).foreground(muted)
             countdown
             ring
             tagChip
@@ -213,6 +212,8 @@ final class Pomodoro: StackbarPlugin {
             HStack(spacing: 6) {
                 Circle().fill(orange).frame(width: 8, height: 8)
                 Text(currentTag)
+                // Says the chip changes on a click.
+                Image(systemName: "chevron.up.chevron.down").font(size: 10, weight: .bold).foreground(muted)
             }
             .font(size: 13, weight: .semibold)
             .foreground(ink)
@@ -220,6 +221,7 @@ final class Pomodoro: StackbarPlugin {
             .background(card, in: .capsule)
             .border(ink, width: 1.5, in: .capsule)
         }
+        .accessibilityLabel("Change tag: \(currentTag)")
     }
 
     @ViewBuilder private var stats: ViewContent {
