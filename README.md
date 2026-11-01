@@ -30,6 +30,7 @@ An update that asks for something new waits for your approval.
 | --- | --- | --- |
 | [Stay Awake](System/StayAwake) | System | Keeps your Mac awake for a while, until a time, while an app runs or on a schedule. |
 | [PR Cockpit](Developer/PRCockpit) | Developer | Your pull requests and the ones waiting on your review, with CI and review state. |
+| [LiteLLM](Monitoring/LiteLLM) | Monitoring | Tokens, spend, budget and model mix from your LiteLLM proxy, with charts. |
 | [Clipboard History](Productivity/Clipboard) | Productivity | Everything you copy, searchable and one keystroke from pasting back. |
 | [Quicklinks](Productivity/Quicklinks) | Productivity | Open links and folders by name, with placeholders filled in. |
 | [Snippets](Productivity/Snippets) | Productivity | Paste text by name, with placeholders filled in. |
