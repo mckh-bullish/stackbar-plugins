@@ -29,11 +29,20 @@ An update that asks for something new waits for your approval.
 | Plugin | Category | What it does |
 | --- | --- | --- |
 | [Stay Awake](System/StayAwake) | System | Keeps your Mac awake for a while, until a time, while an app runs or on a schedule. |
+| [Docker](Developer/Docker) | Developer | Your containers, with start, stop, restart and logs a click away. |
+| [GitHub](Developer/GitHub) | Developer | Your repositories and issues from the palette, and new issues without a browser. |
+| [Homebrew](Developer/Homebrew) | Developer | Outdated formulae and casks, with upgrades a click away. |
+| [Jira](Developer/Jira) | Developer | Your assigned Jira Cloud issues, search and new issues from the palette. |
+| [Linear](Developer/Linear) | Developer | Your assigned Linear issues, branch names, search and new issues from the palette. |
 | [PR Cockpit](Developer/PRCockpit) | Developer | Your pull requests and the ones waiting on your review, with CI and review state. |
+| [Ports](Developer/Ports) | Developer | Which process is listening on which port, and a way to stop it. |
 | [LiteLLM](Monitoring/LiteLLM) | Monitoring | Tokens, spend, budget and model mix from your LiteLLM proxy, with charts. |
+| [System Monitor](Monitoring/SystemMonitor) | Monitoring | CPU, memory and disk in the menu bar, with the processes using the most. |
 | [Clipboard History](Productivity/Clipboard) | Productivity | Everything you copy, searchable and one keystroke from pasting back. |
+| [Music](Productivity/Music) | Productivity | What's playing in Music or Spotify, with play, pause, skip and volume. |
 | [Quicklinks](Productivity/Quicklinks) | Productivity | Open links and folders by name, with placeholders filled in. |
 | [Snippets](Productivity/Snippets) | Productivity | Paste text by name, with placeholders filled in. |
+| [Translate](Productivity/Translate) | Productivity | Translate the selected text, in your browser or in place with DeepL. |
 | [Up Next](Productivity/UpNext) | Productivity | Your next meeting in the menu bar, with a countdown and one-click join. |
 | [World Clock](Productivity/WorldClock) | Productivity | The time in the cities you work with, with offsets and working hours. |
 

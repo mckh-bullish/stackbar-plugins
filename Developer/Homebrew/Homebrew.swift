@@ -1,0 +1,247 @@
+import StackbarKit
+import Foundation
+
+/// What Homebrew can upgrade, in the menu bar, with upgrades one click away.
+///
+/// Every hour (and on wake) it runs `brew outdated --json=v2`, which reads
+/// what Homebrew already knows and is quick. "Update Homebrew" runs
+/// `brew update` to fetch the latest formulae first. Runs go through
+/// Stackbar, which finds `brew` in /opt/homebrew/bin or /usr/local/bin and
+/// asks you to approve that path once.
+@main
+final class Homebrew: StackbarPlugin {
+    static let manifest = Manifest(
+        id: "io.navbytes.stackbar.plugins.homebrew",
+        name: "Homebrew",
+        version: "1.0.0",
+        summary: "Outdated formulae and casks, with upgrades a click away.",
+        surfaces: [.menuBar, .panel, .settings],
+        triggers: [.launch, .minutes(60), .wake],
+        capabilities: [.run(commands: ["brew"])],
+        minimumStackbar: "0.11.0",
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew"
+    )
+
+    struct Package: Equatable, Identifiable {
+        var name: String
+        var installed: String
+        var current: String
+        var isCask: Bool
+        var pinned: Bool
+        var id: String { (isCask ? "cask:" : "formula:") + name }
+    }
+
+    /// `brew outdated --json=v2`.
+    struct Outdated: Decodable {
+        struct Item: Decodable {
+            let name: String
+            let installed_versions: Versions
+            let current_version: String
+            let pinned: Bool?
+        }
+
+        /// A list for formulae; casks have sent both a list and a string.
+        struct Versions: Decodable {
+            let values: [String]
+            init(from decoder: Decoder) throws {
+                let container = try decoder.singleValueContainer()
+                if let list = try? container.decode([String].self) {
+                    values = list
+                } else {
+                    values = [try container.decode(String.self)]
+                }
+            }
+        }
+
+        let formulae: [Item]
+        let casks: [Item]
+    }
+
+    var packages: [Package] = []
+    var checked: Date?
+    var problem: String?
+    /// What is running now, like "Upgrading node".
+    var busy: String?
+    var lastResult: String?
+
+    @Stored("includeCasks") var includeCasks = true
+    @Stored("hidePinned") var hidePinned = true
+    @Stored("greedy") var greedy = false
+    @Stored("notify") var notifyNew = false
+
+    var shown: [Package] {
+        packages.filter { (includeCasks || !$0.isCask) && (!hidePinned || !$0.pinned) }
+    }
+
+    func refresh() async throws {
+        await check()
+    }
+
+    func check() async {
+        var arguments = ["outdated", "--json=v2"]
+        if greedy { arguments.append("--greedy") }
+        do {
+            let result = try await Stackbar.run("brew", arguments, environment: Self.quiet, timeout: .seconds(120))
+            guard result.succeeded else {
+                problem = Self.failure(result, doing: "brew outdated")
+                return
+            }
+            let reply = try JSONDecoder().decode(Outdated.self, from: result.stdout)
+            let fresh = reply.formulae.map { Package(name: $0.name, installed: $0.installed_versions.values.last ?? "?", current: $0.current_version, isCask: false, pinned: $0.pinned ?? false) }
+                + reply.casks.map { Package(name: $0.name, installed: $0.installed_versions.values.last ?? "?", current: $0.current_version, isCask: true, pinned: false) }
+            if notifyNew, checked != nil {
+                let known = Set(packages.map(\.id))
+                let new = fresh.filter { !known.contains($0.id) && (includeCasks || !$0.isCask) }
+                if !new.isEmpty {
+                    Stackbar.notify("Homebrew: \(new.count) new update\(new.count == 1 ? "" : "s")", body: new.prefix(5).map(\.name).joined(separator: ", "))
+                }
+            }
+            packages = fresh.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            checked = Date()
+            problem = nil
+        } catch {
+            problem = Self.explain(error)
+        }
+    }
+
+    /// No auto-update, hints or analytics noise in the output.
+    static let quiet = ["HOMEBREW_NO_AUTO_UPDATE": "1", "HOMEBREW_NO_ENV_HINTS": "1", "HOMEBREW_NO_INSTALL_CLEANUP": "1", "HOMEBREW_NO_COLOR": "1"]
+
+    static func explain(_ error: Error) -> String {
+        let text = "\(error)"
+        if text.contains("not installed") || text.contains("not found") {
+            return "Homebrew isn't installed. Get it from brew.sh, then refresh."
+        }
+        return text
+    }
+
+    static func failure(_ result: RunResult, doing what: String) -> String {
+        if result.timedOut { return "\(what) took too long" }
+        let message = result.errorText.split(separator: "\n").last { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.map(String.init)
+        return "\(what) failed (\(result.status))" + (message.map { ": \($0)" } ?? "")
+    }
+
+    // MARK: Actions
+
+    func upgrade(_ names: [String], label: String) async throws {
+        guard busy == nil else { throw HostError("\(busy!) is still running") }
+        busy = label
+        defer { busy = nil }
+        let result = try await Stackbar.run("brew", ["upgrade"] + names, environment: Self.quiet, timeout: .seconds(600))
+        lastResult = result.succeeded ? "\(label): done" : Self.failure(result, doing: label)
+        await check()
+        if !result.succeeded { throw HostError(lastResult!) }
+    }
+
+    func update() async throws -> String {
+        guard busy == nil else { throw HostError("\(busy!) is still running") }
+        busy = "Updating Homebrew"
+        defer { busy = nil }
+        let result = try await Stackbar.run("brew", ["update"], environment: ["HOMEBREW_NO_ENV_HINTS": "1", "HOMEBREW_NO_COLOR": "1"], timeout: .seconds(300))
+        guard result.succeeded else { throw HostError(Self.failure(result, doing: "brew update")) }
+        await check()
+        lastResult = "Updated; \(shown.count) outdated"
+        return lastResult!
+    }
+
+    // MARK: Surfaces
+
+    var menuBar: ViewContent {
+        if busy != nil {
+            Label("…", symbol: "arrow.triangle.2.circlepath")
+        } else if problem != nil {
+            Label("!", symbol: "mug").role(.warning)
+        } else {
+            Label(shown.isEmpty ? "" : "\(shown.count)", symbol: "mug").role(shown.isEmpty ? .secondary : .accent)
+        }
+    }
+
+    var panel: ViewContent {
+        if let problem {
+            ContentUnavailableView("Can't check Homebrew", symbol: "exclamationmark.triangle", message: problem)
+            Button("Try Again", symbol: "arrow.clockwise") { await self.check() }
+        } else if checked == nil {
+            ContentUnavailableView("Checking…", symbol: "mug")
+        } else if shown.isEmpty {
+            ContentUnavailableView("Everything is up to date", symbol: "checkmark.seal", message: checkedText)
+            Button("Update Homebrew", symbol: "arrow.down.circle") { _ = try await self.update() }
+        } else {
+            if let busy { Label(busy, symbol: "arrow.triangle.2.circlepath").role(.accent) }
+            List(shown, searchable: shown.count > 8) { package in
+                self.row(package)
+            }
+            HStack {
+                Button("Upgrade All", symbol: "arrow.up.circle", role: .accent) {
+                    try await self.upgrade(self.shown.map(\.name), label: "Upgrading everything")
+                }
+                Button("Update Homebrew", symbol: "arrow.down.circle") { _ = try await self.update() }
+            }
+            Text(checkedText + (lastResult.map { " · \($0)" } ?? "")).style(.caption)
+        }
+    }
+
+    var checkedText: String {
+        guard let checked else { return "" }
+        return "Checked " + checked.formatted(date: .omitted, time: .shortened)
+    }
+
+    func row(_ package: Package) -> Row {
+        var row = Row(package.name, subtitle: "\(package.installed) → \(package.current)", symbol: package.isCask ? "macwindow" : "shippingbox", key: package.id)
+        if package.isCask { row = row.badge("cask") }
+        if package.pinned { row = row.badge("pinned", role: .warning) }
+        return row
+            .action("Upgrade") { try await self.upgrade([package.name], label: "Upgrading \(package.name)") }
+            .action("Open Homepage", shortcut: "cmd+o") {
+                Stackbar.open("https://formulae.brew.sh/\(package.isCask ? "cask" : "formula")/\(package.name)")
+            }
+            .action("Copy Upgrade Command", shortcut: "cmd+shift+c") {
+                Stackbar.copy("brew upgrade \(package.isCask ? "--cask " : "")\(package.name)")
+            }
+    }
+
+    var settings: ViewContent {
+        Section("Show") {
+            Toggle("Casks", isOn: includeCasks) { self.includeCasks = $0 }
+            Toggle("Hide pinned formulae", isOn: hidePinned) { self.hidePinned = $0 }
+            Toggle("Casks that update themselves (--greedy)", isOn: greedy) { value in
+                self.greedy = value
+                await self.check()
+            }
+        }
+        Section("Notify") {
+            Toggle("When new updates appear", isOn: notifyNew) { self.notifyNew = $0 }
+        }
+        Section("How it checks") {
+            Text("Hourly and on wake, Stackbar runs brew outdated, which reads what Homebrew already knows. Update Homebrew runs brew update to fetch the latest. Nothing runs in a shell.").style(.caption)
+        }
+    }
+
+    var commands: [Command] {
+        Command("upgrade-all", title: "Upgrade All Homebrew Packages", symbol: "arrow.up.circle", keywords: ["brew", "homebrew", "upgrade"]) { _ in
+            await self.check()
+            let names = self.shown.map(\.name)
+            guard !names.isEmpty else { return .message("Everything is up to date") }
+            try await self.upgrade(names, label: "Upgrading \(names.count) package\(names.count == 1 ? "" : "s")")
+            return .message("Upgraded \(names.count)")
+        }
+        Command("update", title: "Update Homebrew", symbol: "arrow.down.circle", keywords: ["brew", "homebrew"]) { _ in
+            .message(try await self.update())
+        }
+        Command("outdated", title: "Outdated Homebrew Packages", symbol: "mug", keywords: ["brew", "homebrew"])
+            .view(search: { _ in await self.check() }) { _ in
+                if let problem = self.problem {
+                    ContentUnavailableView("Can't check Homebrew", symbol: "exclamationmark.triangle", message: problem)
+                } else if self.shown.isEmpty {
+                    ContentUnavailableView("Everything is up to date", symbol: "checkmark.seal")
+                } else {
+                    List(self.shown, searchable: true) { package in self.row(package) }
+                }
+            }
+    }
+
+    var tools: [AgentTool] {
+        AgentTool("outdated", description: "Homebrew formulae and casks with updates, as name installed -> current") { _ in
+            self.shown.isEmpty ? "Everything is up to date" : self.shown.map { "\($0.name) \($0.installed) -> \($0.current)\($0.isCask ? " (cask)" : "")" }.joined(separator: "\n")
+        }
+    }
+}
