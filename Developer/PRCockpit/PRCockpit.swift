@@ -19,7 +19,7 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.4.0",
+        version: "1.4.1",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
@@ -78,6 +78,9 @@ final class PRCockpit: StackbarPlugin {
         case mine = "Mine"
         case issues = "Issues"
         case inbox = "Inbox"
+
+        /// Short, so four tabs and their counts fit the panel's width.
+        var title: String { self == .review ? "Review" : rawValue }
     }
 
     /// One of your repositories (REST).
@@ -649,7 +652,7 @@ final class PRCockpit: StackbarPlugin {
                     }
                 }
                 Picker("Show", options: tabs.map(label), selection: label(currentTab), style: .segmented) { chosen in
-                    self.tab = (self.tabs.first { chosen.hasPrefix($0.rawValue) } ?? .review).rawValue
+                    self.tab = (self.tabs.first { self.label($0) == chosen } ?? .review).rawValue
                 }
                 if let lastError { Banner(lastError) }
                 if currentTab == .inbox {
@@ -815,13 +818,16 @@ final class PRCockpit: StackbarPlugin {
         return tabs.contains(chosen) ? chosen : .review
     }
 
+    /// The tab's title, with its count when there is something in it.
     func label(_ tab: Tab) -> String {
+        let count: Int
         switch tab {
-        case .review: return "\(tab.rawValue) (\(shownReview.count))"
-        case .mine: return "\(tab.rawValue) (\(shownMine.count))"
-        case .issues: return "\(tab.rawValue) (\(issues.count))"
-        case .inbox: return "\(tab.rawValue) (\(inbox.filter(\.unread).count))"
+        case .review: count = shownReview.count
+        case .mine: count = shownMine.count
+        case .issues: count = issues.count
+        case .inbox: count = inbox.filter(\.unread).count
         }
+        return count > 0 ? "\(tab.title) \(count)" : tab.title
     }
 
     @ViewBuilder func list(_ prs: [PullRequest], showAuthor: Bool, empty: (String, String)) -> ViewContent {
