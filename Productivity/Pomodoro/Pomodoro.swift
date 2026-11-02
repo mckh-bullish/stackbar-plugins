@@ -4,13 +4,15 @@ import Foundation
 /// A focus timer in the Stackbar look: Focus and Break modes, presets, a
 /// big countdown inside a progress ring, a tag for what you are working on,
 /// and today's sessions. Stackbar counts the timer and animates the ring, so
-/// the plugin only renders when something changes. Needs nothing.
+/// the plugin only renders when something changes. Commands start, pause and
+/// skip from the palette, a hotkey or a Shortcut, and a stray tap never
+/// throws away a session already under way. Needs nothing.
 @main
 final class Pomodoro: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.pomodoro",
         name: "Pomodoro",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "A focus timer with presets, a progress ring, tags and today's sessions.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(1)), .wake],
@@ -42,6 +44,21 @@ final class Pomodoro: StackbarPlugin {
         }
     }
 
+    /// A tap that would end a session already under way, held until the
+    /// user confirms it.
+    enum Pending: Equatable {
+        case mode(Mode), minutes(Int), skip, reset
+
+        var verb: String {
+            switch self {
+            case .mode(let mode): return "Switch to \(mode.rawValue)"
+            case .minutes(let minutes): return "Start \(minutes) min"
+            case .skip: return "Skip"
+            case .reset: return "Reset"
+            }
+        }
+    }
+
     struct Day: Codable, Equatable {
         var sessions = 0
         var minutes = 0
@@ -63,6 +80,10 @@ final class Pomodoro: StackbarPlugin {
     @Stored("days") var days: [String: Day] = [:]
 
     var now = Date()
+    var pending: Pending?
+
+    /// How far into a session a tap has to be before it asks first.
+    static let protectedAfter: TimeInterval = 60
 
     func refresh() async throws {
         now = Date()
@@ -78,22 +99,33 @@ final class Pomodoro: StackbarPlugin {
                 TimerText(range)
             }
         } else {
-            Label(session == nil ? "" : clock(session?.remaining ?? 0), symbol: "timer").role(session == nil ? .secondary : .primary)
+            if let session {
+                // Paused: the frozen time, dimmed, behind a pause sign.
+                Label(clock(session.remaining), symbol: "pause.fill").role(.secondary)
+            } else {
+                Label("", symbol: "timer").role(.secondary)
+            }
         }
     }
 
     var panel: ViewContent {
         PanelHeader(headline, subtitle: "\(today.sessions) sessions · \(minutesText(today.minutes)) focused today", symbol: mode.symbol, theme: theme) {
-            IconButton("arrow.counterclockwise", label: "Reset", theme: theme, key: "reset") { self.reset() }
+            IconButton("arrow.counterclockwise", label: "Reset", theme: theme, key: "reset") { self.guarded(.reset) }
+        }
+        if let pending {
+            Banner(warning(for: pending), symbol: "hand.raised.fill", theme: theme) {
+                ActionButton("Keep going", theme: theme, key: "keep") { self.pending = nil }
+                ActionButton(pending.verb, theme: theme, prominent: true, key: "confirm") { self.apply(pending) }
+            }
         }
         Picker("Mode", options: Mode.allCases.map(\.rawValue), selection: mode.rawValue, style: .segmented, key: "mode") { choice in
-            self.select(Mode(rawValue: choice) ?? .focus)
+            self.guarded(.mode(Mode(rawValue: choice) ?? .focus))
         }
         HeroCard(theme: theme, look: .glow, alignment: .center, spacing: Space.m) {
             dial(size: 172, lineWidth: 12, timeSize: 40)
             HStack(spacing: Space.xs) {
                 ForEach(presetMinutes) { minutes in
-                    Chip("\(minutes) min", theme: theme, selected: minutes == currentMinutes, key: "preset-\(minutes)") { self.setMinutes(minutes) }
+                    Chip("\(minutes) min", theme: theme, selected: minutes == currentMinutes, key: "preset-\(minutes)") { self.guarded(.minutes(minutes)) }
                 }
             }
             controls
@@ -141,8 +173,31 @@ final class Pomodoro: StackbarPlugin {
     var tools: [AgentTool] {
         AgentTool("status", description: "The timer's mode, time left and today's focus") { _ in
             let today = self.today
-            let state = self.session.map { "\($0.mode.rawValue) on \($0.tag), \(self.clock(self.left($0))) left\($0.started == nil ? " (paused)" : "")" } ?? "Idle"
-            return "\(state). Today: \(today.sessions) sessions, \(today.minutes) minutes focused."
+            return "\(self.statusLine). Today: \(today.sessions) sessions, \(today.minutes) minutes focused."
+        }
+    }
+
+    var commands: [Command] {
+        Command("toggle", title: "Start or Pause Pomodoro", symbol: "playpause.fill", keywords: ["pomodoro", "timer", "focus", "pause", "resume", "tomato"]) { _ in
+            self.toggle()
+            return .message(self.statusLine)
+        }
+        Command("start-focus", title: "Start a Focus Session", subtitle: "Optionally a length in minutes and a tag", symbol: Mode.focus.symbol, keywords: ["pomodoro", "timer", "focus", "work", "tomato"]) { invocation in
+            self.command(.focus, minutes: invocation["minutes"], tag: invocation["tag"])
+        }
+        .argument("minutes", placeholder: "\(focusMinutes)", required: false)
+        .argument("tag", placeholder: tag, required: false, options: tags)
+        Command("start-break", title: "Take a Break", subtitle: "Optionally a length in minutes", symbol: Mode.rest.symbol, keywords: ["pomodoro", "timer", "break", "rest", "tomato"]) { invocation in
+            self.command(.rest, minutes: invocation["minutes"], tag: nil)
+        }
+        .argument("minutes", placeholder: "\(breakMinutes)", required: false)
+        Command("skip", title: "Skip to the Next Pomodoro Session", symbol: "forward.fill", keywords: ["pomodoro", "timer", "skip", "next"]) { _ in
+            self.skip()
+            return .message("Up next: \(self.mode.rawValue), \(self.currentMinutes) min")
+        }
+        Command("reset", title: "Reset Pomodoro", symbol: "arrow.counterclockwise", keywords: ["pomodoro", "timer", "reset", "stop", "cancel"]) { _ in
+            self.reset()
+            return .message("Pomodoro reset")
         }
     }
 
@@ -179,7 +234,7 @@ final class Pomodoro: StackbarPlugin {
     @ViewBuilder private var controls: ViewContent {
         HStack(alignment: .center, spacing: Space.m) {
             IconButton(autoStart ? "repeat" : "repeat.1", label: autoStart ? "Auto-start on" : "Auto-start off", theme: theme, size: 34, key: "auto") { self.autoStart.toggle() }
-            IconButton("forward.fill", label: "Skip", theme: theme, size: 34, key: "skip") { self.skip() }
+            IconButton("forward.fill", label: "Skip", theme: theme, size: 34, key: "skip") { self.guarded(.skip) }
             IconButton(isRunning ? "pause.fill" : "play.fill", label: isRunning ? "Pause" : "Start", theme: theme, prominence: .filled, size: 52, key: "start") { self.toggle() }
             IconButton(sound ? "speaker.wave.2.fill" : "speaker.slash.fill", label: sound ? "Sound on" : "Sound off", theme: theme, size: 34, key: "sound") { self.sound.toggle() }
         }
@@ -220,6 +275,73 @@ final class Pomodoro: StackbarPlugin {
         session.end.map { max(0, $0.timeIntervalSince(now)) } ?? session.remaining
     }
 
+    /// One line on where the timer stands, for commands and the agent tool.
+    private var statusLine: String {
+        now = Date()
+        guard let session else { return "Idle. Next: \(mode.rawValue), \(currentMinutes) min" }
+        let state = session.started == nil ? "Paused" : (session.mode == .focus ? "Focusing" : "On a break")
+        return "\(state)\(session.mode == .focus ? " on \(session.tag)" : ""), \(clock(left(session))) left"
+    }
+
+    /// Seconds of the current session already behind the user.
+    private var progress: TimeInterval {
+        guard let session else { return 0 }
+        return Double(session.minutes * 60) - left(session)
+    }
+
+    /// Applies a tap now, or, when it would end a session more than a
+    /// minute in, asks first with a banner.
+    private func guarded(_ change: Pending) {
+        now = Date()
+        if session != nil, progress >= Self.protectedAfter {
+            pending = change
+        } else {
+            apply(change)
+        }
+    }
+
+    private func apply(_ change: Pending) {
+        pending = nil
+        switch change {
+        case .mode(let mode): select(mode)
+        case .minutes(let minutes): setMinutes(minutes)
+        case .skip: skip()
+        case .reset: reset()
+        }
+    }
+
+    private func warning(for change: Pending) -> String {
+        let done = "\(Int(progress / 60)) min in"
+        switch change {
+        case .skip: return "Skipping ends this session without counting it (\(done))."
+        case .reset: return "Resetting throws away this session (\(done))."
+        case .mode, .minutes: return "This ends the session you are in (\(done))."
+        }
+    }
+
+    /// What a start command does: resumes or reports a session of the same
+    /// kind, otherwise starts a fresh one with any minutes and tag given.
+    private func command(_ kind: Mode, minutes text: String?, tag name: String?) -> CommandResult {
+        let text = text?.trimmingCharacters(in: .whitespaces).lowercased().replacingOccurrences(of: "min", with: "").trimmingCharacters(in: .whitespaces) ?? ""
+        let name = name?.trimmingCharacters(in: .whitespaces) ?? ""
+        var minutes: Int?
+        if !text.isEmpty {
+            guard let value = Int(text), (1...180).contains(value) else { return .failure("Give a length between 1 and 180 minutes") }
+            minutes = value
+        }
+        if let session, session.mode == kind, minutes == nil, name.isEmpty {
+            if session.started == nil { toggle() }
+            return .message(statusLine)
+        }
+        now = Date()
+        pending = nil
+        mode = kind
+        if !name.isEmpty { tag = name }
+        let length = minutes ?? (kind == .focus ? focusMinutes : breakMinutes)
+        session = Session(mode: kind, minutes: length, tag: tag, started: now, remaining: Double(length * 60))
+        return .message(statusLine)
+    }
+
     private func toggle() {
         now = Date()
         if var session {
@@ -258,6 +380,7 @@ final class Pomodoro: StackbarPlugin {
     }
 
     private func reset() {
+        pending = nil
         session = nil
     }
 
@@ -274,6 +397,7 @@ final class Pomodoro: StackbarPlugin {
         if counted && sound, let chime = SystemSound(rawValue: chime) { Stackbar.play(chime) }
         if counted { Stackbar.notify(ended.mode == .focus ? "Focus done" : "Break over", body: ended.mode == .focus ? "\(ended.minutes) minutes on \(ended.tag). Time for a break." : "Back to it.") }
         mode = ended.mode == .focus ? .rest : .focus
+        pending = nil
         session = nil
         if autoStart { toggle() }
     }
