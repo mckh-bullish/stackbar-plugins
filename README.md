@@ -42,6 +42,7 @@ An update that asks for something new waits for your approval.
 | [Pomodoro](Productivity/Pomodoro) | Productivity | A focus timer with presets, a progress ring, tags and today's sessions. |
 | [Quicklinks](Productivity/Quicklinks) | Productivity | Open links and folders by name, with placeholders filled in. |
 | [Snippets](Productivity/Snippets) | Productivity | Paste text by name, with placeholders filled in. |
+| [Todo](Productivity/Todo) | Productivity | A calm to-do list that understands dates as you type them, with reminders and repeats. |
 | [Translate](Productivity/Translate) | Productivity | Translate the selected text in place, on your Mac or with Google or DeepL. |
 | [Up Next](Productivity/UpNext) | Productivity | Your next meeting in the menu bar, with a countdown and one-click join. |
 | [World Clock](Productivity/WorldClock) | Productivity | The time in the cities you work with, with offsets and working hours. |
