@@ -63,6 +63,10 @@ Up Next and PR Cockpit) live in the Stackbar repository and update with the app.
 - A push to `main` runs `scripts/publish.sh`: new versions are signed with the
   navbytes key and added to the `gh-pages` branch next to the old ones, and the
   signed `index.json` is rebuilt. Published versions are never rewritten.
+  Each version's surfaces are rendered in light and dark under
+  `<Category>/shots/<id>/<version>/`, listed in `site.json` for the plugin's
+  page on [stackbar.navbytes.io](https://stackbar.navbytes.io/plugins/), where
+  the branch's own address redirects.
 - `revoked.json` withdraws a published version; Stackbar removes it from Macs
   that installed it.
 - A nightly canary builds everything against Stackbar's `main`.

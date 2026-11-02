@@ -17,6 +17,21 @@ CTL="$(swift build -c release --show-bin-path)/stackbarctl"
 STACKBAR_PACKAGE="${STACKBAR_PATH:-$(pwd)/.build/checkouts/stackbar}"
 export STACKBAR_PACKAGE
 
+# Every surface in light and dark, for the plugin's page on the Stackbar site.
+# Renders are not part of a signed bundle, so a version missing them (one
+# published before renders existed) gets them on the next run.
+render_shots() {
+    out="$SITE/$1/shots/$2/$3"
+    [ -d "$out" ] && return 0
+    for appearance in light dark; do
+        flag=""
+        [ "$appearance" = dark ] && flag="--dark"
+        # shellcheck disable=SC2086
+        "$CTL" render "$4" --png "$out.tmp/$appearance" $flag > /dev/null || echo "warning: could not render $2 $3 $appearance"
+    done
+    if [ -d "$out.tmp/light" ]; then mv "$out.tmp" "$out"; else rm -rf "$out.tmp"; fi
+}
+
 for source in */*/*.swift; do
     case "$source" in scripts/*|.build/*) continue ;; esac
     category=${source%%/*}
@@ -36,15 +51,15 @@ if published != current:
     sys.exit(f"{source}: version already published with different source; raise its version")
 PY
         echo "unchanged: $id $version"
+        render_shots "$category" "$id" "$version" "$source"
         continue
     fi
     "$CTL" sign "$source" --publisher navbytes --key "$KEY" -o "$bundle"
-    shots=$(mktemp -d)
-    if "$CTL" render "$source" --surface panel --png "$shots" > /dev/null; then
-        first_png=$(ls "$shots"/*.png 2>/dev/null | head -1 || true)
-        [ -n "$first_png" ] && cp "$first_png" "$SITE/$category/$id.png"
-    fi
-    rm -rf "$shots"
+    render_shots "$category" "$id" "$version" "$source"
+    shots="$SITE/$category/shots/$id/$version/light"
+    for surface in panel menuBar window widget; do
+        if [ -f "$shots/$surface.png" ]; then cp "$shots/$surface.png" "$SITE/$category/$id.png"; break; fi
+    done
     echo "published: $id $version"
 done
 
@@ -52,3 +67,37 @@ done
     --homepage https://github.com/navbytes/stackbar-plugins \
     --revoked revoked.json --key "$KEY"
 touch "$SITE/.nojekyll"
+
+# site.json: each version's renders, for the site's plugin galleries.
+python3 - "$SITE" <<'PY'
+import json, os, sys
+site = sys.argv[1]
+plugins = {}
+for category in sorted(os.listdir(site)):
+    root = os.path.join(site, category, "shots")
+    if not os.path.isdir(root):
+        continue
+    for plugin in sorted(os.listdir(root)):
+        for version in sorted(os.listdir(os.path.join(root, plugin))):
+            shots = {}
+            for appearance in ("light", "dark"):
+                folder = os.path.join(root, plugin, version, appearance)
+                for name in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+                    if name.endswith(".png"):
+                        shots.setdefault(name[:-4], {})[appearance] = f"{category}/shots/{plugin}/{version}/{appearance}/{name}"
+            if shots:
+                plugins.setdefault(plugin, {})[version] = shots
+with open(os.path.join(site, "site.json"), "w") as out:
+    json.dump({"format": 1, "plugins": plugins}, out, indent=2, sort_keys=True)
+    out.write("\n")
+PY
+
+# People who open the store's address get the store's pages.
+cat > "$SITE/index.html" <<'HTML'
+<!doctype html>
+<meta charset="utf-8">
+<title>Stackbar Plugins</title>
+<link rel="canonical" href="https://stackbar.navbytes.io/plugins/">
+<meta http-equiv="refresh" content="0; url=https://stackbar.navbytes.io/plugins/">
+<p><a href="https://stackbar.navbytes.io/plugins/">Stackbar Plugins</a></p>
+HTML
