@@ -45,6 +45,7 @@ An update that asks for something new waits for your approval.
 | [Todo](Productivity/Todo) | Productivity | A calm to-do list that understands dates as you type them, with reminders and repeats. |
 | [Translate](Productivity/Translate) | Productivity | Translate the selected text in place, on your Mac or with Google or DeepL. |
 | [Up Next](Productivity/UpNext) | Productivity | Your next meeting in the menu bar, with a countdown and one-click join. |
+| [Workspaces](Productivity/Workspaces) | Productivity | Saves where your windows are for each monitor setup, and puts them back when you dock, undock or wake. |
 | [World Clock](Productivity/WorldClock) | Productivity | The time in the cities you work with, with offsets and working hours. |
 
 <!-- plugins:end -->
