@@ -33,7 +33,7 @@ render_shots() {
 }
 
 for source in */*/*.swift; do
-    case "$source" in scripts/*|.build/*) continue ;; esac
+    case "$source" in scripts/*|.build/*|Tests/*) continue ;; esac
     category=${source%%/*}
     first=$("$CTL" manifest "$source" | head -1)          # "Name 1.2.0 (io.navbytes...)"
     id=$(echo "$first" | sed -n 's/.*(\(.*\))$/\1/p')
