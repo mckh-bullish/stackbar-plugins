@@ -2,22 +2,25 @@ import StackbarKit
 import Foundation
 
 /// Your pull requests and the ones waiting on your review, with CI and review
-/// state, in the menu bar.
+/// state, in the menu bar; the issues assigned to you; and your repositories
+/// and new issues from the palette. (The separate GitHub plugin is now part
+/// of this one.)
 ///
 /// One GraphQL request a refresh fetches both lists with their checks, review
 /// decision and merge conflicts. It tells you when someone asks for your
 /// review, and when one of your own PRs is approved, gets changes requested,
 /// or its checks fail. The token is a `GITHUB_TOKEN` secret the host keeps in
-/// the Keychain (a fine-grained token with read access to pull requests is
-/// enough), and every request goes through the host to the one declared
-/// domain.
+/// the Keychain (a fine-grained token with read access to pull requests,
+/// issues and metadata covers everything but creating issues, which needs
+/// write access to issues), and every request goes through the host to the
+/// one declared domain.
 @main
 final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.3.0",
-        summary: "Your pull requests and the ones waiting on your review, with CI and review state.",
+        version: "1.4.0",
+        summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
         capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN")],
@@ -73,7 +76,41 @@ final class PRCockpit: StackbarPlugin {
     enum Tab: String, CaseIterable {
         case review = "To review"
         case mine = "Mine"
+        case issues = "Issues"
         case inbox = "Inbox"
+    }
+
+    /// One of your repositories (REST).
+    struct Repo: Codable, Equatable, Identifiable {
+        let id: Int
+        let full_name: String
+        let html_url: String
+        let ssh_url: String
+        let clone_url: String
+        let description: String?
+        let `private`: Bool
+        let fork: Bool
+        let archived: Bool
+        let has_issues: Bool
+        let open_issues_count: Int
+        let stargazers_count: Int
+        let pushed_at: Date?
+    }
+
+    /// An issue assigned to you (REST).
+    struct Issue: Decodable, Equatable, Identifiable {
+        struct Label: Decodable, Equatable { let name: String }
+        struct Repository: Decodable, Equatable { let full_name: String }
+        let id: Int
+        let number: Int
+        let title: String
+        let html_url: String
+        let updated_at: Date
+        let labels: [Label]
+        let repository: Repository?
+        let pull_request: [String: String?]?
+
+        var reference: String { "\(repository?.full_name ?? "")#\(number)" }
     }
 
     /// One thread from GitHub's notifications inbox (REST).
@@ -191,6 +228,18 @@ final class PRCockpit: StackbarPlugin {
     var inbox: [InboxItem] = []
     var inboxError: String?
     var recentlyClosed: [PullRequest] = []
+    var issues: [Issue] = []
+    var issuesError: String?
+    var issuesLoaded = false
+    @Stored("repos") var repos: [Repo] = []
+    @Stored("reposLoaded") var reposLoaded: Date? = nil
+    @Stored("recentRepos") var recentRepos: [String] = []
+    @Stored("includeArchived") var includeArchived = false
+    @Stored("cloneWith") var cloneWith = "SSH"
+    var repoResults: [Repo] = []
+    var reposError: String?
+    var formError: String?
+    var created: String?
 
     func refresh() async throws {
         defer { loaded = true }
@@ -226,6 +275,7 @@ final class PRCockpit: StackbarPlugin {
             lastError = "\(error)"
         }
         if showInbox { await refreshInbox(token: token) }
+        await loadIssues()
     }
 
     /// GitHub's notifications inbox. The REST API takes a classic token with
@@ -345,6 +395,163 @@ final class PRCockpit: StackbarPlugin {
         Stackbar.open(pr.url + path)
     }
 
+    // MARK: Issues and repositories (REST)
+
+    static let restDecoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }()
+
+    func rest(_ path: String, method: String = "GET", body: Data? = nil) async throws -> Data {
+        guard let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else {
+            throw HostError("Add a GitHub token (GITHUB_TOKEN) first")
+        }
+        let response = try await Stackbar.http(HTTPRequest(url: "https://api.github.com" + path, method: method, headers: [
+            "Authorization": "Bearer \(token)",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type": "application/json",
+        ], body: body))
+        switch response.status {
+        case 200..<300: return response.body
+        case 401: throw HostError("GitHub rejected the token (401); set a new GITHUB_TOKEN")
+        case 403, 404:
+            struct Message: Decodable { let message: String }
+            let message = (try? JSONDecoder().decode(Message.self, from: response.body))?.message ?? "not allowed"
+            throw HostError("GitHub said \(response.status): \(message). The token may need more access.")
+        case 422: throw HostError("GitHub couldn't do that (422): \(String(decoding: response.body.prefix(200), as: UTF8.self))")
+        default: throw HostError("GitHub answered \(response.status)")
+        }
+    }
+
+    /// Open issues assigned to you, telling you about new ones.
+    func loadIssues() async {
+        do {
+            let data = try await rest("/issues?filter=assigned&state=open&per_page=50&sort=updated")
+            let fresh = try Self.restDecoder.decode([Issue].self, from: data).filter { $0.pull_request == nil }
+            if notifyChanges, issuesLoaded {
+                let known = Set(issues.map(\.id))
+                let added = fresh.filter { !known.contains($0.id) }
+                if added.count == 1, let issue = added.first {
+                    Stackbar.notify("Assigned: \(issue.title)", body: issue.reference, actions: [NotificationAction("Open", url: issue.html_url)])
+                } else if added.count > 1 {
+                    Stackbar.notify("\(added.count) issues assigned to you", body: added.prefix(3).map(\.title).joined(separator: "\n"))
+                }
+            }
+            issues = fresh
+            issuesError = nil
+            issuesLoaded = true
+        } catch {
+            issuesError = "\(error)"
+        }
+    }
+
+    /// Your repositories and your organizations', most recently pushed
+    /// first; three pages of 100 at most. Kept for six hours.
+    func loadRepos(force: Bool = false) async {
+        if !force, !repos.isEmpty, let at = reposLoaded, Date().timeIntervalSince(at) < 6 * 3600 { return }
+        do {
+            var all: [Repo] = []
+            for page in 1...3 {
+                let data = try await rest("/user/repos?sort=pushed&per_page=100&page=\(page)&affiliation=owner,collaborator,organization_member")
+                let batch = try Self.restDecoder.decode([Repo].self, from: data)
+                all += batch
+                if batch.count < 100 { break }
+            }
+            repos = all
+            reposLoaded = Date()
+            reposError = nil
+        } catch {
+            reposError = "\(error)"
+        }
+    }
+
+    /// GitHub search for repositories you don't have, once your own run short.
+    func searchRepos(_ text: String) async {
+        let query = text.trimmingCharacters(in: .whitespaces)
+        guard query.count >= 3, matchingRepos(query).count < 5 else {
+            repoResults = []
+            return
+        }
+        struct Reply: Decodable { let items: [Repo] }
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? query
+        repoResults = (try? Self.restDecoder.decode(Reply.self, from: try await rest("/search/repositories?q=\(encoded)&per_page=10")).items) ?? []
+    }
+
+    func matchingRepos(_ text: String) -> [Repo] {
+        let words = text.lowercased().split(separator: " ")
+        return shownRepos.filter { repo in words.allSatisfy { repo.full_name.lowercased().contains($0) } }
+    }
+
+    var shownRepos: [Repo] { repos.filter { includeArchived || !$0.archived } }
+
+    /// Recently opened first, then most recently pushed.
+    var orderedRepos: [Repo] {
+        let rank = Dictionary(recentRepos.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+        return shownRepos.sorted { (rank[$0.full_name] ?? Int.max, $0.pushed_at.map { -$0.timeIntervalSince1970 } ?? 0) < (rank[$1.full_name] ?? Int.max, $1.pushed_at.map { -$0.timeIntervalSince1970 } ?? 0) }
+    }
+
+    func opened(_ repo: Repo) {
+        recentRepos = Array(([repo.full_name] + recentRepos.filter { $0 != repo.full_name }).prefix(10))
+    }
+
+    func repoRow(_ repo: Repo) -> Row {
+        let fallback = "★ \(repo.stargazers_count) · \(repo.open_issues_count) open issue\(repo.open_issues_count == 1 ? "" : "s")"
+        var row = Row(repo.full_name, subtitle: repo.description.flatMap { $0.isEmpty ? nil : $0 } ?? fallback, symbol: repo.private ? "lock" : "book.closed", key: "repo-\(repo.id)")
+        if repo.archived { row = row.badge("archived") } else if repo.fork { row = row.badge("fork") }
+        return row
+            .action("Open") { self.opened(repo); Stackbar.open(repo.html_url) }
+            .action("Pull Requests", shortcut: "cmd+p") { self.opened(repo); Stackbar.open(repo.html_url + "/pulls") }
+            .action("Issues", shortcut: "cmd+i") { self.opened(repo); Stackbar.open(repo.html_url + "/issues") }
+            .action("Actions", shortcut: "cmd+shift+a") { self.opened(repo); Stackbar.open(repo.html_url + "/actions") }
+            .action("Copy Clone URL", shortcut: "cmd+shift+c") { Stackbar.copy(self.cloneWith == "HTTPS" ? repo.clone_url : repo.ssh_url) }
+            .action("Copy URL", shortcut: "cmd+c") { Stackbar.copy(repo.html_url) }
+            .navigate("New Issue", to: "create-issue", arguments: ["repo": repo.full_name], shortcut: "cmd+n")
+    }
+
+    func issueRow(_ issue: Issue) -> Row {
+        var row = Row(issue.title, subtitle: "\(issue.reference) · \(Self.ago(issue.updated_at))", symbol: "smallcircle.filled.circle", key: "issue-\(issue.id)")
+        if let label = issue.labels.first { row = row.badge(label.name) }
+        return row
+            .action("Open", shortcut: "cmd+return") { Stackbar.open(issue.html_url) }
+            .action("Copy Link", shortcut: "cmd+c") { Stackbar.copy(issue.html_url) }
+            .action("Copy Reference", shortcut: "cmd+shift+c") { Stackbar.copy(issue.reference) }
+    }
+
+    @ViewBuilder func issueForm(repo: String?) -> ViewContent {
+        let names = shownRepos.filter(\.has_issues).map(\.full_name)
+        if names.isEmpty {
+            ContentUnavailableView("No repositories yet", symbol: "book.closed", message: reposError ?? "Add a GitHub token, then try again.")
+        } else {
+            Form(submit: "Create Issue", key: "issue") {
+                FormField.picker("Repository", name: "repo", options: names, selection: repo.flatMap { names.contains($0) ? $0 : nil } ?? recentRepos.first { names.contains($0) } ?? names.first)
+                FormField.text("Title", name: "title", error: formError)
+                FormField.multiline("Description", name: "body", placeholder: "Markdown")
+            } onSubmit: { values in
+                try await self.createIssue(values)
+            }
+            if let created { Banner(created, symbol: "checkmark.circle.fill", theme: .success) }
+        }
+    }
+
+    func createIssue(_ values: [String: EventValue]) async throws {
+        let title = (values.string("title") ?? "").trimmingCharacters(in: .whitespaces)
+        guard !title.isEmpty else { formError = "Give it a title"; return }
+        guard let repo = values.string("repo"), repo.split(separator: "/").count == 2 else { formError = "Pick a repository"; return }
+        formError = nil
+        let body = try JSONSerialization.data(withJSONObject: ["title": title, "body": values.string("body") ?? ""])
+        do {
+            let data = try await rest("/repos/\(repo)/issues", method: "POST", body: body)
+            struct Created: Decodable { let html_url: String; let number: Int }
+            let issue = try Self.restDecoder.decode(Created.self, from: data)
+            created = "Created \(repo)#\(issue.number)"
+            Stackbar.open(issue.html_url)
+        } catch {
+            formError = "\(error)"
+        }
+    }
+
     // MARK: Words
 
     static func ago(_ date: Date, now: Date = Date()) -> String {
@@ -417,7 +624,7 @@ final class PRCockpit: StackbarPlugin {
                 PanelHeader("Pull requests", subtitle: "Checking…", symbol: "arrow.triangle.pull", theme: theme)
             } else if let lastError, toReview.isEmpty, mine.isEmpty, updatedAt == nil {
                 if lastError.contains("Add a GitHub token") {
-                    EmptyState("Paste a GitHub token above", symbol: "key.fill", message: "A fine-grained token with read access to pull requests is enough. The GitHub plugin uses the same one.", theme: theme)
+                    EmptyState("Paste a GitHub token above", symbol: "key.fill", message: "A fine-grained token with read access to pull requests, issues and metadata. Add write access to issues to create them from the palette.", theme: theme)
                 } else {
                     EmptyState("Can't reach GitHub", symbol: "exclamationmark.triangle.fill", message: lastError, theme: .critical) {
                         ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh() }
@@ -451,6 +658,13 @@ final class PRCockpit: StackbarPlugin {
                         if inboxError == nil { EmptyState("Inbox zero", symbol: "tray", message: "No GitHub notifications.", theme: .success) }
                     } else {
                         List(inbox, searchable: true) { item in inboxRow(item) }
+                    }
+                } else if currentTab == .issues {
+                    if let issuesError { Banner(issuesError) }
+                    if issues.isEmpty {
+                        if issuesError == nil { EmptyState("No issues assigned", symbol: "checkmark", message: "Open issues assigned to you show up here.", theme: .success) }
+                    } else {
+                        List(issues, searchable: true) { issue in issueRow(issue) }
                     }
                 } else if currentTab == .mine {
                     list(shownMine, showAuthor: false, empty: ("Nothing of yours open", "Pull requests you open show up here."))
@@ -490,6 +704,13 @@ final class PRCockpit: StackbarPlugin {
             }
             Text("Mentions, issues and everything else GitHub notifies you about. Needs a classic token with the notifications scope.").style(.caption).role(.secondary)
             if let inboxError { Text(inboxError).style(.caption).role(.warning) }
+        }
+        Section("Repositories") {
+            LabeledContent("Loaded", value: "\(repos.count)")
+            Toggle("Include archived", isOn: includeArchived) { self.includeArchived = $0 }
+            Picker("Copy clone URLs as", options: ["SSH", "HTTPS"], selection: cloneWith) { self.cloneWith = $0 }
+            Button("Reload", symbol: "arrow.clockwise") { await self.loadRepos(force: true) }
+            Text("Search GitHub Repositories in the palette opens any of them, or its pull requests, issues or Actions. Creating issues needs a token with write access to issues.").style(.caption).role(.secondary)
         }
         Section("Hidden repositories") {
             if hiddenRepos.isEmpty { Text("None. Hide one from a pull request's menu.").role(.secondary) }
@@ -587,7 +808,7 @@ final class PRCockpit: StackbarPlugin {
         .frame(fillWidth: true, fillHeight: true)
     }
 
-    var tabs: [Tab] { showInbox ? Tab.allCases : [.review, .mine] }
+    var tabs: [Tab] { showInbox ? Tab.allCases : [.review, .mine, .issues] }
 
     var currentTab: Tab {
         let chosen = Tab(rawValue: tab) ?? .review
@@ -598,6 +819,7 @@ final class PRCockpit: StackbarPlugin {
         switch tab {
         case .review: return "\(tab.rawValue) (\(shownReview.count))"
         case .mine: return "\(tab.rawValue) (\(shownMine.count))"
+        case .issues: return "\(tab.rawValue) (\(issues.count))"
         case .inbox: return "\(tab.rawValue) (\(inbox.filter(\.unread).count))"
         }
     }
@@ -637,6 +859,34 @@ final class PRCockpit: StackbarPlugin {
             self.markSeen(pr)
             return .open(url: pr.url, app: nil)
         }
+        Command("repos", title: "Search GitHub Repositories", symbol: "book.closed", keywords: ["github", "repo", "repository", "gh"])
+            .view(search: { invocation in
+                await self.loadRepos()
+                await self.searchRepos(invocation.text)
+            }) { _ in
+                if let problem = self.reposError, self.repos.isEmpty {
+                    ContentUnavailableView("Can't reach GitHub", symbol: "exclamationmark.triangle", message: problem)
+                } else {
+                    List(searchable: true) {
+                        ForEach(self.orderedRepos) { repo in self.repoRow(repo) }
+                        ForEach(self.repoResults.filter { result in !self.repos.contains { $0.id == result.id } }) { repo in self.repoRow(repo) }
+                    }
+                }
+            }
+        Command("issues", title: "My GitHub Issues", subtitle: "Open issues assigned to you", symbol: "smallcircle.filled.circle", keywords: ["github", "issue", "assigned", "gh"])
+            .view(search: { _ in await self.loadIssues() }) { _ in
+                if let problem = self.issuesError {
+                    ContentUnavailableView("Can't reach GitHub", symbol: "exclamationmark.triangle", message: problem)
+                } else if self.issues.isEmpty {
+                    ContentUnavailableView("Nothing assigned to you", symbol: "checkmark.circle")
+                } else {
+                    List(self.issues, searchable: true) { issue in self.issueRow(issue) }
+                }
+            }
+        Command("create-issue", title: "Create GitHub Issue", symbol: "plus.circle", keywords: ["github", "issue", "new", "bug", "gh"])
+            .argument("repo", placeholder: "Repository", required: false)
+            .stackbarOnly()
+            .view(search: { _ in await self.loadRepos() }) { invocation in self.issueForm(repo: invocation["repo"]) }
         Command("refresh", title: "Refresh Pull Requests", symbol: "arrow.clockwise", keywords: ["github"]) { _ in
             try await self.refresh()
             return .message(self.lastError ?? "\(self.shownReview.count) to review, \(self.shownMine.count) of yours open")
@@ -702,6 +952,9 @@ final class PRCockpit: StackbarPlugin {
     var tools: [AgentTool] {
         AgentTool("review_queue", description: "Pull requests waiting on my review, one per line") { _ in
             self.toReview.isEmpty ? "No pull requests are waiting on your review." : self.toReview.map { "\($0.id) \($0.title) by \($0.author?.login ?? "?") (\($0.url))" }.joined(separator: "\n")
+        }
+        AgentTool("my_issues", description: "Open GitHub issues assigned to me, one per line") { _ in
+            self.issues.isEmpty ? "No open issues are assigned to you." : self.issues.map { "\($0.reference) \($0.title) (\($0.html_url))" }.joined(separator: "\n")
         }
         AgentTool("my_pull_requests", description: "My open pull requests with their checks and review state, one per line") { _ in
             self.mine.isEmpty ? "You have no open pull requests." : self.mine.map { pr in

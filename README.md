@@ -30,11 +30,10 @@ An update that asks for something new waits for your approval.
 | --- | --- | --- |
 | [Stay Awake](System/StayAwake) | System | Keeps your Mac awake for a while, until a time, while an app runs or on a schedule. |
 | [Docker](Developer/Docker) | Developer | Your containers, with start, stop, restart and logs a click away. |
-| [GitHub](Developer/GitHub) | Developer | Your repositories and issues from the palette, and new issues without a browser. |
 | [Homebrew](Developer/Homebrew) | Developer | Outdated formulae and casks, with upgrades a click away. |
 | [Jira](Developer/Jira) | Developer | Your assigned Jira Cloud issues, search and new issues from the palette. |
 | [Linear](Developer/Linear) | Developer | Your assigned Linear issues, branch names, search and new issues from the palette. |
-| [PR Cockpit](Developer/PRCockpit) | Developer | Your pull requests and the ones waiting on your review, with CI and review state. |
+| [PR Cockpit](Developer/PRCockpit) | Developer | Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away. |
 | [Ports](Developer/Ports) | Developer | Which process is listening on which port, and a way to stop it. |
 | [LiteLLM](Monitoring/LiteLLM) | Monitoring | Tokens, spend, budget and model mix from your LiteLLM proxy, with charts. |
 | [System Monitor](Monitoring/SystemMonitor) | Monitoring | CPU, memory and disk in the menu bar, with the processes using the most. |
