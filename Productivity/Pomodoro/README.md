@@ -1,8 +1,8 @@
 # Pomodoro
 
-A focus timer with its own warm look. Pick Focus or Break, a preset (25, 50 or
+A focus timer in the Stackbar look: red for focus, teal for breaks. Pick Focus or Break, a preset (25, 50 or
 90 minutes of focus; 5, 10 or 15 of break), and press play. The countdown and
-the ring around the play button move on their own, the menu bar shows the time
+the ring around it move on their own, the menu bar shows the time
 left, and a chime and a notification mark the end. Today's finished sessions
 and focused minutes sit under the timer.
 

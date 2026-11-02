@@ -1,7 +1,7 @@
 import StackbarKit
 import Foundation
 
-/// A focus timer with its own warm look: Focus and Break modes, presets, a
+/// A focus timer in the Stackbar look: Focus and Break modes, presets, a
 /// big countdown inside a progress ring, a tag for what you are working on,
 /// and today's sessions. Stackbar counts the timer and animates the ring, so
 /// the plugin only renders when something changes. Needs nothing.
@@ -10,7 +10,7 @@ final class Pomodoro: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.pomodoro",
         name: "Pomodoro",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "A focus timer with presets, a progress ring, tags and today's sessions.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(1)), .wake],
@@ -47,19 +47,9 @@ final class Pomodoro: StackbarPlugin {
         var minutes = 0
     }
 
-    // The look. Every color has a dark variant.
-    let cream = Paint.hex("#F7E7D9", dark: "#2B221C")
-    let card = Paint.hex("#FFF6EE", dark: "#3A2E26")
-    let orange = Paint.hex("#F28C38", dark: "#F59A4E")
-    let ink = Paint.hex("#1C1A19", dark: "#F7EDE4")
-    /// Text and symbols on orange stay dark in both modes, for contrast.
-    let onOrange = Paint.hex("#1C1A19")
-    let muted = Paint.hex("#6E625A", dark: "#C9B9AC")
-    let track = Paint.hex("#1C1A1914", dark: "#F7EDE41F")
-    /// The ring's ember sweep: pale gold at the start, burnt orange at the end.
-    let ember = Paint.angularGradient(colors: [HexColor("#FFC074", dark: "#FFB45E"), HexColor("#F28C38", dark: "#F59A4E"), HexColor("#D9512C", dark: "#F0703F")], angle: -90)
-    /// The warm halo behind a running ring.
-    let halo = Paint.radialGradient(colors: [HexColor("#F28C3866", dark: "#F59A4E55"), HexColor("#F28C3800", dark: "#F59A4E00")], x: 0.5, y: 0.5, radius: 72)
+    /// Focus in the tomato red, breaks in a calm teal, from the shared
+    /// design system like every other Stackbar plugin.
+    var theme: Theme { mode == .focus ? .red : .teal }
 
     @Stored("mode") var mode = Mode.focus
     @Stored("focusMinutes") var focusMinutes = 25
@@ -93,38 +83,38 @@ final class Pomodoro: StackbarPlugin {
     }
 
     var panel: ViewContent {
-        VStack(alignment: .center, spacing: 12) {
-            modeToggle
-            presets
-            countdown
-            ring
-            tagChip
-            stats
+        PanelHeader(headline, subtitle: "\(today.sessions) sessions · \(minutesText(today.minutes)) focused today", symbol: mode.symbol, theme: theme) {
+            IconButton("arrow.counterclockwise", label: "Reset", theme: theme, key: "reset") { self.reset() }
+        }
+        Picker("Mode", options: Mode.allCases.map(\.rawValue), selection: mode.rawValue, style: .segmented, key: "mode") { choice in
+            self.select(Mode(rawValue: choice) ?? .focus)
+        }
+        HeroCard(theme: theme, look: .glow, alignment: .center, spacing: Space.m) {
+            dial(size: 172, lineWidth: 12, timeSize: 40)
+            HStack(spacing: Space.xs) {
+                ForEach(presetMinutes) { minutes in
+                    Chip("\(minutes) min", theme: theme, selected: minutes == currentMinutes, key: "preset-\(minutes)") { self.setMinutes(minutes) }
+                }
+            }
             controls
         }
-        .padding(18)
-        .frame(fillWidth: true)
-        .background(cream, in: .roundedRectangle(cornerRadius: 18))
+        HStack(spacing: Space.s) {
+            StatTile("Sessions", value: "\(today.sessions)", symbol: "checkmark.circle.fill", theme: theme)
+            StatTile("Focused", value: minutesText(today.minutes), symbol: "clock.fill", theme: theme)
+        }
     }
 
     var widget: ViewContent {
-        HStack(spacing: 16) {
-            ZStack {
-                progress(lineWidth: 9)
-                if isRunning {
-                    Image(systemName: mode.symbol).font(size: 24).foreground(orange).symbolEffect(.breathe)
-                } else {
-                    Image(systemName: mode.symbol).font(size: 24).foreground(orange)
-                }
+        HStack(spacing: Space.l) {
+            dial(size: 104, lineWidth: 8, timeSize: 22, showTag: false)
+            VStack(spacing: Space.xxs) {
+                Text(mode.rawValue.uppercased()).typography(.overline).foreground(theme.textPaint)
+                Text(currentTag).typography(.title)
+                Text("\(today.sessions) sessions · \(minutesText(today.minutes)) today").role(.secondary).typography(.caption)
             }
-            .frame(width: 84, height: 84)
-            VStack(alignment: .start, spacing: 2) {
-                Text("\(mode.rawValue) · \(currentTag)").font(size: 13, weight: .semibold).foreground(muted)
-                timeText.font(size: 44, weight: .heavy, design: .rounded, monospacedDigit: true).foreground(ink)
-            }
+            .frame(fillWidth: true, alignment: .leading)
         }
         .frame(fillWidth: true, fillHeight: true)
-        .background(cream, in: .roundedRectangle(cornerRadius: 18))
     }
 
     var settings: ViewContent {
@@ -158,124 +148,41 @@ final class Pomodoro: StackbarPlugin {
 
     // MARK: - Panel parts
 
-    @ViewBuilder private var modeToggle: ViewContent {
-        HStack(spacing: 4) {
-            ForEach(Mode.allCases) { option in
-                Button(key: "mode-\(option.rawValue)") { self.select(option) } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: option.symbol)
-                        Text(option.rawValue)
-                    }
-                    .font(size: 14, weight: .semibold)
-                    .foreground(option == mode ? onOrange : muted)
-                    .frame(fillWidth: true)
-                    .padding(vertical: 9)
-                    .background(option == mode ? orange : .hex("#00000000"), in: .capsule)
-                }
-            }
-        }
-        .padding(4)
-        .background(card, in: .capsule)
-        .border(ink, width: 2, in: .capsule)
+    private var headline: String {
+        if isRunning { return mode == .focus ? "Focusing" : "On a break" }
+        return session != nil ? "Paused" : (mode == .focus ? "Ready to focus" : "Ready for a break")
     }
 
-    @ViewBuilder private var presets: ViewContent {
-        HStack(spacing: 10) {
-            ForEach(presetMinutes) { minutes in
-                Button(key: "preset-\(minutes)") { self.setMinutes(minutes) } label: {
-                    Text("\(minutes)")
-                        .font(size: 15, weight: .bold, monospacedDigit: true)
-                        .foreground(minutes == currentMinutes ? onOrange : ink)
-                        .frame(width: 52, height: 34)
-                        .background(minutes == currentMinutes ? orange : card, in: .roundedRectangle(cornerRadius: 10))
-                        .border(ink, width: 2, in: .roundedRectangle(cornerRadius: 10))
-                }
-            }
-        }
-    }
-
-    @ViewBuilder private var countdown: ViewContent {
-        timeText.font(size: 64, weight: .heavy, design: .rounded, monospacedDigit: true).foreground(ink)
-    }
-
-    @ViewBuilder private var ring: ViewContent {
+    /// The ring with the countdown in the middle and, under it, the tag,
+    /// which changes on a click.
+    @ViewBuilder private func dial(size: Double, lineWidth: Double, timeSize: Double, showTag: Bool = true) -> ViewContent {
         ZStack {
-            if isRunning {
-                Circle().fill(halo).frame(width: 144, height: 144)
-            }
-            progress(lineWidth: 10)
-            Button(key: "start") { self.toggle() } label: {
-                Image(systemName: isRunning ? "pause.fill" : "play.fill")
-                    .font(size: 26, weight: .bold)
-                    .foreground(onOrange)
-                    .frame(width: 76, height: 76)
-                    .background(orange, in: .circle)
-                    .border(ink, width: 2, in: .circle)
-                    .shadow(radius: 0, x: 2, y: 3, color: HexColor("#1C1A19", dark: "#000000"))
-            }
-            .accessibilityLabel(isRunning ? "Pause" : "Start")
-        }
-        .frame(width: 144, height: 144)
-    }
-
-    @ViewBuilder private var tagChip: ViewContent {
-        Button(key: "tag") { self.nextTag() } label: {
-            HStack(spacing: 6) {
-                Circle().fill(orange).frame(width: 8, height: 8)
-                Text(currentTag)
-                // Says the chip changes on a click.
-                Image(systemName: "chevron.up.chevron.down").font(size: 10, weight: .bold).foreground(muted)
-            }
-            .font(size: 13, weight: .semibold)
-            .foreground(ink)
-            .padding(horizontal: 12, vertical: 5)
-            .background(card, in: .capsule)
-            .border(ink, width: 1.5, in: .capsule)
-        }
-        .accessibilityLabel("Change tag: \(currentTag)")
-    }
-
-    @ViewBuilder private var stats: ViewContent {
-        HStack(spacing: 0) {
-            stat("\(today.sessions)", "sessions", symbol: "checkmark.circle.fill")
-            Rectangle().fill(track).frame(width: 1, height: 30)
-            stat(minutesText(today.minutes), "focused", symbol: "clock.fill")
-        }
-        .padding(vertical: 10)
-        .frame(width: 240)
-        .background(card, in: .roundedRectangle(cornerRadius: 14))
-    }
-
-    @ViewBuilder private func stat(_ value: String, _ caption: String, symbol: String) -> ViewContent {
-        HStack(spacing: 8) {
-            Image(systemName: symbol).font(size: 15).foreground(muted)
-            VStack(spacing: 0) {
-                Text(value).font(size: 16, weight: .bold).foreground(ink)
-                Text(caption).font(size: 11).foreground(muted)
+            // A neutral track, so the ring still shows before it fills.
+            Circle().stroke(.hex("#00000017", dark: "#FFFFFF1F"), lineWidth: lineWidth)
+            progress(lineWidth: lineWidth)
+            VStack(alignment: .center, spacing: Space.xxs) {
+                if isRunning {
+                    Image(systemName: mode.symbol).font(size: timeSize * 0.4, weight: .semibold).foreground(theme.textPaint).symbolEffect(.breathe)
+                } else {
+                    Image(systemName: mode.symbol).font(size: timeSize * 0.4, weight: .semibold).foreground(theme.textPaint)
+                }
+                timeText.typography(Typography(size: timeSize, weight: .bold, design: .rounded, monospacedDigit: true))
+                if showTag {
+                    Chip(currentTag, symbol: "tag.fill", theme: theme, key: "tag") { self.nextTag() }
+                        .accessibilityLabel("Change tag: \(currentTag)")
+                }
             }
         }
-        .frame(fillWidth: true)
+        .frame(width: size, height: size)
     }
 
     @ViewBuilder private var controls: ViewContent {
-        HStack(spacing: 14) {
-            iconButton("forward.fill", label: "Skip", key: "skip") { self.skip() }
-            iconButton("repeat", label: autoStart ? "Auto-start on" : "Auto-start off", key: "auto", filled: autoStart) { self.autoStart.toggle() }
-            iconButton(sound ? "music.note" : "speaker.slash.fill", label: sound ? "Sound on" : "Sound off", key: "sound", filled: sound) { self.sound.toggle() }
-            iconButton("arrow.counterclockwise", label: "Reset", key: "reset") { self.reset() }
+        HStack(alignment: .center, spacing: Space.m) {
+            IconButton(autoStart ? "repeat" : "repeat.1", label: autoStart ? "Auto-start on" : "Auto-start off", theme: theme, size: 34, key: "auto") { self.autoStart.toggle() }
+            IconButton("forward.fill", label: "Skip", theme: theme, size: 34, key: "skip") { self.skip() }
+            IconButton(isRunning ? "pause.fill" : "play.fill", label: isRunning ? "Pause" : "Start", theme: theme, prominence: .filled, size: 52, key: "start") { self.toggle() }
+            IconButton(sound ? "speaker.wave.2.fill" : "speaker.slash.fill", label: sound ? "Sound on" : "Sound off", theme: theme, size: 34, key: "sound") { self.sound.toggle() }
         }
-    }
-
-    @ViewBuilder private func iconButton(_ symbol: String, label: String, key: String, filled: Bool = false, action: @escaping @MainActor () async throws -> Void) -> ViewContent {
-        Button(key: key, action: action) {
-            Image(systemName: symbol)
-                .font(size: 15, weight: .bold)
-                .foreground(filled ? onOrange : ink)
-                .frame(width: 40, height: 40)
-                .background(filled ? orange : card, in: .circle)
-                .border(ink, width: 2, in: .circle)
-        }
-        .accessibilityLabel(label)
     }
 
     @ViewBuilder private var timeText: ViewContent {
@@ -288,10 +195,10 @@ final class Pomodoro: StackbarPlugin {
 
     @ViewBuilder private func progress(lineWidth: Double) -> ViewContent {
         if let range = session?.range {
-            ProgressBar(timing: range, style: .ring(lineWidth: lineWidth)).foreground(ember)
+            ProgressBar(timing: range, style: .ring(lineWidth: lineWidth)).foreground(theme.sweep)
         } else {
             let total = Double(currentMinutes * 60)
-            ProgressBar(value: total - (session?.remaining ?? total), total: total, style: .ring(lineWidth: lineWidth)).foreground(ember)
+            ProgressBar(value: total - (session?.remaining ?? total), total: total, style: .ring(lineWidth: lineWidth)).foreground(theme.sweep)
         }
     }
 
