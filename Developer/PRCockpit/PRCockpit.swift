@@ -19,7 +19,7 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.4.0",
+        version: "1.4.1",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
@@ -221,6 +221,11 @@ final class PRCockpit: StackbarPlugin {
     /// When you last looked at each pull request (by URL), to mark new activity.
     @Stored("seen") var seen: [String: Date] = [:]
     @Stored("seenStarted") var seenStarted = false
+    /// The last state each notification announced, by `<id> <topic>`, so a
+    /// state GitHub briefly loses and finds again (mergeable going UNKNOWN
+    /// after the base branch moves, checks going PENDING, search lagging
+    /// behind a merge) is not announced twice.
+    @Stored("announced") var announced: [String: String] = [:]
     /// Hidden until they change: URL to the update time they were snoozed at.
     @Stored("snoozed") var snoozed: [String: Date] = [:]
     @Stored("hiddenRepos") var hiddenRepos: [String] = []
@@ -327,10 +332,14 @@ final class PRCockpit: StackbarPlugin {
     }
 
     /// Takes the new lists, telling the user what changed since last time.
-    func update(review: [PullRequest], mine newMine: [PullRequest], closed: [PullRequest] = []) {
-        if notifyChanges, updatedAt != nil {
+    func update(review: [PullRequest], mine fetchedMine: [PullRequest], closed: [PullRequest] = []) {
+        // Search can list a PR that just closed under both queries for a refresh or two.
+        let closedIDs = Set(closed.map(\.id))
+        let newMine = fetchedMine.filter { !closedIDs.contains($0.id) }
+        let notifying = notifyChanges && updatedAt != nil
+        if notifying {
             let wasOpen = Set(mine.map(\.id))
-            for pr in closed where wasOpen.contains(pr.id) {
+            for pr in closed where wasOpen.contains(pr.id) && announce(pr, "closed", as: pr.state ?? "CLOSED") {
                 Stackbar.notify(pr.state == "MERGED" ? "Merged: \(pr.title)" : "Closed: \(pr.title)", body: pr.id, actions: [NotificationAction("Open", url: pr.url)])
             }
             let known = Set(toReview.map(\.id))
@@ -340,21 +349,37 @@ final class PRCockpit: StackbarPlugin {
             } else if added.count > 1 {
                 Stackbar.notify("\(added.count) new review requests", body: added.map(\.title).prefix(3).joined(separator: "\n"))
             }
-            let before = Dictionary(mine.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-            for pr in newMine {
-                guard let old = before[pr.id] else { continue }
-                if pr.reviewDecision != old.reviewDecision, pr.reviewDecision == "APPROVED" {
+        }
+        let before = Set(mine.map(\.id))
+        for pr in newMine {
+            // A PR seen for the first time records its state without a notification.
+            let tell = notifying && before.contains(pr.id)
+            if let decision = pr.reviewDecision, announce(pr, "review", as: decision), tell {
+                if decision == "APPROVED" {
                     Stackbar.notify("Approved: \(pr.title)", body: pr.id, actions: [NotificationAction("Open", url: pr.url)])
-                } else if pr.reviewDecision != old.reviewDecision, pr.reviewDecision == "CHANGES_REQUESTED" {
+                } else if decision == "CHANGES_REQUESTED" {
                     Stackbar.notify("Changes requested: \(pr.title)", body: pr.id, actions: [NotificationAction("Open", url: pr.url)])
                 }
-                if pr.checksFailed, !old.checksFailed {
+            }
+            // An unknown merge state passes (GitHub recomputes it whenever the
+            // base moves); running checks reset, so a new push that goes green is news.
+            let outcome: String? = switch pr.checks {
+            case "PENDING", "EXPECTED": "running"
+            case _ where pr.checksFailed: "failed"
+            case _ where pr.readyToMerge: "ready"
+            case "SUCCESS" where pr.mergeable == "UNKNOWN": nil
+            default: "blocked"
+            }
+            if let outcome, announce(pr, "checks", as: outcome), tell {
+                if outcome == "failed" {
                     Stackbar.notify("Checks failed: \(pr.title)", body: pr.id, actions: [NotificationAction("See checks", url: pr.url + "/checks")])
-                } else if pr.readyToMerge, !old.readyToMerge {
+                } else if outcome == "ready" {
                     Stackbar.notify("Ready to merge: \(pr.title)", body: pr.id, actions: [NotificationAction("Open", url: pr.url)])
                 }
             }
         }
+        let tracked = Set((newMine + closed).map(\.id))
+        announced = announced.filter { tracked.contains(String($0.key.split(separator: " ").first ?? "")) }
         recentlyClosed = closed.sorted { $0.updatedAt > $1.updatedAt }
         toReview = review.sorted { $0.updatedAt > $1.updatedAt }
         mine = newMine.sorted { $0.updatedAt > $1.updatedAt }
@@ -389,6 +414,15 @@ final class PRCockpit: StackbarPlugin {
     }
 
     func markSeen(_ pr: PullRequest) { seen[pr.url] = pr.updatedAt }
+
+    /// Records `state` as the last one announced about `pr`'s `topic`, and
+    /// says whether it is a change from what was announced before.
+    func announce(_ pr: PullRequest, _ topic: String, as state: String) -> Bool {
+        let key = "\(pr.id) \(topic)"
+        guard announced[key] != state else { return false }
+        announced[key] = state
+        return true
+    }
 
     func open(_ pr: PullRequest, path: String = "") {
         markSeen(pr)
