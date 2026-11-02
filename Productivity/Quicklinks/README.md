@@ -10,6 +10,13 @@ of its own. Links use Raycast's template syntax:
 - **Needs:** opening links and folders (in the app each quicklink names), the
   clipboard, and what you had selected, for `{clipboard}` and `{selection}`.
 - **Surfaces:** panel, settings.
-- **Settings:** your quicklinks, and importing a Raycast export.
-- **Commands:** Search Quicklinks, Create Quicklink, Import Quicklinks, Export
-  Quicklinks (a file Raycast reads too), plus one command per quicklink.
+- **Getting started:** an empty panel offers eight everyday links in one
+  click, and Browse Quicklink Library has 40 ready-made searches, sites and
+  folders (Search, Developer, Productivity, Mac) to add one by one or all at
+  once.
+- **Order:** the ones you open most, and most lately, come first in the list
+  and the launcher.
+- **Settings:** your quicklinks, the library, and importing a Raycast export.
+- **Commands:** Search Quicklinks, Create Quicklink, Browse Quicklink Library,
+  Import Quicklinks, Export Quicklinks (a file Raycast reads too), plus one
+  command per quicklink.

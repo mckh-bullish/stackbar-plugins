@@ -4,13 +4,15 @@ import Foundation
 /// The time in the places you work with. The menu bar shows one city; the
 /// panel shows them all with the offset from you and whether it is working
 /// hours there, drawn on your own day so the overlap shows at a glance.
-/// Cities are chosen in Settings. Needs nothing from the host.
+/// Cities are chosen in Settings. A slider in the panel moves every clock
+/// forward or back, to answer "what time is it there when it's 3pm here".
+/// Needs nothing from the host.
 @main
 final class WorldClock: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.world-clock",
         name: "World Clock",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "The time in the cities you work with, with offsets and working hours.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(30)), .wake],
@@ -18,7 +20,12 @@ final class WorldClock: StackbarPlugin {
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WorldClock"
     )
 
-    var now = Date()
+    /// The real time, from the last refresh.
+    var realNow = Date()
+    /// How far the panel's time-travel slider has moved every clock, in hours.
+    var offsetHours = 0.0
+    /// The moment every clock shows: now, or where the slider points.
+    var now: Date { realNow.addingTimeInterval(offsetHours * 3600) }
     @Stored("zones") var zones: [String] = ["America/Los_Angeles", "America/New_York", "Europe/London", "Asia/Kolkata"]
     @Stored("menuBarZone") var menuBarZone = "Europe/London"
     @Stored("use24Hour") var use24Hour = true
@@ -26,21 +33,21 @@ final class WorldClock: StackbarPlugin {
     @Stored("workEnd") var workEnd = 18.0
 
     func refresh() async throws {
-        now = Date()
+        realNow = Date()
     }
 
     let theme = Theme.violet
 
     var menuBar: ViewContent {
         if let zone = TimeZone(identifier: menuBarZone) {
-            Label("\(city(menuBarZone)) \(time(now, in: zone))", symbol: "globe").role(.primary)
+            Label("\(city(menuBarZone)) \(time(realNow, in: zone))", symbol: "globe").role(.primary)
         } else {
             Label("", symbol: "globe").role(.secondary)
         }
     }
 
     var panel: ViewContent {
-        PanelHeader("\(time(now, in: .current)) here", subtitle: "\(now.formatted(.dateTime.weekday(.wide).day().month(.abbreviated))) · \(validZones.count) \(validZones.count == 1 ? "city" : "cities")",
+        PanelHeader("\(time(now, in: .current)) here", subtitle: (offsetHours == 0 ? "" : Self.shift(offsetHours) + " · ") + "\(now.formatted(.dateTime.weekday(.wide).day().month(.abbreviated))) · \(validZones.count) \(validZones.count == 1 ? "city" : "cities")",
                     symbol: "globe", theme: theme) {
             Picker("Clock", options: ["12h", "24h"], selection: use24Hour ? "24h" : "12h", style: .segmented) { self.use24Hour = $0 == "24h" }
                 .frame(width: 96)
@@ -53,8 +60,30 @@ final class WorldClock: StackbarPlugin {
             VStack(spacing: Space.s) {
                 ForEach(validZones) { zone in card(zone) }
             }
-            Text("Bars show each city's working hours across your day, and the tick is your time now. Tap a city to show it in the menu bar.").role(.secondary).typography(.caption)
+            timeTravel
+            Text("Bars show each city's working hours across your day, and the tick is your time\(offsetHours == 0 ? " now" : " on the slider"). Tap a city to show it in the menu bar.").role(.secondary).typography(.caption)
         }
+    }
+
+    /// A slider that moves every clock, so you can find a time that works
+    /// everywhere. Steps are half an hour; Now puts it back.
+    @ViewBuilder var timeTravel: ViewContent {
+        HStack(spacing: Space.s) {
+            Image(systemName: "clock.arrow.2.circlepath").opacity(0.6)
+            Slider(offsetHours == 0 ? "Slide to see another time" : Self.shift(offsetHours) + " · \(time(now, in: .current)) here", value: offsetHours, in: -12...12, step: 0.5, key: "time-travel") { value in
+                self.offsetHours = value
+            }
+            if offsetHours != 0 {
+                ActionButton("Now", theme: theme) { self.offsetHours = 0 }
+            }
+        }
+    }
+
+    /// `+3h`, `−1h 30m`.
+    static func shift(_ hours: Double) -> String {
+        let minutes = Int((abs(hours) * 60).rounded())
+        let text = minutes % 60 == 0 ? "\(minutes / 60)h" : minutes < 60 ? "\(minutes)m" : "\(minutes / 60)h \(minutes % 60)m"
+        return (hours > 0 ? "+" : "−") + text + " from now"
     }
 
     /// One city as a band of its sky: dawn, day, dusk or night, with the
@@ -130,13 +159,13 @@ final class WorldClock: StackbarPlugin {
     var widget: ViewContent {
         Grid(columns: 2, spacing: Space.s) {
             ForEach(Array(validZones.prefix(4))) { zone in
-                let sky = Sky(hour: hour(in: zone))
+                let sky = Sky(hour: hour(in: zone, at: realNow))
                 VStack(spacing: Space.xxs) {
                     HStack(spacing: Space.xs) {
                         Image(systemName: sky.symbol).font(size: 11).symbolRendering(.multicolor)
                         Text(city(zone.identifier)).typography(.caption).opacity(0.85)
                     }
-                    Text(time(now, in: zone)).typography(Typography(size: 22, weight: .bold, design: .rounded, monospacedDigit: true))
+                    Text(time(realNow, in: zone)).typography(Typography(size: 22, weight: .bold, design: .rounded, monospacedDigit: true))
                 }
                 .foreground(.onMedia)
                 .padding(horizontal: Space.m - 2, vertical: Space.s)
@@ -168,8 +197,28 @@ final class WorldClock: StackbarPlugin {
 
     var tools: [AgentTool] {
         AgentTool("times", description: "The current time in each configured city") { _ in
-            self.validZones.map { "\(self.city($0.identifier)): \(self.time(self.now, in: $0))" }.joined(separator: "\n")
+            self.validZones.map { "\(self.city($0.identifier)): \(self.time(self.realNow, in: $0))" }.joined(separator: "\n")
         }
+    }
+
+    // MARK: Commands
+
+    var commands: [Command] {
+        Command("times", title: "World Clock", subtitle: "The time in your cities", symbol: "globe", keywords: ["time", "zone", "clock", "city", "timezone"])
+            .view(search: { _ in try await self.refresh() }) { invocation in
+                let query = invocation.text.lowercased()
+                let zones = self.validZones.filter { query.isEmpty || self.city($0.identifier).lowercased().contains(query) || $0.identifier.lowercased().contains(query) }
+                if zones.isEmpty {
+                    ContentUnavailableView(self.validZones.isEmpty ? "No cities yet" : "No city matches", symbol: "globe", message: self.validZones.isEmpty ? "Add cities in World Clock's settings." : nil)
+                } else {
+                    List(zones) { zone in
+                        Row(self.city(zone.identifier), subtitle: self.subtitle(for: zone, at: self.realNow), symbol: Sky(hour: self.hour(in: zone, at: self.realNow)).symbol, key: zone.identifier)
+                            .badge(self.time(self.realNow, in: zone), role: self.isWorking(zone, at: self.realNow) ? .accent : .secondary)
+                            .action("Copy Time") { Stackbar.copy("\(self.time(self.realNow, in: zone)) in \(self.city(zone.identifier))") }
+                            .action("Show in Menu Bar") { self.menuBarZone = zone.identifier }
+                    }
+                }
+            }
     }
 
     // MARK: -
@@ -196,32 +245,34 @@ final class WorldClock: StackbarPlugin {
         return formatter.string(from: date)
     }
 
-    func hour(in zone: TimeZone) -> Double {
+    func hour(in zone: TimeZone, at date: Date? = nil) -> Double {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = zone
-        let parts = calendar.dateComponents([.hour, .minute], from: now)
+        let parts = calendar.dateComponents([.hour, .minute], from: date ?? now)
         return Double(parts.hour ?? 0) + Double(parts.minute ?? 0) / 60
     }
 
-    func isWorking(_ zone: TimeZone) -> Bool {
+    func isWorking(_ zone: TimeZone, at date: Date? = nil) -> Bool {
+        let date = date ?? now
         let weekday = { () -> Int in
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = zone
-            return calendar.component(.weekday, from: now)
+            return calendar.component(.weekday, from: date)
         }()
-        return (2...6).contains(weekday) && hour(in: zone) >= workStart && hour(in: zone) < workEnd
+        return (2...6).contains(weekday) && hour(in: zone, at: date) >= workStart && hour(in: zone, at: date) < workEnd
     }
 
-    private func subtitle(for zone: TimeZone) -> String {
+    private func subtitle(for zone: TimeZone, at date: Date? = nil) -> String {
+        let now = date ?? self.now
         let difference = zone.secondsFromGMT(for: now) - TimeZone.current.secondsFromGMT(for: now)
         let hours = Double(difference) / 3600
         let offset = difference == 0 ? "Same time" : String(format: "%@%gh", hours > 0 ? "+" : "−", abs(hours))
         // Compare the calendar dates in each zone, not the sign of the offset.
-        let theirs = day(in: zone), ours = day(in: .current)
+        let theirs = day(in: zone, at: now), ours = day(in: .current, at: now)
         return offset + (theirs == ours ? "" : theirs > ours ? " · tomorrow" : " · yesterday")
     }
 
-    private func day(in zone: TimeZone) -> String {
+    private func day(in zone: TimeZone, at now: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = zone

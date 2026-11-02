@@ -12,4 +12,7 @@ you when it starts.
   with a link or with other people, the reminder lead time, auto-join, a
   full-screen alert, how the title shows in the menu bar, and opening calls in
   their apps.
+- **Commands:** Join Next Meeting, Copy Next Meeting Link and Today's
+  Meetings. Give them a hotkey or an alias in Stackbar's Settings, or run them
+  from Spotlight, Shortcuts or a `stackbar://` link.
 - **Agent tools:** `next_meeting`, `agenda` and `join_next`.

@@ -7,12 +7,14 @@ import Foundation
 /// It runs the `docker` CLI through Stackbar (Docker Desktop, OrbStack,
 /// Colima and Rancher Desktop all install one), every 15 seconds while a
 /// container runs and every minute otherwise. Nothing runs in a shell.
+/// When a container crashes, turns unhealthy or keeps restarting, it says
+/// so with a notification and a red menu bar.
 @main
 final class Docker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.docker",
         name: "Docker",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "Your containers, with start, stop, restart and logs a click away.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
@@ -38,6 +40,14 @@ final class Docker: StackbarPlugin {
         var name: String { names.split(separator: ",").first.map(String.init) ?? names }
         var isRunning: Bool { state == "running" || state == "restarting" }
         var isUnhealthy: Bool { status.contains("(unhealthy)") }
+        /// The code in `Exited (1) 5 minutes ago`.
+        var exitCode: Int? {
+            guard state == "exited", let open = status.firstIndex(of: "("), let close = status.firstIndex(of: ")"), open < close else { return nil }
+            return Int(status[status.index(after: open)..<close])
+        }
+        /// Exited on its own with an error. 0 is a clean exit, and 130, 137
+        /// and 143 are what `docker stop` and Ctrl-C leave.
+        var crashed: Bool { exitCode.map { ![0, 130, 137, 143].contains($0) } ?? false }
         /// `nginx:latest`, without Docker Hub's `docker.io/library/`.
         var shortImage: String {
             image.hasPrefix("docker.io/library/") ? String(image.dropFirst("docker.io/library/".count)) : image
@@ -69,6 +79,12 @@ final class Docker: StackbarPlugin {
 
     @Stored("showStopped") var showStopped = true
     @Stored("groupByProject") var groupByProject = true
+    @Stored("notifyTrouble") var notifyTrouble = true
+    /// Containers that crashed since they last ran, by id, so the menu bar
+    /// stays red until they are started again or removed.
+    var crashedIDs: Set<String> = []
+    /// Containers this plugin is stopping, so their exit isn't a crash.
+    var stopping: Set<String> = []
 
     var running: [Container] { containers.filter(\.isRunning) }
     var shown: [Container] { showStopped ? containers : running }
@@ -90,8 +106,11 @@ final class Docker: StackbarPlugin {
                 return
             }
             let decoder = JSONDecoder()
-            containers = result.text.split(separator: "\n").compactMap { try? decoder.decode(Container.self, from: Data($0.utf8)) }
+            let fresh = result.text.split(separator: "\n").compactMap { try? decoder.decode(Container.self, from: Data($0.utf8)) }
                 .sorted { ($0.isRunning ? 0 : 1, $0.name) < ($1.isRunning ? 0 : 1, $1.name) }
+            if loaded, problem == nil { noticeTrouble(from: containers, to: fresh) }
+            containers = fresh
+            crashedIDs = crashedIDs.filter { id in fresh.contains { $0.id == id && !$0.isRunning } }
             problem = nil
         } catch {
             problem = "\(error)".contains("not installed")
@@ -99,6 +118,31 @@ final class Docker: StackbarPlugin {
                 : "\(error)"
         }
         loaded = true
+    }
+
+    /// Compares two lists and speaks up about what went wrong in between:
+    /// a crash, a container turning unhealthy, or one stuck restarting.
+    func noticeTrouble(from old: [Container], to new: [Container]) {
+        let before = Dictionary(old.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var lines: [String] = []
+        for container in new {
+            guard let was = before[container.id] else { continue }
+            if was.isRunning, container.crashed, !stopping.contains(container.id) {
+                crashedIDs.insert(container.id)
+                lines.append("\(container.name) crashed (exit \(container.exitCode ?? 0))")
+            } else if container.isUnhealthy, !was.isUnhealthy {
+                lines.append("\(container.name) is unhealthy")
+            } else if container.state == "restarting", was.state != "restarting" {
+                lines.append("\(container.name) keeps restarting")
+            }
+        }
+        guard notifyTrouble, !lines.isEmpty else { return }
+        Stackbar.notify(lines.count == 1 ? lines[0] : "\(lines.count) containers need a look", body: lines.count == 1 ? "Open Docker in the menu bar for its logs." : lines.joined(separator: "\n"))
+    }
+
+    /// Containers that need a look: unhealthy, restarting, or crashed.
+    var troubled: [Container] {
+        containers.filter { $0.isUnhealthy || $0.state == "restarting" || crashedIDs.contains($0.id) }
     }
 
     static func explain(_ result: RunResult) -> String {
@@ -113,9 +157,11 @@ final class Docker: StackbarPlugin {
     func act(_ verb: String, _ container: Container) async throws {
         busy.insert(container.id)
         busyText = "\(["stop": "Stopping", "start": "Starting", "restart": "Restarting", "rm": "Removing"][verb] ?? verb) \(container.name)…"
+        if verb == "stop" || verb == "restart" { stopping.insert(container.id) }
         defer {
             busy.remove(container.id)
             busyText = nil
+            stopping.remove(container.id)
         }
         let result = try await Stackbar.run("docker", [verb, container.id], timeout: .seconds(90))
         guard result.succeeded else { throw HostError("\(verb) \(container.name): " + Self.explain(result)) }
@@ -142,6 +188,8 @@ final class Docker: StackbarPlugin {
     var menuBar: ViewContent {
         if problem != nil, loaded {
             Label("", symbol: "shippingbox").role(.warning)
+        } else if !troubled.isEmpty {
+            Label("\(running.count) · \(troubled.count)!", symbol: "shippingbox.fill").role(.critical)
         } else if running.isEmpty {
             Label("", symbol: "shippingbox").role(.secondary)
         } else {
@@ -181,6 +229,9 @@ final class Docker: StackbarPlugin {
                     }
                 }
                 if let problem { Banner(problem) }
+                if !troubled.isEmpty {
+                    Banner(troubled.map { self.trouble($0) }.joined(separator: " · "), symbol: "exclamationmark.triangle.fill", theme: .critical)
+                }
                 if let busyText { Banner(busyText, symbol: "arrow.triangle.2.circlepath", theme: .info) }
                 if containers.isEmpty {
                     EmptyState("No containers yet", symbol: "shippingbox", message: "Containers you create or start with Compose show up here.", theme: theme)
@@ -205,6 +256,12 @@ final class Docker: StackbarPlugin {
                 }
             }
         }
+    }
+
+    func trouble(_ container: Container) -> String {
+        if crashedIDs.contains(container.id) { return "\(container.name) crashed (exit \(container.exitCode ?? 0))" }
+        if container.state == "restarting" { return "\(container.name) keeps restarting" }
+        return "\(container.name) is unhealthy"
     }
 
     var summary: String {
@@ -247,6 +304,8 @@ final class Docker: StackbarPlugin {
             row = row.badge("unhealthy", role: .critical)
         } else if container.state == "restarting" {
             row = row.badge("restarting", role: .warning)
+        } else if crashedIDs.contains(container.id) {
+            row = row.badge("crashed", role: .critical)
         } else if container.state == "paused" {
             row = row.badge("paused")
         }
@@ -276,6 +335,9 @@ final class Docker: StackbarPlugin {
     var settings: ViewContent {
         Section("Show") {
             Toggle("Group by Compose project", isOn: groupByProject) { self.groupByProject = $0 }
+        }
+        Section("Notify") {
+            Toggle("When a container crashes, turns unhealthy or keeps restarting", isOn: notifyTrouble) { self.notifyTrouble = $0 }
         }
         Section("Cleanup") {
             Button("Remove Stopped Containers", symbol: "trash", role: .critical) { _ = try await self.prune() }

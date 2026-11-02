@@ -4,8 +4,9 @@ import Foundation
 /// What Homebrew can upgrade, in the menu bar, with upgrades one click away.
 ///
 /// Every hour (and on wake) it runs `brew outdated --json=v2`, which reads
-/// what Homebrew already knows and is quick. "Update Homebrew" runs
-/// `brew update` to fetch the latest formulae first. Runs go through
+/// what Homebrew already knows and is quick. Every few hours it first runs
+/// `brew update` in the background so that list is not stale, and "Update
+/// Homebrew" does the same on demand. Runs go through
 /// Stackbar, which finds `brew` in /opt/homebrew/bin or /usr/local/bin and
 /// asks you to approve that path once.
 @main
@@ -13,7 +14,7 @@ final class Homebrew: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.homebrew",
         name: "Homebrew",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "Outdated formulae and casks, with upgrades a click away.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(60), .wake],
@@ -69,6 +70,18 @@ final class Homebrew: StackbarPlugin {
     @Stored("hidePinned") var hidePinned = true
     @Stored("greedy") var greedy = false
     @Stored("notify") var notifyNew = false
+    /// Run `brew update` in the background when the formulae list is older than this.
+    @Stored("autoUpdate") var autoUpdate = true
+    /// When `brew update` last succeeded, from here or the button.
+    @Stored("indexUpdated") var indexUpdated: Date? = nil
+
+    static let staleAfter: TimeInterval = 6 * 3600
+
+    /// Whether the background `brew update` is due.
+    func indexIsStale(now: Date = Date()) -> Bool {
+        guard let indexUpdated else { return true }
+        return now.timeIntervalSince(indexUpdated) >= Self.staleAfter
+    }
 
     var shown: [Package] {
         packages.filter { (includeCasks || !$0.isCask) && (!hidePinned || !$0.pinned) }
@@ -76,6 +89,12 @@ final class Homebrew: StackbarPlugin {
 
     func refresh() async throws {
         if busy == nil { lastResult = nil }
+        // Not on the first check after launch, which should show the list
+        // right away; the next hourly or wake check fetches first.
+        if autoUpdate, busy == nil, checked != nil, indexIsStale() {
+            // Quietly: a failed fetch (offline, say) still leaves the last list to show.
+            _ = try? await fetchIndex(label: "Fetching the latest formulae")
+        }
         await check()
     }
 
@@ -136,12 +155,18 @@ final class Homebrew: StackbarPlugin {
         if !result.succeeded { throw HostError(lastResult!) }
     }
 
-    func update() async throws -> String {
+    /// Runs `brew update` and records when it worked.
+    func fetchIndex(label: String) async throws {
         guard busy == nil else { throw HostError("\(busy!) is still running") }
-        busy = "Updating Homebrew"
+        busy = label
         defer { busy = nil }
         let result = try await Stackbar.run("brew", ["update"], environment: ["HOMEBREW_NO_ENV_HINTS": "1", "HOMEBREW_NO_COLOR": "1"], timeout: .seconds(300))
         guard result.succeeded else { throw HostError(Self.failure(result, doing: "brew update")) }
+        indexUpdated = Date()
+    }
+
+    func update() async throws -> String {
+        try await fetchIndex(label: "Updating Homebrew")
         await check()
         lastResult = "Homebrew updated; \(shown.count) outdated"
         lastFailed = false
@@ -233,7 +258,18 @@ final class Homebrew: StackbarPlugin {
 
     var checkedText: String {
         guard let checked else { return "" }
-        return "Checked " + checked.formatted(date: .omitted, time: .shortened)
+        let text = "Checked " + checked.formatted(date: .omitted, time: .shortened)
+        guard let indexUpdated else { return text + " · list never fetched" }
+        return text + " · list from " + Self.ago(indexUpdated, now: checked)
+    }
+
+    /// "just now", "3h ago", "2d ago".
+    static func ago(_ date: Date, now: Date) -> String {
+        let minutes = max(0, Int(now.timeIntervalSince(date) / 60))
+        if minutes < 1 { return "just now" }
+        if minutes < 60 { return "\(minutes)m ago" }
+        if minutes < 48 * 60 { return "\(minutes / 60)h ago" }
+        return "\(minutes / 1440)d ago"
     }
 
     func row(_ package: Package) -> Row {
@@ -258,11 +294,14 @@ final class Homebrew: StackbarPlugin {
                 await self.check()
             }
         }
+        Section("Stay current") {
+            Toggle("Fetch the latest formulae every 6 hours", isOn: autoUpdate) { self.autoUpdate = $0 }
+        }
         Section("Notify") {
             Toggle("When new updates appear", isOn: notifyNew) { self.notifyNew = $0 }
         }
         Section("How it checks") {
-            Text("Hourly and on wake, Stackbar runs brew outdated, which reads what Homebrew already knows. Update Homebrew runs brew update to fetch the latest. Nothing runs in a shell.").style(.caption)
+            Text("Hourly and on wake, Stackbar runs brew outdated, which reads what Homebrew already knows. Every 6 hours it runs brew update first, so that list stays current; Update Homebrew does it now. Nothing runs in a shell.").style(.caption)
         }
     }
 

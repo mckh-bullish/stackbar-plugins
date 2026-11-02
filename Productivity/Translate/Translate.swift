@@ -1,25 +1,33 @@
 import StackbarKit
 import Foundation
+#if canImport(Translation)
+import NaturalLanguage
+import Translation
+#endif
 
 /// Translates the text you selected, from the palette, a hotkey or
 /// Spotlight.
 ///
-/// With no setup it opens Google Translate in your browser with the text
-/// filled in. With a DeepL API key (the free plan is enough) it translates
-/// in place, so you can paste the result over the selection or copy it.
-/// When an app doesn't share its selection, it uses what you last copied.
+/// With no setup it translates in place: on your Mac with Apple's
+/// translation when the language pair is downloaded, and with Google
+/// Translate otherwise. DeepL (with an API key) and opening Google Translate
+/// in the browser are the other engines. Paste the result over the
+/// selection or copy it. When an app doesn't share its selection, it uses
+/// what you last copied.
 @main
 final class Translate: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.translate",
         name: "Translate",
-        version: "1.2.0",
-        summary: "Translate the selected text, in your browser or in place with DeepL.",
+        version: "1.3.0",
+        summary: "Translate the selected text in place, on your Mac or with Google or DeepL.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
         // The selection; the clipboard as a fallback and for pasting the
-        // result; DeepL's two API hosts (free and paid keys).
-        capabilities: [.context, .clipboard, .network("api-free.deepl.com", "api.deepl.com"), .secret(name: "DEEPL_API_KEY")],
+        // result; Google Translate's keyless endpoint, used when the Mac
+        // can't translate the pair itself; DeepL's two API hosts (free and
+        // paid keys).
+        capabilities: [.context, .clipboard, .network("translate.googleapis.com", "api-free.deepl.com", "api.deepl.com"), .secret(name: "DEEPL_API_KEY")],
         minimumStackbar: "0.14.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate"
     )
@@ -57,15 +65,22 @@ final class Translate: StackbarPlugin {
 
     static let maxCharacters = 5_000
 
-    @Stored("engine") var engine = "Google Translate (browser)"
+    /// "Automatic" (on the Mac, else Google), "DeepL" or "Browser".
+    @Stored("engine") var storedEngine = "Automatic"
     @Stored("target") var target = "English"
     @Stored("second") var second = "German"
     @Stored("formality") var formality = "Default"
 
+    var engine: String {
+        // Before 1.3 the only keyless engine opened the browser; those users get the new default.
+        ["DeepL", "Browser"].contains(storedEngine) ? storedEngine : "Automatic"
+    }
     var useDeepL: Bool { engine == "DeepL" }
+    /// Whether the translation shows here, rather than in the browser.
+    var inPlace: Bool { engine != "Browser" }
 
-    /// The last translation, for the view.
-    var result: (source: String, text: String, detected: String?, target: String)?
+    /// The last translation, for the view. `by` names the engine that did it.
+    var result: (source: String, text: String, detected: String?, target: String, by: String)?
     var problem: String?
 
     static func language(_ name: String?) -> Language {
@@ -85,6 +100,76 @@ final class Translate: StackbarPlugin {
         allowed.remove(charactersIn: "&+=?#")
         let encoded = String(text.prefix(maxCharacters)).addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
         return "https://translate.google.com/?sl=auto&tl=\(language.google)&op=translate&text=\(encoded)"
+    }
+
+    /// The language as Apple's Translation names it.
+    static func appleCode(_ language: Language) -> String {
+        switch language.deepl {
+        case "EN-US": return "en-US"
+        case "EN-GB": return "en-GB"
+        case "PT-BR": return "pt-BR"
+        case "ZH-HANS": return "zh-Hans"
+        case "ZH-HANT": return "zh-Hant"
+        default: return language.google
+        }
+    }
+
+    /// Translates on the Mac, with nothing sent anywhere, when Apple's
+    /// Translation has this language pair downloaded. Nil means it can't
+    /// (another OS, an unknown source language, or the pair isn't installed).
+    func onDevice(_ text: String, to language: Language) async throws -> (text: String, detected: String?)? {
+        #if canImport(Translation)
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(text)
+        guard let detected = recognizer.dominantLanguage?.rawValue else { return nil }
+        let source = Locale.Language(identifier: detected)
+        let target = Locale.Language(identifier: Self.appleCode(language))
+        guard await LanguageAvailability().status(from: source, to: target) == .installed else { return nil }
+        let session = TranslationSession(installedSource: source, target: target)
+        let response = try await session.translate(text)
+        return (response.targetText, detected)
+        #else
+        return nil
+        #endif
+    }
+
+    /// Translates with Google Translate's keyless endpoint, the one its
+    /// browser extension uses. It answers nested arrays: the translated
+    /// pieces first, the detected language third.
+    func google(_ text: String, to language: Language) async throws -> (text: String, detected: String?) {
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: "&+=?#")
+        let query = String(text.prefix(Self.maxCharacters)).addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+        let response = try await Stackbar.http(HTTPRequest(url: "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=\(language.google)&dt=t&q=\(query)"))
+        guard (200..<300).contains(response.status) else {
+            throw HostError(response.status == 429 ? "Google Translate is busy; try again in a moment" : "Google Translate answered \(response.status)")
+        }
+        guard let reply = try JSONSerialization.jsonObject(with: response.body) as? [Any], let pieces = reply.first as? [Any] else {
+            throw HostError("Google Translate sent something unexpected")
+        }
+        let translated = pieces.compactMap { ($0 as? [Any])?.first as? String }.joined()
+        guard !translated.isEmpty else { throw HostError("Google Translate sent no translation") }
+        return (translated, reply.count > 2 ? reply[2] as? String : nil)
+    }
+
+    /// The engine's translation, and which engine it was.
+    func run(_ text: String, to language: Language) async throws -> (text: String, detected: String?, by: String) {
+        if useDeepL {
+            let result = try await deepL(text, to: language)
+            return (result.text, result.detected, "DeepL")
+        }
+        // Apple's translation can fail for reasons of its own; Google is the fallback.
+        if let local = try? await onDevice(text, to: language) { return (local.text, local.detected, "your Mac") }
+        let result = try await google(text, to: language)
+        return (result.text, result.detected, "Google Translate")
+    }
+
+    /// Whether `detected` (a DeepL, Google or Apple code) is `language`.
+    static func same(_ detected: String?, _ language: Language) -> Bool {
+        guard let detected = detected?.lowercased(), !detected.isEmpty else { return false }
+        let code = language.google.lowercased()
+        let base = detected.split(separator: "-").first.map(String.init) ?? detected
+        return code == detected || code.hasPrefix(base + "-") || code == base
     }
 
     /// Translates with DeepL. A key ending in `:fx` is a free-plan key.
@@ -118,12 +203,12 @@ final class Translate: StackbarPlugin {
     /// the second language, so one command goes both ways.
     func translate(_ text: String, to name: String?) async throws {
         var language = Self.language(name ?? target)
-        var translated = try await deepL(text, to: language)
-        if name == nil, let detected = translated.detected, language.deepl.hasPrefix(detected) {
+        var translated = try await run(text, to: language)
+        if name == nil, Self.same(translated.detected, language) {
             language = Self.language(second)
-            translated = try await deepL(text, to: language)
+            translated = try await run(text, to: language)
         }
-        result = (text, translated.text, translated.detected, language.name)
+        result = (text, translated.text, translated.detected, language.name, translated.by)
     }
 
     // MARK: Commands
@@ -138,10 +223,10 @@ final class Translate: StackbarPlugin {
                     self.problem = "Select some text first (or copy it), or type it here"
                     return
                 }
-                if self.useDeepL {
+                if self.inPlace {
                     do { try await self.translate(text, to: invocation["to"]) } catch { self.problem = "\(error)" }
                 } else {
-                    self.result = (text, "", nil, invocation["to"] ?? self.target)
+                    self.result = (text, "", nil, invocation["to"] ?? self.target, "")
                 }
             }) { invocation in
                 self.view(into: invocation["to"])
@@ -157,10 +242,10 @@ final class Translate: StackbarPlugin {
         if let problem {
             ContentUnavailableView("Can't translate", symbol: "character.bubble", message: problem)
         } else if let result {
-            if useDeepL {
+            if inPlace {
                 List {
                     Row(result.text, subtitle: "\(result.detected.map { "From \($0) " } ?? "")into \(result.target)", symbol: "character.bubble", key: "translation")
-                        .preview(text: result.text, caption: "\(result.source.count) characters translated by DeepL")
+                        .preview(text: result.text, caption: "\(result.source.count) characters translated by \(result.by)")
                         .action("Paste") {
                             try await Stackbar.paste(.text(result.text), restoringClipboard: true)
                         }
@@ -174,10 +259,10 @@ final class Translate: StackbarPlugin {
                 Button("Open in Google Translate (\(result.target))", symbol: "globe", role: .accent) {
                     Stackbar.open(Self.googleURL(result.source, to: Self.language(result.target)))
                 }
-                Text("Add a DeepL API key in Settings to translate here instead.").style(.caption)
+                Text("Choose Automatic in Settings to translate here instead.").style(.caption)
             }
         } else {
-            ContentUnavailableView(useDeepL ? "Translating…" : "Reading the selection…", symbol: "character.bubble")
+            ContentUnavailableView(inPlace ? "Translating…" : "Reading the selection…", symbol: "character.bubble")
         }
     }
 
@@ -191,7 +276,7 @@ final class Translate: StackbarPlugin {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         problem = nil
-        if useDeepL {
+        if inPlace {
             do { try await translate(text, to: nil) } catch { problem = "\(error)" }
         } else {
             Stackbar.open(Self.googleURL(text, to: Self.language(target)))
@@ -199,7 +284,7 @@ final class Translate: StackbarPlugin {
     }
 
     var panel: ViewContent {
-        PanelHeader("Translate", subtitle: useDeepL ? "DeepL" + (formality == "Default" ? "" : " · \(formality.lowercased())") : "Google Translate · opens in your browser",
+        PanelHeader("Translate", subtitle: useDeepL ? "DeepL" + (formality == "Default" ? "" : " · \(formality.lowercased())") : inPlace ? "On your Mac, or Google Translate" : "Google Translate · opens in your browser",
                     symbol: "character.bubble.fill", theme: theme)
         HStack(spacing: Space.s) {
             Pill("Detect", theme: .neutral)
@@ -212,7 +297,7 @@ final class Translate: StackbarPlugin {
         }
         TextField("Type or paste, then Return") { text in await self.translateHere(text) }
         if useDeepL, problem != nil, result == nil {
-            Text("Or switch to Google Translate in Settings.").role(.secondary).typography(.caption)
+            Text("Or switch to Automatic in Settings.").role(.secondary).typography(.caption)
         }
         HStack(spacing: Space.xs + 2) {
             Chip("Translate clipboard", symbol: "doc.on.clipboard", theme: theme) {
@@ -233,10 +318,10 @@ final class Translate: StackbarPlugin {
         }
         if let problem {
             Banner(problem)
-        } else if let result, useDeepL {
+        } else if let result, inPlace {
             // Two cards: what went in, quiet, and what came out, lit.
             VStack(spacing: Space.xxs) {
-                Text((result.detected.map { Self.languageName($0) + " · detected" } ?? "Original").uppercased())
+                Text((result.detected.map { Self.languageName($0) + " · detected" } ?? "Original").uppercased() + " · BY \(result.by.uppercased())")
                     .role(.secondary).typography(.overline)
                 Text(Self.clipped(result.source, 220)).role(.secondary).typography(.body)
             }
@@ -270,21 +355,23 @@ final class Translate: StackbarPlugin {
 
     /// DeepL's source code ("DE") as a name ("German").
     static func languageName(_ code: String) -> String {
-        languages.first { $0.deepl.hasPrefix(code.uppercased()) }?.name.replacingOccurrences(of: " (UK)", with: "") ?? code
+        languages.first { $0.deepl.hasPrefix(code.uppercased()) || same(code, $0) }?.name.replacingOccurrences(of: " (UK)", with: "") ?? code
     }
 
     var settings: ViewContent {
         Section("Engine") {
-            Picker("Translate with", options: ["Google", "DeepL"], selection: useDeepL ? "DeepL" : "Google", style: .segmented) { choice in
-                self.engine = choice == "DeepL" ? "DeepL" : "Google Translate (browser)"
+            Picker("Translate with", options: ["Automatic", "DeepL", "Browser"], selection: engine, style: .segmented) { choice in
+                self.storedEngine = choice
                 self.result = nil
                 self.problem = nil
             }
-            if useDeepL {
+            if engine == "Automatic" {
+                Text("Translates on your Mac when the language pair is downloaded (System Settings > General > Language & Region > Translation Languages), so nothing leaves it. Otherwise the text goes to Google Translate, with no account or key.").style(.caption)
+            } else if useDeepL {
                 Text("DeepL needs an API key: the free plan at deepl.com/pro-api covers 500,000 characters a month. Stackbar asks for it the first time and keeps it in your Keychain.").style(.caption)
                 Picker("Formality", options: ["Default", "Formal", "Informal"], selection: formality, style: .segmented) { self.formality = $0 }
             } else {
-                Text("Opens translate.google.com with the text filled in. Nothing is sent until you look at it there.").style(.caption)
+                Text("Opens translate.google.com in your browser with the text filled in.").style(.caption)
             }
         }
         Section("Languages") {

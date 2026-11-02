@@ -10,5 +10,10 @@ default).
 - **Settings:** the cities (type a time zone like `Asia/Tokyo`, or a city name
   like `Tokyo`), which one the menu bar shows, 12- or 24-hour time, and your
   working hours.
-- **In the panel:** each row can be pinned to the menu bar or copied.
+- **In the panel:** tap a city to show it in the menu bar. The time-travel
+  slider moves every clock up to 12 hours either way in half-hour steps, so
+  you can see what time it is everywhere when it's 3pm here; Now puts it back.
+  The menu bar and widget always show the real time.
+- **Commands:** World Clock lists your cities with their times; each row can
+  be copied or shown in the menu bar.
 - **Agent tool:** `times` returns the time in every city.

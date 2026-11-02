@@ -11,7 +11,7 @@ final class Ports: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.ports",
         name: "Ports",
-        version: "1.2.0",
+        version: "1.2.1",
         summary: "Which process is listening on which port, and a way to stop it.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .every(.seconds(30))],
@@ -62,7 +62,8 @@ final class Ports: StackbarPlugin {
     func load() async {
         do {
             // -F prints one field a line: p (pid), c (command), L (login), n (name).
-            let result = try await Stackbar.run("lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-FpcLn"], timeout: .seconds(20))
+            // +c 0 prints the whole command name; lsof cuts it to 9 characters otherwise.
+            let result = try await Stackbar.run("lsof", ["+c", "0", "-nP", "-iTCP", "-sTCP:LISTEN", "-FpcLn"], timeout: .seconds(20))
             // lsof exits 1 when nothing matches.
             guard result.succeeded || (result.status == 1 && result.errorText.isEmpty) else {
                 problem = "lsof failed (\(result.status)): \(result.errorText.prefix(200))"

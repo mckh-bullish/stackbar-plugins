@@ -139,4 +139,25 @@ final class QuicklinksTests: XCTestCase {
         XCTAssertTrue(host.opened.all.contains { ["file:///tmp", "file:///tmp/"].contains($0.url) }, "and opens it: \(host.opened.all)")
         await session.stop()
     }
+
+    func testAFirstRunOffersEverydayLinksAndRanksByUse() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Quicklinks")
+        let offer = await supervisor.views[.panel]?.tree.lazy.compactMap { node -> ActionID? in
+            if case .tappable(_, let action) = node, action.rawValue.hasPrefix("button/Add ") { return action }
+            return nil
+        }.first
+        await supervisor.press(try XCTUnwrap(offer, "the empty panel offers a starter set"))
+        let added = await waitUntil(10) { await supervisor.views[.panel]?.rows.count == 8 }
+        XCTAssertTrue(added, "the starter set is added")
+
+        // Opening one moves it to the top of the list.
+        let rows = await supervisor.views[.panel]?.rows ?? []
+        let gmail = try XCTUnwrap(rows.first { $0.title == "Gmail" })
+        XCTAssertNotEqual(rows.first?.title, "Gmail")
+        await supervisor.press(try XCTUnwrap(gmail.actions.first).id)
+        let moved = await waitUntil(10) { await supervisor.views[.panel]?.rows.first?.title == "Gmail" }
+        XCTAssertTrue(moved, "the most used quicklink comes first")
+        await supervisor.stop()
+    }
 }

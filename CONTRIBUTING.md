@@ -12,6 +12,9 @@ A plugin is accepted when all of these hold:
 2. **It is one file that imports StackbarKit and Foundation only.** No
    `URLSession`, `Process` or `FileManager`: plugins run sandboxed and reach
    the network, secrets and the system through `Stackbar.*` host calls.
+   Apple's on-device NaturalLanguage and Translation frameworks are the
+   exception: they do no I/O of their own. Guard them with
+   `#if canImport(...)` so the plugin still builds on Linux.
 3. **It asks for as little as it can.** Every capability shows on the install
    sheet. Network hosts are exact (`api.github.com`), not `*.com`. A secret is
    asked for only when it is needed, through `Stackbar.secret`.

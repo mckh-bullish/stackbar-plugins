@@ -10,7 +10,7 @@ final class StayAwake: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.stay-awake",
         name: "Stay Awake",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "Keeps your Mac awake for a while, until a time, while an app runs or on a schedule.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
@@ -51,6 +51,8 @@ final class StayAwake: StackbarPlugin {
     /// until stopped, otherwise starts for that many minutes. Clicking again
     /// stops; a right click always opens the panel.
     @Stored("clickMinutes") var clickMinutes = 0.0
+    /// Shows the time left as digits next to the cup during a timed session.
+    @Stored("showTimeLeft") var showTimeLeft = true
     @Stored("scheduleStart") var scheduleStart = "09:00"
     @Stored("scheduleEnd") var scheduleEnd = "18:00"
     @Stored("scheduleWeekdaysOnly") var scheduleWeekdaysOnly = true
@@ -312,7 +314,11 @@ final class StayAwake: StackbarPlugin {
         if held != nil, let range {
             HStack(spacing: Space.xs) {
                 Image(systemName: "cup.and.heat.waves.fill")
-                ProgressBar(timing: range, style: .ring(lineWidth: 2)).frame(width: 13, height: 13)
+                if showTimeLeft {
+                    TimerText(range)
+                } else {
+                    ProgressBar(timing: range, style: .ring(lineWidth: 2)).frame(width: 13, height: 13)
+                }
             }
         } else if held != nil {
             Label("", symbol: "cup.and.heat.waves.fill").role(.primary)
@@ -520,7 +526,8 @@ final class StayAwake: StackbarPlugin {
             Picker("Clicking the cup", options: Self.clickChoices.map(\.title), selection: Self.clickChoices.first { $0.minutes == clickMinutes }?.title ?? Self.clickChoices[1].title, key: "click") { title in
                 self.clickMinutes = Self.clickChoices.first { $0.title == title }?.minutes ?? 0
             }
-            Text("A right click always opens the panel.").style(.caption).role(.secondary)
+            Toggle("Show time left during a timed session", isOn: showTimeLeft, key: "time-left") { self.showTimeLeft = $0 }
+            Text("A right click always opens the panel. Toggle, Keep Awake For and Allow Sleep are commands too, so you can give them a hotkey or run them from Shortcuts.").style(.caption).role(.secondary)
         }
         Section("Stop or pause") {
             Slider(batteryFloor > 0 ? "Stop below \(Int(batteryFloor))% battery" : "Ignore the battery level", value: batteryFloor, in: 0...50, step: 5, key: "battery") { value in
@@ -609,6 +616,41 @@ final class StayAwake: StackbarPlugin {
         if let end { scheduleEnd = end.trimmingCharacters(in: .whitespaces) }
         settingsError = nil
         await apply()
+    }
+
+    // MARK: Commands
+
+    /// What a typed `for` argument means: nothing is until stopped, `90m`,
+    /// `2h` or `1:30` is a duration, and `until 17:30` or `5pm` is a time.
+    static func mode(for text: String?, now: Date = Date()) -> Mode? {
+        let text = (text ?? "").trimmingCharacters(in: .whitespaces).lowercased()
+        if text.isEmpty { return .indefinitely }
+        if text.hasPrefix("until ") { return next(String(text.dropFirst(6)), after: now).map(Mode.until) }
+        if let seconds = duration(text) { return .until(now.addingTimeInterval(seconds)) }
+        return next(text, after: now).map(Mode.until)
+    }
+
+    var commands: [Command] {
+        Command("toggle", title: "Toggle Stay Awake", symbol: "cup.and.heat.waves", keywords: ["awake", "caffeine", "amphetamine", "sleep"]) { _ in
+            if self.session != nil {
+                await self.stop()
+                return .message("Your Mac can sleep again")
+            }
+            await self.start(.indefinitely)
+            return .message("Keeping your Mac awake until you stop it")
+        }
+        Command("keep-awake", title: "Keep Awake For…", subtitle: "A duration like 90m or 2h, or a time like 17:30", symbol: "timer", keywords: ["awake", "caffeine", "sleep", "until"]) { invocation in
+            guard let mode = Self.mode(for: invocation["for"]) else {
+                return .failure("Try a duration like 90m or 2h, or a time like 17:30")
+            }
+            await self.start(mode)
+            return .message("Keeping your Mac awake " + self.describe(mode).lowercased())
+        }
+        .argument("for", placeholder: "2h, 90m or 17:30", required: false)
+        Command("allow-sleep", title: "Allow Sleep", symbol: "moon.zzz", keywords: ["awake", "sleep", "stop"]) { _ in
+            await self.stop()
+            return .message("Your Mac can sleep again")
+        }
     }
 
     // MARK: Agents

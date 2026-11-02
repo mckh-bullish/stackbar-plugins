@@ -64,4 +64,31 @@ final class ClipboardTests: XCTestCase {
         XCTAssertNotNil(row?.preview?.caption)
         await supervisor.stop()
     }
+
+    func testMasksCopiesThatLookLikeSecrets() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Clipboard")
+        func titles() async -> [String] { await supervisor.views[.panel]?.rows.map(\.title) ?? [] }
+        func copy(_ text: String) async {
+            let before = await supervisor.settledCount
+            host.system.simulateCopy(text)
+            _ = await waitUntil(5) { await supervisor.settledCount > before }
+        }
+        let token = "ghp_" + String(repeating: "a1B2", count: 9)
+        await copy(token)
+        await copy("4242 4242 4242 4242")
+        await copy("a normal sentence with ghp_ in it")
+        _ = await waitUntil(10) { await titles().contains("a normal sentence with ghp_ in it") }
+        let shown = await titles()
+        XCTAssertTrue(shown.contains("•••••••• GitHub token"), "\(shown)")
+        XCTAssertTrue(shown.contains("•••••••• card number"), "\(shown)")
+        XCTAssertFalse(shown.contains { $0.contains(token) }, "the token itself is never shown")
+        let masked = await supervisor.views[.panel]?.rows.first { $0.title == "•••••••• GitHub token" }
+        XCTAssertFalse(masked?.preview?.text?.contains(token) ?? false, "nor in the preview")
+
+        // Pasting still pastes the real thing.
+        await supervisor.press(try XCTUnwrap(masked?.actions.first).id)
+        XCTAssertEqual(host.system.pasted.last, .text(token))
+        await supervisor.stop()
+    }
 }

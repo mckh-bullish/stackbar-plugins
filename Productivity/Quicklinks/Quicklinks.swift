@@ -15,7 +15,7 @@ final class Quicklinks: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.quicklinks",
         name: "Quicklinks",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "Open links and folders by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -46,6 +46,14 @@ final class Quicklinks: StackbarPlugin {
     /// The tag the panel filters by; nil shows them all.
     @Stored("panelTag") var panelTag: String? = nil
     @Stored("siteIcons") var siteIcons = true
+    /// How often and how lately each quicklink was opened, by id, so the
+    /// ones you use come first.
+    @Stored("usage") var usage: [String: Usage] = [:]
+
+    struct Usage: Codable, Equatable {
+        var count: Int
+        var last: Date
+    }
     var draft = Draft()
     var notice: String?
 
@@ -53,6 +61,134 @@ final class Quicklinks: StackbarPlugin {
     struct Draft {
         var nameError: String?
         var linkError: String?
+    }
+
+    // MARK: Library
+
+    /// A ready-made quicklink: what a new user can add in one click.
+    struct Starter: Identifiable {
+        var name: String
+        var link: String
+        var tag: String
+        var id: String { link }
+    }
+
+    static func ask(_ name: String) -> String { #"{argument name=""# + name + #""}"# }
+
+    /// Starters by tag, the everyday ones first.
+    static let library: [Starter] = [
+        Starter(name: "Google", link: "https://www.google.com/search?q=" + ask("query"), tag: "Search"),
+        Starter(name: "DuckDuckGo", link: "https://duckduckgo.com/?q=" + ask("query"), tag: "Search"),
+        Starter(name: "Kagi", link: "https://kagi.com/search?q=" + ask("query"), tag: "Search"),
+        Starter(name: "Perplexity", link: "https://www.perplexity.ai/search?q=" + ask("query"), tag: "Search"),
+        Starter(name: "Ask Claude", link: "https://claude.ai/new?q=" + ask("prompt"), tag: "Search"),
+        Starter(name: "Wikipedia", link: "https://en.wikipedia.org/w/index.php?search=" + ask("query"), tag: "Search"),
+        Starter(name: "YouTube", link: "https://www.youtube.com/results?search_query=" + ask("query"), tag: "Search"),
+        Starter(name: "Google Maps", link: "https://www.google.com/maps/search/" + ask("place"), tag: "Search"),
+        Starter(name: "Google Images", link: "https://www.google.com/search?tbm=isch&q=" + ask("query"), tag: "Search"),
+        Starter(name: "Reddit", link: "https://www.reddit.com/search/?q=" + ask("query"), tag: "Search"),
+        Starter(name: "Amazon", link: "https://www.amazon.com/s?k=" + ask("query"), tag: "Search"),
+        Starter(name: "GitHub Repository", link: "https://github.com/" + ask("owner") + "/" + ask("repo"), tag: "Developer"),
+        Starter(name: "GitHub Search", link: "https://github.com/search?type=repositories&q=" + ask("query"), tag: "Developer"),
+        Starter(name: "GitHub Code Search", link: "https://github.com/search?type=code&q=" + ask("query"), tag: "Developer"),
+        Starter(name: "My Pull Requests", link: "https://github.com/pulls", tag: "Developer"),
+        Starter(name: "GitHub Notifications", link: "https://github.com/notifications", tag: "Developer"),
+        Starter(name: "Stack Overflow", link: "https://stackoverflow.com/search?q=" + ask("query"), tag: "Developer"),
+        Starter(name: "MDN", link: "https://developer.mozilla.org/en-US/search?q=" + ask("query"), tag: "Developer"),
+        Starter(name: "Apple Developer Docs", link: "https://developer.apple.com/search/?q=" + ask("query"), tag: "Developer"),
+        Starter(name: "Swift Package Index", link: "https://swiftpackageindex.com/search?query=" + ask("query"), tag: "Developer"),
+        Starter(name: "npm", link: "https://www.npmjs.com/search?q=" + ask("package"), tag: "Developer"),
+        Starter(name: "PyPI", link: "https://pypi.org/search/?q=" + ask("package"), tag: "Developer"),
+        Starter(name: "crates.io", link: "https://crates.io/search?q=" + ask("crate"), tag: "Developer"),
+        Starter(name: "Homebrew Formula", link: "https://formulae.brew.sh/formula/" + ask("formula"), tag: "Developer"),
+        Starter(name: "Docker Hub", link: "https://hub.docker.com/search?q=" + ask("image"), tag: "Developer"),
+        Starter(name: "Can I Use", link: "https://caniuse.com/?search=" + ask("feature"), tag: "Developer"),
+        Starter(name: "regex101", link: "https://regex101.com", tag: "Developer"),
+        Starter(name: "crontab guru", link: "https://crontab.guru", tag: "Developer"),
+        Starter(name: "JWT Debugger", link: "https://jwt.io", tag: "Developer"),
+        Starter(name: "Gmail", link: "https://mail.google.com", tag: "Productivity"),
+        Starter(name: "Google Calendar", link: "https://calendar.google.com", tag: "Productivity"),
+        Starter(name: "Google Drive Search", link: "https://drive.google.com/drive/search?q=" + ask("query"), tag: "Productivity"),
+        Starter(name: "Google Translate", link: "https://translate.google.com/?sl=auto&tl=en&text=" + ask("text"), tag: "Productivity"),
+        Starter(name: "Dictionary", link: "https://www.merriam-webster.com/dictionary/" + ask("word"), tag: "Productivity"),
+        Starter(name: "Thesaurus", link: "https://www.thesaurus.com/browse/" + ask("word"), tag: "Productivity"),
+        Starter(name: "Weather", link: "https://wttr.in/" + ask("city"), tag: "Productivity"),
+        Starter(name: "Downloads", link: "~/Downloads", tag: "Mac"),
+        Starter(name: "Desktop", link: "~/Desktop", tag: "Mac"),
+        Starter(name: "Documents", link: "~/Documents", tag: "Mac"),
+        Starter(name: "Applications", link: "/Applications", tag: "Mac"),
+    ]
+
+    /// Opening and everyday sites, added by the empty state's one button.
+    static let essentials = ["Google", "YouTube", "Wikipedia", "Google Maps", "GitHub Repository", "Gmail", "Google Calendar", "Downloads"]
+
+    static let libraryTags = ["Search", "Developer", "Productivity", "Mac"]
+
+    /// Whether a starter's link is already saved.
+    func has(_ starter: Starter) -> Bool { links.contains { $0.link == starter.link } }
+
+    func add(_ starters: [Starter]) -> Int {
+        let new = starters.filter { !has($0) }
+        links += new.map { Link(id: UUID(), name: $0.name, link: $0.link, tags: [$0.tag]) }
+        return new.count
+    }
+
+    @ViewBuilder func libraryView(tag: String?) -> ViewContent {
+        let shown = Self.library.filter { tag == nil || tag == "All" || $0.tag == tag }
+        let missing = shown.filter { !has($0) }
+        if !missing.isEmpty {
+            Button(missing.count == shown.count ? "Add all \(shown.count)" : "Add the \(missing.count) you don't have", symbol: "plus.circle", key: "library-add-all") {
+                let added = self.add(missing)
+                self.notice = "Added \(added) quicklink\(added == 1 ? "" : "s")"
+            }
+        }
+        List(searchable: true) {
+            ForEach(Self.libraryTags.filter { tag == nil || tag == "All" || $0 == tag }) { group in
+                Section(group) {
+                    ForEach(shown.filter { $0.tag == group }) { starter in
+                        let link = Link(id: UUID(), name: starter.name, link: starter.link, tags: [starter.tag])
+                        let row = Row(starter.name, subtitle: Self.readable(link), symbol: Self.symbol(for: link), key: "starter-\(starter.link)")
+                        if self.has(starter) {
+                            row.badge("Added", role: .secondary)
+                        } else {
+                            row.action("Add") {
+                                _ = self.add([starter])
+                                self.notice = "Added \(starter.name)"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Ranking
+
+    /// Opens, worth less as they age: a link used daily this week beats
+    /// one used a lot last year.
+    func score(_ link: Link, now: Date = Date()) -> Double {
+        guard let use = usage[link.id.uuidString] else { return 0 }
+        let days = max(0, now.timeIntervalSince(use.last) / 86400)
+        return Double(use.count) * pow(0.5, days / 14)
+    }
+
+    func ranked(_ shown: [Link]) -> [Link] {
+        let now = Date()
+        return shown.sorted {
+            let (a, b) = (score($0, now: now), score($1, now: now))
+            return a != b ? a > b : $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+    }
+
+    func noteOpened(_ link: Link) {
+        var use = usage[link.id.uuidString] ?? Usage(count: 0, last: Date())
+        use.count += 1
+        use.last = Date()
+        var all = usage
+        all[link.id.uuidString] = use
+        // Forget deleted links.
+        let ids = Set(links.map { $0.id.uuidString })
+        usage = all.filter { ids.contains($0.key) }
     }
 
     // MARK: Links and paths
@@ -123,7 +259,7 @@ final class Quicklinks: StackbarPlugin {
     /// The launcher: up to six links that open without asking anything, as
     /// tiles with their site's icon.
     @ViewBuilder func launcher(_ shown: [Link]) -> ViewContent {
-        let ready = shown.filter { !($0.template?.arguments.contains(where: \.required) ?? false) }.prefix(6)
+        let ready = ranked(shown).filter { !($0.template?.arguments.contains(where: \.required) ?? false) }.prefix(6)
         if ready.count >= 3 {
             Grid(columns: 3, spacing: Space.s) {
                 ForEach(Array(ready)) { link in
@@ -147,6 +283,7 @@ final class Quicklinks: StackbarPlugin {
 
     func open(_ link: Link, arguments: [String: String] = [:], context: InvocationContext? = nil) async throws {
         try await Stackbar.open(try await resolve(link, arguments: arguments, context: context), with: link.openWith)
+        noteOpened(link)
     }
 
     // MARK: Commands
@@ -185,6 +322,10 @@ final class Quicklinks: StackbarPlugin {
             .argument("id", placeholder: "Quicklink", required: false)
             .stackbarOnly()
             .view { invocation in self.form(editing: invocation["id"].flatMap(UUID.init(uuidString:))) }
+        Command("library", title: "Browse Quicklink Library", subtitle: "\(Self.library.count) ready-made searches, sites and folders", symbol: "books.vertical", keywords: ["quicklink", "starter", "add", "template"])
+            .argument("tag", placeholder: "Tag", required: false, default: "All", options: ["All"] + Self.libraryTags)
+            .stackbarOnly()
+            .view { invocation in self.libraryView(tag: invocation["tag"]) }
         Command("import", title: "Import Quicklinks", subtitle: "From a Raycast export", symbol: "square.and.arrow.down", keywords: ["quicklink", "raycast"]) { _ in
             .message(try await self.importLinks())
         }
@@ -199,7 +340,9 @@ final class Quicklinks: StackbarPlugin {
     func command(for link: Link) -> Command {
         var command = Command(link.commandID, title: link.name, subtitle: link.link, symbol: Self.symbol(for: link), keywords: link.tags + [Self.host(of: link.link)].compactMap { $0 } + ["quicklink"]) { invocation in
             do {
-                return .open(url: try await self.resolve(link, arguments: invocation.arguments, context: invocation.context), app: link.openWith)
+                let url = try await self.resolve(link, arguments: invocation.arguments, context: invocation.context)
+                self.noteOpened(link)
+                return .open(url: url, app: link.openWith)
             } catch {
                 return .failure("\(link.name): \(error)")
             }
@@ -211,11 +354,15 @@ final class Quicklinks: StackbarPlugin {
     }
 
     @ViewBuilder func searchView(tag: String?) -> ViewContent {
-        let shown = links.filter { tag == nil || tag == "All" || $0.tags.contains(tag!) }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        let shown = ranked(links.filter { tag == nil || tag == "All" || $0.tags.contains(tag!) })
         if links.isEmpty {
-            EmptyState("No quicklinks yet", symbol: "link", message: "Open links, folders and apps by name, with placeholders filled in. Import brings in a Raycast export.", theme: theme) {
-                ActionButton("Create Quicklink", symbol: "plus", theme: theme, prominent: true) { self.openCommand("create") }
+            EmptyState("No quicklinks yet", symbol: "link", message: "Open searches, sites and folders by name. Start with a few everyday ones, browse \(Self.library.count) ready-made ones, or bring in a Raycast export.", theme: theme) {
+                ActionButton("Add \(Self.essentials.count) Everyday Links", symbol: "sparkles", theme: theme, prominent: true) {
+                    let added = self.add(Self.library.filter { Self.essentials.contains($0.name) })
+                    self.notice = "Added \(added) quicklinks. Type a name in the palette to open one."
+                }
+                ActionButton("Browse Library", symbol: "books.vertical", theme: theme) { self.openCommand("library") }
+                ActionButton("Create", symbol: "plus", theme: theme) { self.openCommand("create") }
                 ActionButton("Import", symbol: "square.and.arrow.down", theme: theme) { self.notice = try await self.importLinks() }
             }
         } else {
@@ -373,7 +520,10 @@ final class Quicklinks: StackbarPlugin {
     var panel: ViewContent {
         if !links.isEmpty {
             PanelHeader(links.count == 1 ? "1 quicklink" : "\(links.count) quicklinks", subtitle: "Type a name in the palette to open one", symbol: "link", theme: theme) {
-                IconButton("plus", label: "New Quicklink", theme: theme, prominence: .tinted) { self.openCommand("create") }
+                HStack(spacing: Space.xs) {
+                    IconButton("books.vertical", label: "Browse Library", theme: theme) { self.openCommand("library") }
+                    IconButton("plus", label: "New Quicklink", theme: theme, prominence: .tinted) { self.openCommand("create") }
+                }
             }
             if let notice { Banner(notice, symbol: "checkmark.circle.fill", theme: .success) }
             if !allTags.isEmpty {
@@ -391,6 +541,7 @@ final class Quicklinks: StackbarPlugin {
             Toggle("Show site icons", isOn: siteIcons) { self.siteIcons = $0 }
             Text("Icons come from DuckDuckGo, which sees the domains of the links in the launcher.").style(.caption).role(.secondary)
             if let notice { Text(notice).style(.caption) }
+            Button("Browse the library…", symbol: "books.vertical") { self.openCommand("library") }
             Button("Import from Raycast…", symbol: "square.and.arrow.down") { _ = try await self.importLinks() }
             Button("Export…", symbol: "square.and.arrow.up") { self.notice = try await self.exportLinks() }
         }

@@ -102,4 +102,19 @@ final class StayAwakeTests: XCTestCase {
         XCTAssertTrue(charted, "the panel charts hours awake per day")
         await supervisor.stop()
     }
+
+    func testCommandsToggleAndTakeADuration() async throws {
+        let host = Host(self)
+        let session = try await host.session("StayAwake")
+        guard case .message = try await session.runCommand("toggle") else { return XCTFail("toggle starts a session") }
+        XCTAssertEqual(host.system.keptAwake[id]?.reason, "Stay Awake: Until you stop it")
+        _ = try await session.runCommand("toggle")
+        XCTAssertTrue(host.system.keptAwake.isEmpty, "toggling again lets the Mac sleep")
+
+        _ = try await session.runCommand("keep-awake", arguments: ["for": "90m"])
+        XCTAssertNotNil(host.system.keptAwake[id]?.reason.range(of: "Stay Awake: Until "), "a duration starts a timed session")
+        guard case .failure = try await session.runCommand("keep-awake", arguments: ["for": "soon"]) else { return XCTFail("nonsense is refused") }
+        _ = try await session.runCommand("allow-sleep")
+        XCTAssertTrue(host.system.keptAwake.isEmpty)
+    }
 }

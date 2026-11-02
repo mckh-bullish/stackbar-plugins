@@ -12,7 +12,7 @@ final class Jira: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.jira",
         name: "Jira",
-        version: "1.2.0",
+        version: "1.2.1",
         summary: "Your assigned Jira Cloud issues, search and new issues from the palette.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .minutes(5), .wake],
@@ -56,12 +56,18 @@ final class Jira: StackbarPlugin {
     @Stored("jql") var jql = Jira.defaultJQL
     var assigned: [Issue] = []
     var found: [Issue] = []
+    /// Why the last search failed, shown instead of an empty list.
+    var searchProblem: String?
+    /// Your issues that moved to Done in the last week. The panel JQL leaves
+    /// Done out by default, so this is a query of its own.
+    var doneThisWeek: [Issue] = []
     var problem: String?
     var loaded = false
     var formError: String?
     var created: String?
 
     static let defaultJQL = "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC"
+    static let doneJQL = "assignee = currentUser() AND statusCategory = Done AND statusCategoryChangedDate >= -7d ORDER BY updated DESC"
     static let fields = ["summary", "status", "priority", "issuetype", "project"]
 
     /// `yourteam`, `yourteam.atlassian.net` or a pasted URL, as the host.
@@ -117,6 +123,8 @@ final class Jira: StackbarPlugin {
         }
         do {
             assigned = try await search(jql: jql)
+            // Only a stat, so a site that rejects this query keeps the rest of the panel.
+            doneThisWeek = (try? await search(jql: Self.doneJQL, limit: 50)) ?? []
             if projects.isEmpty { try await loadProjects() }
             problem = nil
         } catch {
@@ -134,11 +142,17 @@ final class Jira: StackbarPlugin {
     /// A key like `ABC-123` is looked up directly; anything else is a text search.
     func find(_ text: String) async {
         let term = text.trimmingCharacters(in: .whitespaces)
-        guard term.count >= 2 else { found = []; return }
+        guard term.count >= 2 else { found = []; searchProblem = nil; return }
         let escaped = term.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
         let isKey = term.range(of: #"^[A-Za-z][A-Za-z0-9_]+-\d+$"#, options: .regularExpression) != nil
         let query = isKey ? "key = \"\(escaped.uppercased())\"" : "text ~ \"\(escaped)\" ORDER BY updated DESC"
-        found = (try? await search(jql: query, limit: 25)) ?? []
+        do {
+            found = try await search(jql: query, limit: 25)
+            searchProblem = nil
+        } catch {
+            found = []
+            searchProblem = "\(error)"
+        }
     }
 
     // MARK: Rows
@@ -166,6 +180,12 @@ final class Jira: StackbarPlugin {
     // MARK: Surfaces
 
     var inProgress: [Issue] { assigned.filter { $0.category == "indeterminate" } }
+
+    /// Done issues from the panel JQL (when it includes them) and from the last week, once each.
+    var done: [Issue] {
+        var seen = Set<String>()
+        return (assigned.filter { $0.category == "done" } + doneThisWeek).filter { seen.insert($0.id).inserted }
+    }
 
     let theme = Theme.blue
     var needsSetup: Bool { Self.host(of: site) == nil || email.isEmpty }
@@ -196,17 +216,17 @@ final class Jira: StackbarPlugin {
                 }
             } else {
                 let toDo = assigned.filter { $0.category == "new" }
-                let done = assigned.filter { $0.category == "done" }
+                let done = self.done
                 PanelHeader(inProgress.isEmpty ? (assigned.isEmpty ? "Nothing assigned" : "Nothing in progress") : "\(inProgress.count) in progress", subtitle: "\(toDo.count) to do · \(Self.host(of: site) ?? site)", symbol: "square.stack.3d.up.fill", theme: theme)
                 if !assigned.isEmpty {
                     HeroCard(theme: theme, look: .glow) {
                         HStack(spacing: Space.l) {
                             HeroStat("In progress", value: "\(inProgress.count)", theme: theme, live: !inProgress.isEmpty)
                             HeroStat("To do", value: "\(toDo.count)", theme: .neutral, symbol: "circle.dashed")
-                            HeroStat("Done", value: "\(done.count)", theme: .success, symbol: "checkmark.circle.fill")
+                            HeroStat("Done this week", value: "\(done.count)", theme: .success, symbol: "checkmark.circle.fill")
                             Spacer()
                         }
-                        ProgressBar(value: Double(done.count), total: Double(max(1, assigned.count))).foreground(theme.sweep)
+                        ProgressBar(value: Double(done.count), total: Double(max(1, assigned.filter { $0.category != "done" }.count + done.count))).foreground(theme.sweep)
                     }
                 }
                 if let problem { Banner(problem) }
@@ -284,6 +304,10 @@ final class Jira: StackbarPlugin {
             .view(search: { invocation in await self.find(invocation.text) }) { invocation in
                 if invocation.text.count < 2 {
                     ContentUnavailableView("Type to search, or paste a key", symbol: "magnifyingglass")
+                } else if let problem = self.searchProblem {
+                    ContentUnavailableView("Can't search Jira", symbol: "exclamationmark.triangle", message: problem)
+                } else if self.found.isEmpty {
+                    ContentUnavailableView("No issues match", symbol: "magnifyingglass")
                 } else {
                     List(self.found) { issue in self.row(issue) }
                 }

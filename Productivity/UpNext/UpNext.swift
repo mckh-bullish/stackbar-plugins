@@ -12,7 +12,7 @@ final class UpNext: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.up-next",
         name: "Up Next",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "Your next meeting in the menu bar, with a countdown and one-click join.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(30)), .wake],
@@ -636,6 +636,36 @@ final class UpNext: StackbarPlugin {
                 .frame(fillWidth: true, alignment: .leading)
             }
         }
+    }
+
+    // MARK: Commands
+
+    var commands: [Command] {
+        Command("join-next", title: "Join Next Meeting", symbol: "video", keywords: ["meeting", "zoom", "meet", "teams", "call", "join"]) { _ in
+            guard let event = self.focus() else { return .message("No more meetings today") }
+            guard Self.meetingLink(for: event) != nil || event.url != nil else { return .failure("\(event.title) has no call link") }
+            self.join(event)
+            return .message("Joining \(event.title)")
+        }
+        Command("copy-next-link", title: "Copy Next Meeting Link", symbol: "link", keywords: ["meeting", "zoom", "meet", "teams", "call", "link"]) { _ in
+            guard let event = self.focus() else { return .message("No more meetings today") }
+            guard let link = Self.meetingLink(for: event) else { return .failure("\(event.title) has no call link") }
+            return .copy(link.url)
+        }
+        Command("agenda", title: "Today's Meetings", symbol: "calendar", keywords: ["meeting", "agenda", "calendar", "today", "schedule"])
+            .view(search: { _ in try await self.refresh() }) { invocation in
+                let now = Date()
+                let query = invocation.text.lowercased()
+                let today = self.visible
+                    .filter { Calendar.current.isDate($0.start, inSameDayAs: now) && (self.showFinished || $0.isAllDay || $0.end > now) }
+                    .filter { query.isEmpty || $0.title.lowercased().contains(query) }
+                    .sorted { ($0.isAllDay ? 0 : 1, $0.start) < ($1.isAllDay ? 0 : 1, $1.start) }
+                if today.isEmpty {
+                    ContentUnavailableView(query.isEmpty ? "Nothing else today" : "No meetings match", symbol: "sun.max")
+                } else {
+                    List(today) { event in self.row(event, now: now) }
+                }
+            }
     }
 
     // MARK: Agents

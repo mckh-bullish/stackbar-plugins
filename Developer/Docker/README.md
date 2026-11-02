@@ -9,7 +9,12 @@ Logs, Open (for a published port), Copy ID and Remove.
 - **Surfaces:** menu bar, panel, settings.
 - **How it checks:** `docker ps --all` every 15 seconds while something runs,
   every minute otherwise.
-- **Settings:** show stopped containers, group by Compose project, and
+- **When something goes wrong:** a container that crashes (exits with an
+  error on its own), turns unhealthy or keeps restarting sends a notification,
+  turns the menu bar red with a count, and gets a banner in the panel until
+  it is started again or removed. Stops from the panel don't count.
+- **Settings:** show stopped containers, group by Compose project, the
+  trouble notification (on by default), and
   Remove Stopped Containers (`docker container prune`; images and volumes
   are left alone).
 - **Commands:** Docker Containers, Docker Logs (the last 200 lines of one

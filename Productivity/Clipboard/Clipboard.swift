@@ -15,10 +15,11 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.3.0",
+        version: "1.4.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
-        triggers: [.launch, .clipboard],
+        // The minute tick only lets secrets expire on time.
+        triggers: [.launch, .clipboard, .every(.seconds(60))],
         capabilities: [.clipboard],
         hotkey: "cmd+shift+v",
         minimumStackbar: "0.14.0",
@@ -40,6 +41,9 @@ final class Clipboard: StackbarPlugin {
         var lastCopied: Date
         var count: Int = 1
         var pinned = false
+        /// What kind of secret this looks like ("GitHub token"), when it
+        /// looks like one: shown masked, and dropped after a while.
+        var secret: String?
 
         /// What makes two copies the same item.
         var fingerprint: String {
@@ -74,6 +78,7 @@ final class Clipboard: StackbarPlugin {
                 let names = files.map { ($0 as NSString).lastPathComponent }
                 return names.count == 1 ? names[0] : "\(names.count) files: " + names.prefix(3).joined(separator: ", ")
             case .text, .url:
+                if let secret { return "•••••••• \(secret)" }
                 let line = (text ?? "").split(whereSeparator: \.isNewline).first.map(String.init) ?? ""
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 let shown = trimmed.isEmpty ? "(whitespace)" : trimmed
@@ -82,6 +87,7 @@ final class Clipboard: StackbarPlugin {
         }
 
         var symbol: String {
+            if secret != nil { return "key.fill" }
             switch kind {
             case .text: return contentID == nil ? "doc.plaintext" : "doc.richtext"
             case .url: return "link"
@@ -106,6 +112,51 @@ final class Clipboard: StackbarPlugin {
         "com.apple.keychainaccess", "com.apple.Passwords", "com.dashlane.dashlanephonefinal", "org.keepassxc.keepassxc",
     ]
 
+    /// Text that looks like a secret, by what kind it is. Only whole copies
+    /// count: a token inside a paragraph is left alone.
+    static let secretPatterns: [(kind: String, pattern: String)] = [
+        ("private key", #"^-----BEGIN [A-Z ]*PRIVATE KEY-----"#),
+        ("JSON web token", #"^eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$"#),
+        ("GitHub token", #"^(gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})$"#),
+        ("API key", #"^sk-(ant-|proj-)?[A-Za-z0-9_-]{20,}$"#),
+        ("Stripe key", #"^(sk|rk)_(live|test)_[A-Za-z0-9]{16,}$"#),
+        ("AWS access key", #"^(AKIA|ASIA)[0-9A-Z]{16}$"#),
+        ("Slack token", #"^xox[abposr]-[A-Za-z0-9-]{10,}$"#),
+        ("Google API key", #"^AIza[0-9A-Za-z_-]{35}$"#),
+        ("npm token", #"^npm_[A-Za-z0-9]{36}$"#),
+        ("one-time code", #"^\d{3}[ -]?\d{3}$"#),
+    ]
+
+    /// What kind of secret `text` looks like, or nil.
+    static func secretKind(_ text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= 10_000 else { return nil }
+        for (kind, pattern) in secretPatterns {
+            guard let regex = try? Regex(pattern) else { continue }
+            // A pattern ending in $ must match the whole copy; the rest, its start.
+            let matched = pattern.hasSuffix("$") ? trimmed.wholeMatch(of: regex) != nil : trimmed.prefixMatch(of: regex) != nil
+            if matched { return kind }
+        }
+        return isCardNumber(trimmed) ? "card number" : nil
+    }
+
+    /// 13 to 19 digits, spaces or dashes allowed, that pass the Luhn check.
+    static func isCardNumber(_ text: String) -> Bool {
+        guard text.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == " " || $0 == "-") }) else { return false }
+        let digits = text.compactMap { $0.wholeNumberValue }
+        guard (13...19).contains(digits.count), Set(digits).count > 1 else { return false }
+        var sum = 0
+        for (index, digit) in digits.reversed().enumerated() {
+            let doubled = index % 2 == 1 ? digit * 2 : digit
+            sum += doubled > 9 ? doubled - 9 : doubled
+        }
+        return sum % 10 == 0
+    }
+
+    /// How long a secret stays in the history, in minutes: 0 doesn't keep
+    /// it at all, and -1 keeps it like anything else (still masked).
+    static let secretChoices: [(title: String, minutes: Double)] = [("Don't keep", 0), ("5 minutes", 5), ("15 minutes", 15), ("1 hour", 60), ("Like any copy", -1)]
+
     /// The plugin's 1 MB of storage, less room for settings.
     static let storageBudget = 850_000
     static let maxEntryCharacters = 100_000
@@ -120,6 +171,8 @@ final class Clipboard: StackbarPlugin {
     /// Regular expressions; a copy whose text matches one is not recorded
     /// (tokens, one-time codes).
     @Stored("ignoredPatterns") var ignoredPatterns: [String] = []
+    /// How long copies that look like secrets are kept; see `secretChoices`.
+    @Stored("secretMinutes") var secretMinutes = 15.0
     /// Copies recorded per day (yyyy-MM-dd), for the last 30 days.
     @Stored("copiesByDay") var copiesByDay: [String: Int] = [:]
 
@@ -151,6 +204,7 @@ final class Clipboard: StackbarPlugin {
     // MARK: Recording
 
     func refresh() async throws {
+        expireSecrets()
         guard let item = try await Stackbar.clipboard() else { return }
         // The first read after a launch records what is on the clipboard
         // now; if it is already in the history it just moves to the top.
@@ -164,7 +218,17 @@ final class Clipboard: StackbarPlugin {
         if let app = item.sourceAppID, isIgnored(app: app, name: item.sourceAppName) { return }
         if item.kind == .image && !keepImages { return }
         if let text = item.text, matchesIgnoredPattern(text) { return }
+        if secretMinutes == 0, item.kind == .text || item.kind == .url, let text = item.text, Self.secretKind(text) != nil { return }
         record(item)
+    }
+
+    /// Drops unpinned secrets older than the setting allows.
+    func expireSecrets(now: Date = Date()) {
+        guard secretMinutes >= 0 else { return }
+        let limit = secretMinutes * 60
+        let history = entries
+        let kept = history.filter { $0.pinned || $0.secret == nil || now.timeIntervalSince($0.lastCopied) < limit }
+        if kept.count != history.count { entries = kept }
     }
 
     func record(_ item: ClipboardItem) {
@@ -174,6 +238,7 @@ final class Clipboard: StackbarPlugin {
             firstCopied: item.copiedAt, lastCopied: item.copiedAt
         )
         if entry.kind != .image && entry.kind != .files && (entry.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return }
+        if entry.kind == .text || entry.kind == .url { entry.secret = entry.text.flatMap(Self.secretKind) }
         // Our own paste coming back says nothing new about where it came from.
         let ownWrite = item.sourceAppID == "io.navbytes.stackbar" || (lastWrite.map { item.copiedAt.timeIntervalSince($0) < 3 } ?? false)
         var history = entries
@@ -352,7 +417,7 @@ final class Clipboard: StackbarPlugin {
 
     /// Up to three lines of a copy, each cut to fit the card.
     static func snippet(_ entry: Entry) -> String {
-        guard entry.kind == .text || entry.kind == .url, let text = entry.text else { return entry.title }
+        guard entry.kind == .text || entry.kind == .url, entry.secret == nil, let text = entry.text else { return entry.title }
         let lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         let shown = lines.prefix(3).map { $0.count > 52 ? String($0.prefix(51)) + "…" : $0 }
         let more = lines.count > 3 ? "\n+ \(lines.count - 3) more lines" : ""
@@ -399,6 +464,14 @@ final class Clipboard: StackbarPlugin {
         }
         Section("Ignored apps") {
             ignoredAppsContent
+        }
+        Section("Secrets") {
+            Picker("Keep copies that look like secrets", options: Self.secretChoices.map(\.title), selection: Self.secretChoices.first { $0.minutes == secretMinutes }?.title ?? "15 minutes", key: "secrets") { title in
+                self.secretMinutes = Self.secretChoices.first { $0.title == title }?.minutes ?? 15
+                if self.secretMinutes == 0 { self.entries = self.entries.filter { $0.pinned || $0.secret == nil } }
+                self.expireSecrets()
+            }
+            Text("API keys and tokens (GitHub, OpenAI, Anthropic, AWS, Stripe, Slack, Google, npm), JSON web tokens, private keys, card numbers and six-digit codes are shown masked, kept out of agent tools, and dropped after this long unless you pin them.").style(.caption).role(.secondary)
         }
         Section("Ignored text") {
             ignoredText
@@ -449,7 +522,7 @@ final class Clipboard: StackbarPlugin {
     }
 
     func row(_ entry: Entry, paste pasteDirectly: Bool) -> Row {
-        let source = [entry.appName, Self.relative(entry.lastCopied), entry.count > 1 ? "×\(entry.count)" : nil, entry.kind == .text ? "\(entry.text?.count ?? 0) chars" : nil]
+        let source = [entry.appName, Self.relative(entry.lastCopied), entry.count > 1 ? "×\(entry.count)" : nil, entry.kind == .text && entry.secret == nil ? "\(entry.text?.count ?? 0) chars" : nil]
             .compactMap { $0 }.joined(separator: " · ")
         var row = Row(entry.title, subtitle: source, symbol: entry.pinned ? "pin.fill" : entry.symbol, key: entry.id).appIcon(entry.appID)
         if let preview = preview(entry) { row = preview(row) }
@@ -477,6 +550,10 @@ final class Clipboard: StackbarPlugin {
         case .files:
             return { $0.preview(text: entry.files.joined(separator: "\n"), caption: caption.joined(separator: " · ")) }
         case .text, .url:
+            if let secret = entry.secret {
+                let expiry = secretMinutes > 0 && !entry.pinned ? " · gone \(Self.relative(entry.lastCopied.addingTimeInterval(secretMinutes * 60), now: Date(), future: true))" : ""
+                return { $0.preview(text: "Hidden: this looks like a \(secret).", caption: caption.joined(separator: " · ") + expiry) }
+            }
             guard let text = entry.text, text.count > 60 || text.contains("\n") else { return nil }
             let lines = text.split(separator: "\n", omittingEmptySubsequences: false).count
             caption.insert("\(text.count) characters" + (lines > 1 ? ", \(lines) lines" : ""), at: 0)
@@ -484,7 +561,11 @@ final class Clipboard: StackbarPlugin {
         }
     }
 
-    static func relative(_ date: Date, now: Date = Date()) -> String {
+    static func relative(_ date: Date, now: Date = Date(), future: Bool = false) -> String {
+        if future {
+            let minutes = max(1, Int((date.timeIntervalSince(now) / 60).rounded(.up)))
+            return minutes < 60 ? "in \(minutes) min" : "in \(minutes / 60)h"
+        }
         let seconds = now.timeIntervalSince(date)
         if seconds < 60 { return "just now" }
         if seconds < 3600 { return "\(Int(seconds / 60))m ago" }
@@ -539,7 +620,7 @@ final class Clipboard: StackbarPlugin {
         }
         AgentTool("search_clips", description: "Clipboard items containing the text, newest first, in full", parameters: [ToolParameter("query", description: "Text to look for")]) { arguments in
             let query = arguments.string("query") ?? ""
-            let found = self.sorted.filter { ($0.text ?? "").localizedCaseInsensitiveContains(query) }.prefix(10)
+            let found = self.sorted.filter { $0.secret == nil && ($0.text ?? "").localizedCaseInsensitiveContains(query) }.prefix(10)
             return found.isEmpty ? "Nothing in the history contains \"\(query)\"." : found.map { $0.text ?? $0.title }.joined(separator: "\n---\n")
         }
         AgentTool("copy_clip", description: "Put a history item back on the clipboard, by its position in recent_clips", parameters: [ToolParameter("position", .number, description: "1 is the newest")]) { arguments in
