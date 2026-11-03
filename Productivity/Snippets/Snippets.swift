@@ -17,7 +17,7 @@ final class Snippets: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.snippets",
         name: "Snippets",
-        version: "1.2.0",
+        version: "1.2.1",
         summary: "Paste text by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -26,7 +26,9 @@ final class Snippets: StackbarPlugin {
         capabilities: [.clipboard, .context, .storage(megabytes: 16)],
         hotkey: "ctrl+option+s",
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
+        accent: .indigo,
+        symbol: "text.insert"
     )
 
     static let maxLength = 65_536

@@ -15,6 +15,6 @@ by state, ordered by priority.
   issues.
 - **Agent tool:** `assigned` lists your open issues with their branch names.
 
-## What's new in 1.2.0
+## What's new in 1.2.1
 
-- A bolder look on the Stackbar design system.
+- Its own icon and colour in the Store and in Settings.

@@ -14,13 +14,15 @@ final class Docker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.docker",
         name: "Docker",
-        version: "1.3.0",
+        version: "1.3.1",
         summary: "Your containers, with start, stop, restart and logs a click away.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.run(commands: ["docker"])],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
+        accent: .cyan,
+        symbol: "shippingbox.fill"
     )
 
     /// One line of `docker ps --format '{{json .}}'`.

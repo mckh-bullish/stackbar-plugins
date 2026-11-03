@@ -14,13 +14,15 @@ final class LiteLLM: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.litellm",
         name: "LiteLLM",
-        version: "1.2.0",
+        version: "1.2.1",
         summary: "Tokens, spend, budget and model mix from your LiteLLM proxy, with charts.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
         capabilities: [.userServer(secret: "LITELLM_PROXY_URL"), .secret(name: "LITELLM_API_KEY")],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/LiteLLM"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/LiteLLM",
+        accent: .pink,
+        symbol: "sparkles"
     )
 
     /// One day's totals, kept between runs for the heatmap and the trend.

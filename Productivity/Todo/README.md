@@ -38,6 +38,6 @@ done.
   from plain words.
 - **Requires:** Stackbar 0.14.0 or later.
 
-## What's new in 1.0.0
+## What's new in 1.0.1
 
-- First release: a calm to-do list that understands dates as you type them.
+- Its own icon and colour in the Store and in Settings.

@@ -16,6 +16,6 @@ another snippet.
 - **Not yet:** keywords are kept but not expanded as you type, because that
   needs a system-wide keyboard monitor.
 
-## What's new in 1.2.0
+## What's new in 1.2.1
 
-- A bolder look on the Stackbar design system.
+- Its own icon and colour in the Store and in Settings.

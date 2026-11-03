@@ -12,13 +12,15 @@ final class Jira: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.jira",
         name: "Jira",
-        version: "1.2.1",
+        version: "1.2.2",
         summary: "Your assigned Jira Cloud issues, search and new issues from the palette.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("*.atlassian.net"), .secret(name: "JIRA_API_TOKEN")],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
+        accent: .blue,
+        symbol: "ticket.fill"
     )
 
     struct Issue: Decodable, Equatable, Identifiable {

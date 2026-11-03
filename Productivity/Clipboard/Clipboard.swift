@@ -15,7 +15,7 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.4.0",
+        version: "1.4.1",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
@@ -23,7 +23,9 @@ final class Clipboard: StackbarPlugin {
         capabilities: [.clipboard],
         hotkey: "cmd+shift+v",
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
+        accent: .blue,
+        symbol: "doc.on.clipboard.fill"
     )
 
     struct Entry: Codable, Equatable {

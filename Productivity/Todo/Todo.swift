@@ -12,12 +12,14 @@ final class Todo: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.todo",
         name: "Todo",
-        version: "1.0.0",
+        version: "1.0.1",
         summary: "A calm to-do list that understands dates as you type them, with reminders and repeats.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(30)), .wake],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Todo"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Todo",
+        accent: .orange,
+        symbol: "checklist"
     )
 
     /// Warm and quiet: the earthy orange of the shared design system.

@@ -26,8 +26,6 @@ all here, with the same `GITHUB_TOKEN`.
   Create GitHub Issue, Refresh Pull Requests.
 - **Agent tools:** `review_queue`, `my_pull_requests` and `my_issues`.
 
-## What's new in 1.4.2
+## What's new in 1.4.3
 
-- Everything the GitHub plugin did is now here, so one plugin covers your reviews, your PRs, your issues and your notifications.
-- Tabs read "Review | Mine 2 | Issues | Inbox 2", with a count only when a tab has something in it, so all four fit the panel.
-- Each PR state change is announced once.
+- Its own icon and colour in the Store and in Settings.

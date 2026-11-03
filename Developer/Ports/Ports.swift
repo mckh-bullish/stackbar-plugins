@@ -11,13 +11,15 @@ final class Ports: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.ports",
         name: "Ports",
-        version: "1.2.1",
+        version: "1.2.2",
         summary: "Which process is listening on which port, and a way to stop it.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .every(.seconds(30))],
         capabilities: [.run(commands: ["lsof", "kill"])],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports",
+        accent: .teal,
+        symbol: "point.3.connected.trianglepath.dotted"
     )
 
     struct Listener: Equatable, Identifiable {

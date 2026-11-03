@@ -13,13 +13,15 @@ final class Linear: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.linear",
         name: "Linear",
-        version: "1.2.0",
+        version: "1.2.1",
         summary: "Your assigned Linear issues, branch names, search and new issues from the palette.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("api.linear.app"), .secret(name: "LINEAR_API_KEY")],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
+        accent: .indigo,
+        symbol: "circle.lefthalf.filled"
     )
 
     struct Issue: Codable, Equatable, Identifiable {

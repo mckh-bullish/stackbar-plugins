@@ -10,13 +10,15 @@ final class StayAwake: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.stay-awake",
         name: "Stay Awake",
-        version: "1.3.0",
+        version: "1.3.1",
         summary: "Keeps your Mac awake for a while, until a time, while an app runs or on a schedule.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.power],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake",
+        accent: .amber,
+        symbol: "cup.and.saucer.fill"
     )
 
     /// What the current session waits for before it ends.

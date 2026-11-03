@@ -19,13 +19,15 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.4.2",
+        version: "1.4.3",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
         capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN")],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
+        accent: .violet,
+        symbol: "arrow.triangle.pull"
     )
 
     struct PullRequest: Decodable, Equatable {

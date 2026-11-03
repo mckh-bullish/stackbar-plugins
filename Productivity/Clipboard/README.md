@@ -21,7 +21,6 @@ the host and pasted back.
   Pause Clipboard History, Ignore Next Copy.
 - **Agent tools:** `recent_clips`, `search_clips` and `copy_clip`.
 
-## What's new in 1.4.0
+## What's new in 1.4.1
 
-- Copies that look like secrets are masked. That covers API keys and tokens, JSON web tokens, private keys, card numbers and six-digit codes.
-- Masked copies are kept out of search and agent tools, and dropped after 15 minutes unless you pin them (setting). Pasting one still pastes the real text.
+- Its own icon and colour in the Store and in Settings.

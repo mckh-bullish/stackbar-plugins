@@ -17,6 +17,6 @@ you when it starts.
   from Spotlight, Shortcuts or a `stackbar://` link.
 - **Agent tools:** `next_meeting`, `agenda` and `join_next`.
 
-## What's new in 1.3.0
+## What's new in 1.3.1
 
-- Commands: Join Next Meeting, Copy Next Meeting Link and Today's Meetings.
+- Its own icon and colour in the Store and in Settings.

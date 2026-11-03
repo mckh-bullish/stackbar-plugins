@@ -12,13 +12,15 @@ final class SystemMonitor: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.system-monitor",
         name: "System Monitor",
-        version: "1.2.0",
+        version: "1.2.1",
         summary: "CPU, memory and disk in the menu bar, with the processes using the most.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(10)), .wake],
         capabilities: [.run(commands: ["top", "vm_stat", "df", "kill"])],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
+        accent: .green,
+        symbol: "gauge.with.dots.needle.67percent"
     )
 
     struct Sample: Equatable {

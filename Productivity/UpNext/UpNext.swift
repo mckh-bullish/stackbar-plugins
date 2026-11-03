@@ -12,14 +12,16 @@ final class UpNext: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.up-next",
         name: "Up Next",
-        version: "1.3.0",
+        version: "1.3.1",
         summary: "Your next meeting in the menu bar, with a countdown and one-click join.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(30)), .wake],
         capabilities: [.calendar],
         hotkey: "ctrl+option+j",
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
+        accent: .red,
+        symbol: "calendar"
     )
 
     // MARK: Meeting links

@@ -18,6 +18,6 @@ whatever holds it is asked to stop.
 Processes owned by another user, like system services, can't be stopped
 from here.
 
-## What's new in 1.2.1
+## What's new in 1.2.2
 
-- Shows full process names. They used to be cut to 9 characters.
+- Its own icon and colour in the Store and in Settings.

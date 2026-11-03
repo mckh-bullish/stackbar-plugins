@@ -19,7 +19,7 @@ final class Translate: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.translate",
         name: "Translate",
-        version: "1.3.0",
+        version: "1.3.1",
         summary: "Translate the selected text in place, on your Mac or with Google or DeepL.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -29,7 +29,9 @@ final class Translate: StackbarPlugin {
         // paid keys).
         capabilities: [.context, .clipboard, .network("translate.googleapis.com", "api-free.deepl.com", "api.deepl.com"), .secret(name: "DEEPL_API_KEY")],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate",
+        accent: .teal,
+        symbol: "character.bubble.fill"
     )
 
     struct Language: Equatable {

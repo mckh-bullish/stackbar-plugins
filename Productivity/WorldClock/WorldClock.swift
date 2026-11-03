@@ -12,12 +12,14 @@ final class WorldClock: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.world-clock",
         name: "World Clock",
-        version: "1.3.0",
+        version: "1.3.1",
         summary: "The time in the cities you work with, with offsets and working hours.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(30)), .wake],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WorldClock"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WorldClock",
+        accent: .violet,
+        symbol: "globe"
     )
 
     /// The real time, from the last refresh.

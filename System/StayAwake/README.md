@@ -17,7 +17,6 @@ crashes, so it can't leave the Mac awake by accident.
   run them from Spotlight, Shortcuts or a `stackbar://` link.
 - **Agent tools:** `awake_status`, `keep_awake` and `allow_sleep`.
 
-## What's new in 1.3.0
+## What's new in 1.3.1
 
-- Commands: Toggle, Keep Awake For… (90m, 2h or until 17:30) and Allow Sleep, so they get hotkeys, Spotlight and Shortcuts.
-- During a timed session, the menu bar can show the time left (setting).
+- Its own icon and colour in the Store and in Settings.

@@ -15,7 +15,7 @@ final class Quicklinks: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.quicklinks",
         name: "Quicklinks",
-        version: "1.3.0",
+        version: "1.3.1",
         summary: "Open links and folders by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -25,7 +25,9 @@ final class Quicklinks: StackbarPlugin {
         // domain of each web link shown in the launcher (off in Settings).
         capabilities: [.openURLs(schemes: ["*"]), .clipboard, .context, .network("icons.duckduckgo.com")],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
+        accent: .cyan,
+        symbol: "link"
     )
 
     struct Link: Codable, Equatable, Identifiable {

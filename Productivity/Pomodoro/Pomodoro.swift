@@ -12,12 +12,14 @@ final class Pomodoro: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.pomodoro",
         name: "Pomodoro",
-        version: "1.3.0",
+        version: "1.3.1",
         summary: "A focus timer with presets, a progress ring, tags and today's sessions.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(1)), .wake],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Pomodoro"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Pomodoro",
+        accent: .red,
+        symbol: "timer"
     )
 
     enum Mode: String, Codable, CaseIterable {

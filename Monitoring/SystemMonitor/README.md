@@ -17,6 +17,6 @@ away.
   and whether processes are sorted by CPU or memory.
 - **Agent tool:** `usage` returns CPU, memory, disk and the busiest processes.
 
-## What's new in 1.2.0
+## What's new in 1.2.1
 
-- A bolder look on the Stackbar design system.
+- Its own icon and colour in the Store and in Settings.

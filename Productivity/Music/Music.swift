@@ -13,7 +13,7 @@ final class Music: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.music",
         name: "Music",
-        version: "1.2.0",
+        version: "1.2.1",
         summary: "What's playing in Music or Spotify, with play, pause, skip and volume.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(5)), .wake],
@@ -23,7 +23,9 @@ final class Music: StackbarPlugin {
         // is looked up in the iTunes catalog by artist and album.
         capabilities: [.run(commands: ["osascript"]), .network("itunes.apple.com", "*.mzstatic.com", "i.scdn.co")],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Music"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Music",
+        accent: .pink,
+        symbol: "music.note"
     )
 
     enum Player: String, CaseIterable {

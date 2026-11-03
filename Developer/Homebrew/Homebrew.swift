@@ -14,13 +14,15 @@ final class Homebrew: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.homebrew",
         name: "Homebrew",
-        version: "1.3.0",
+        version: "1.3.1",
         summary: "Outdated formulae and casks, with upgrades a click away.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(60), .wake],
         capabilities: [.run(commands: ["brew"])],
         minimumStackbar: "0.14.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew"
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew",
+        accent: .amber,
+        symbol: "mug.fill"
     )
 
     struct Package: Equatable, Identifiable {
