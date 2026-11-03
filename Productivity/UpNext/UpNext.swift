@@ -12,17 +12,26 @@ final class UpNext: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.up-next",
         name: "Up Next",
-        version: "1.3.1",
+        version: "1.4.0",
         summary: "Your next meeting in the menu bar, with a countdown and one-click join.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(30)), .wake],
         capabilities: [.calendar],
         hotkey: "ctrl+option+j",
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
         accent: .red,
         symbol: "calendar"
     )
+
+    // MARK: Previews
+
+    /// The simulated calendar outside the app is a sample working day.
+    static let previews: [PreviewScene<UpNext>] = [
+        PreviewScene("hero", "Your next meeting, one click from joining") { try await $0.refresh() },
+        PreviewScene("week", "The day and the week's meeting load", surface: .window) { try await $0.refresh() },
+        PreviewScene("widget", "What's next, on your desktop", surface: .widget) { try await $0.refresh() },
+    ]
 
     // MARK: Meeting links
 

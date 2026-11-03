@@ -20,6 +20,10 @@ Upgrade All at the bottom.
   Homebrew Packages.
 - **Agent tool:** `outdated` lists what can be upgraded.
 
+## What's new in 1.4.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.3.1
 
 - Its own icon and colour in the Store and in Settings.

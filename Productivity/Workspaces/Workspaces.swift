@@ -12,16 +12,27 @@ final class Workspaces: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.workspaces",
         name: "Workspaces",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Saves where your windows are for each monitor setup, and puts them back when you dock, undock or wake.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .wake, .displays],
         capabilities: [.windows],
-        minimumStackbar: "0.15.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Workspaces",
         accent: .graphite,
         symbol: "rectangle.3.group"
     )
+
+    // MARK: Previews
+
+    /// Outside the app the windows are simulated: a laptop with an external display.
+    static let previews: [PreviewScene<Workspaces>] = [
+        PreviewScene("hero", "Save your windows as a layout and get them back") { plugin in
+            try await plugin.refresh()
+            for name in ["Coding", "Writing", "Meetings"] { _ = await plugin.save(name) }
+            plugin.notice = nil
+        },
+    ]
 
     /// Calm and neutral: windows are the user's content, not ours.
     let theme = Theme.graphite

@@ -13,16 +13,38 @@ final class AppSwitcher: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.app-switcher",
         name: "App Switcher",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .apps, .every(.seconds(20))],
         capabilities: [.apps, .keyLayer, .openURLs(schemes: ["x-apple.systempreferences"])],
-        minimumStackbar: "0.16.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/AppSwitcher",
         accent: .indigo,
         symbol: "command"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<AppSwitcher>] = [
+        PreviewScene("hero", "Hold Right ⌘ and press a letter") { plugin in
+            plugin.apps = sampleApps
+            plugin.pins = ["m": ["com.apple.mail"], "t": ["com.apple.Terminal"]]
+            plugin.pinNames = ["com.apple.mail": "Mail", "com.apple.Terminal": "Terminal"]
+        },
+    ]
+
+    static let sampleApps = [
+        RunningApp(id: "com.apple.finder", name: "Finder"),
+        RunningApp(id: "com.apple.Safari", name: "Safari", isActive: true),
+        RunningApp(id: "com.tinyspeck.slackmacgap", name: "Slack"),
+        RunningApp(id: "com.spotify.client", name: "Spotify"),
+        RunningApp(id: "com.apple.dt.Xcode", name: "Xcode"),
+        RunningApp(id: "com.apple.Notes", name: "Notes"),
+        RunningApp(id: "com.figma.Desktop", name: "Figma"),
+        RunningApp(id: "com.apple.iCal", name: "Calendar"),
+        RunningApp(id: "com.apple.Terminal", name: "Terminal"),
+    ]
 
     let theme = Theme.indigo
 

@@ -12,16 +12,49 @@ final class Jira: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.jira",
         name: "Jira",
-        version: "1.2.2",
+        version: "1.3.0",
         summary: "Your assigned Jira Cloud issues, search and new issues from the palette.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("*.atlassian.net"), .secret(name: "JIRA_API_TOKEN")],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
         accent: .blue,
         symbol: "ticket.fill"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Jira>] = [
+        PreviewScene("hero", "Your issues, grouped by where they stand") { plugin in
+            plugin.site = "acme.atlassian.net"
+            plugin.email = "sam@example.com"
+            plugin.projects = [Project(id: "10001", key: "SHOP", name: "Shop"), Project(id: "10002", key: "APP", name: "Mobile App")]
+            plugin.defaultProject = "SHOP"
+            plugin.assigned = samples
+            plugin.doneThisWeek = [
+                sample("SHOP-398", "Cache product images at the edge", "Done", "done", "Medium", "Task"),
+                sample("SHOP-401", "Fix VAT rounding on invoices", "Done", "done", "High", "Bug"),
+                sample("APP-77", "Dark mode for the order screen", "Done", "done", "Low", "Story"),
+            ]
+            plugin.loaded = true
+        },
+    ]
+
+    static func sample(_ key: String, _ summary: String, _ status: String, _ category: String, _ priority: String, _ type: String) -> Issue {
+        let project = key.hasPrefix("APP") ? Issue.Fields.Project(key: "APP", name: "Mobile App") : Issue.Fields.Project(key: "SHOP", name: "Shop")
+        return Issue(id: key, key: key, fields: Issue.Fields(summary: summary, status: .init(name: status, statusCategory: .init(key: category)),
+                                                            priority: .init(name: priority), issuetype: .init(name: type), project: project))
+    }
+
+    static let samples = [
+        sample("SHOP-412", "Checkout fails when the coupon field is empty", "In Progress", "indeterminate", "Highest", "Bug"),
+        sample("SHOP-409", "Add Apple Pay to the checkout", "In Review", "indeterminate", "High", "Story"),
+        sample("APP-81", "Push notification when an order ships", "In Progress", "indeterminate", "Medium", "Story"),
+        sample("SHOP-415", "Search results ignore the size filter", "To Do", "new", "High", "Bug"),
+        sample("SHOP-420", "Show delivery estimates on product pages", "To Do", "new", "Medium", "Story"),
+        sample("APP-84", "Upgrade to the new payments SDK", "To Do", "new", "Low", "Task"),
+    ]
 
     struct Issue: Decodable, Equatable, Identifiable {
         struct Fields: Decodable, Equatable {

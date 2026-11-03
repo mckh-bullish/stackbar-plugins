@@ -11,16 +11,33 @@ final class Ports: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.ports",
         name: "Ports",
-        version: "1.2.2",
+        version: "1.3.0",
         summary: "Which process is listening on which port, and a way to stop it.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .every(.seconds(30))],
         capabilities: [.run(commands: ["lsof", "kill"])],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports",
         accent: .teal,
         symbol: "point.3.connected.trianglepath.dotted"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Ports>] = [
+        PreviewScene("hero", "What's listening, and one click to stop it") { plugin in
+            plugin.listeners = [
+                Listener(port: 3000, address: "127.0.0.1", pid: 48211, process: "node", user: "you"),
+                Listener(port: 5173, address: "[::1]", pid: 48390, process: "vite", user: "you"),
+                Listener(port: 5432, address: "127.0.0.1", pid: 712, process: "postgres", user: "you"),
+                Listener(port: 6379, address: "127.0.0.1", pid: 733, process: "redis-server", user: "you"),
+                Listener(port: 8080, address: "*", pid: 51022, process: "java", user: "you"),
+                Listener(port: 9229, address: "127.0.0.1", pid: 48211, process: "node", user: "you"),
+                Listener(port: 11434, address: "127.0.0.1", pid: 1880, process: "ollama", user: "you"),
+            ]
+            plugin.loaded = true
+        },
+    ]
 
     struct Listener: Equatable, Identifiable {
         var port: Int

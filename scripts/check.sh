@@ -3,7 +3,8 @@
 #   1. every plugin builds against the pinned StackbarKit (swift build)
 #   2. the plugins' own tests (Tests/PluginTests)
 #   3. house rules and the README table (scripts/lint.py)
-#   4. every plugin renders every surface it declares with stackbarctl
+#   4. every plugin renders every surface it declares, and every preview,
+#      with stackbarctl
 # On macOS it also soaks each plugin for a minute (pass SOAK_MINUTES to change).
 #
 #   scripts/check.sh [--base <git ref>]   --base also requires version bumps
@@ -41,6 +42,14 @@ for source in */*/*.swift; do
     } >> "$summary"
     for surface in $(echo "$manifest" | sed -n 's/^surfaces: //p' | tr ',' ' '); do
         "$CTL" render "$source" --surface "$surface" > /dev/null
+    done
+    # Each preview renders, and sets itself up without an error.
+    "$CTL" previews "$source" --json | python3 -c 'import json,sys; [print(p["name"], p["surface"]) for p in json.load(sys.stdin)]' |
+    while read -r name surface; do
+        echo "   preview $name ($surface)"
+        if "$CTL" render "$source" --preview "$name" --surface "$surface" --verbose 2>&1 >/dev/null | grep -q "preview $name failed"; then
+            echo "::error file=$source::preview $name failed to set up"; exit 1
+        fi
     done
     if [ "$(uname)" = Darwin ]; then
         "$CTL" soak "$source" --minutes "${SOAK_MINUTES:-1}" --press

@@ -22,16 +22,53 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.5.0",
+        version: "1.6.0",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
         capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN")],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
         accent: .violet,
         symbol: "arrow.triangle.pull"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<PRCockpit>] = [
+        PreviewScene("hero", "Every pull request waiting on you") { plugin in sample(plugin) },
+        PreviewScene("mine", "Your own PRs: checks, reviews and conflicts") { plugin in
+            sample(plugin)
+            plugin.tab = Tab.mine.rawValue
+        },
+        PreviewScene("widget", "Your review queue on the desktop", surface: .widget) { plugin in sample(plugin) },
+    ]
+
+    static func sample(_ plugin: PRCockpit) {
+        let now = Date()
+        func pr(_ repo: String, _ number: Int, _ title: String, by author: String, minutesAgo: Double, review: String?, checks: String?,
+                mergeable: String = "MERGEABLE", draft: Bool = false, plus: Int, minus: Int, comments: Int) -> PullRequest {
+            PullRequest(number: number, title: title, url: "https://github.com/\(repo)/pull/\(number)", isDraft: draft,
+                        updatedAt: now.addingTimeInterval(-minutesAgo * 60), repository: .init(nameWithOwner: repo), author: .init(login: author),
+                        reviewDecision: review, mergeable: mergeable, headRefName: "feature/\(number)", additions: plus, deletions: minus,
+                        commits: checks.map { .init(nodes: [.init(commit: .init(statusCheckRollup: .init(state: $0)))]) },
+                        comments: .init(totalCount: comments), state: "OPEN")
+        }
+        plugin.toReview = [
+            pr("acme/web", 1482, "Add Apple Pay to checkout", by: "priya-dev", minutesAgo: 8, review: "REVIEW_REQUIRED", checks: "SUCCESS", plus: 412, minus: 38, comments: 3),
+            pr("acme/api", 977, "Rate-limit the export endpoint", by: "marco-k", minutesAgo: 35, review: "REVIEW_REQUIRED", checks: "PENDING", plus: 96, minus: 12, comments: 1),
+            pr("acme/web", 1479, "Fix layout shift on product pages", by: "lena-w", minutesAgo: 120, review: "CHANGES_REQUESTED", checks: "SUCCESS", plus: 28, minus: 41, comments: 6),
+            pr("acme/ios", 311, "Push notification when an order ships", by: "tom-b", minutesAgo: 260, review: "REVIEW_REQUIRED", checks: "FAILURE", plus: 233, minus: 17, comments: 0),
+        ]
+        plugin.mine = [
+            pr("acme/api", 981, "Move cron jobs to the queue", by: "you", minutesAgo: 15, review: "APPROVED", checks: "SUCCESS", plus: 188, minus: 140, comments: 4),
+            pr("acme/web", 1485, "Dark mode for the order screen", by: "you", minutesAgo: 50, review: "REVIEW_REQUIRED", checks: "PENDING", plus: 77, minus: 9, comments: 0),
+            pr("acme/api", 969, "Audit log for admin actions", by: "you", minutesAgo: 1440, review: "REVIEW_REQUIRED", checks: "SUCCESS", mergeable: "CONFLICTING", plus: 520, minus: 61, comments: 2),
+        ]
+        plugin.history = [3, 4, 2, 5, 6, 4, 3, 5, 7, 4]
+        plugin.updatedAt = now
+        plugin.loaded = true
+    }
 
     struct PullRequest: Decodable, Equatable {
         let number: Int

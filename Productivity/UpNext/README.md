@@ -17,6 +17,10 @@ you when it starts.
   from Spotlight, Shortcuts or a `stackbar://` link.
 - **Agent tools:** `next_meeting`, `agenda` and `join_next`.
 
+## What's new in 1.4.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.3.1
 
 - Its own icon and colour in the Store and in Settings.

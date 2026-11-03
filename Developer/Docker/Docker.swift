@@ -14,16 +14,51 @@ final class Docker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.docker",
         name: "Docker",
-        version: "1.3.1",
+        version: "1.4.0",
         summary: "Your containers, with start, stop, restart and logs a click away.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.run(commands: ["docker"])],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
         accent: .cyan,
         symbol: "shippingbox.fill"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Docker>] = [
+        PreviewScene("hero", "Every container, grouped by Compose project") { plugin in
+            plugin.containers = samples
+            plugin.loaded = true
+        },
+        PreviewScene("trouble", "Catch the container that keeps crashing") { plugin in
+            plugin.containers = samples
+            plugin.crashedIDs = ["c6"]
+            plugin.loaded = true
+        },
+        PreviewScene("widget", "Your stack's health on the desktop", surface: .widget) { plugin in
+            plugin.containers = samples
+            plugin.loaded = true
+        },
+    ]
+
+    static let samples: [Container] = {
+        func container(_ id: String, _ name: String, _ image: String, _ state: String, _ status: String, _ ports: String?, project: String?) -> Container {
+            Container(id: id, names: name, image: image, state: state, status: status, ports: ports,
+                      labels: project.map { "com.docker.compose.project=\($0),com.docker.compose.service=\(name)" })
+        }
+        return [
+            container("c1", "shop-web", "node:22-alpine", "running", "Up 3 hours", "0.0.0.0:3000->3000/tcp", project: "shop"),
+            container("c2", "shop-api", "shop/api:dev", "running", "Up 3 hours (healthy)", "0.0.0.0:8080->8080/tcp", project: "shop"),
+            container("c3", "shop-db", "postgres:17", "running", "Up 3 hours (healthy)", "0.0.0.0:5432->5432/tcp", project: "shop"),
+            container("c4", "shop-cache", "redis:7", "running", "Up 3 hours", "6379/tcp", project: "shop"),
+            container("c5", "blog-site", "ghost:5", "running", "Up 25 minutes", "0.0.0.0:2368->2368/tcp", project: "blog"),
+            container("c6", "blog-worker", "blog/worker:latest", "exited", "Exited (1) 4 minutes ago", nil, project: "blog"),
+            container("c7", "minio", "minio/minio:latest", "running", "Up 2 days", "0.0.0.0:9000-9001->9000-9001/tcp", project: nil),
+            container("c8", "mailpit", "axllent/mailpit", "exited", "Exited (0) 2 hours ago", nil, project: nil),
+        ]
+    }()
 
     /// One line of `docker ps --format '{{json .}}'`.
     struct Container: Decodable, Equatable, Identifiable {

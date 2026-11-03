@@ -18,6 +18,10 @@ setup comes back by itself, and apps that weren't running are opened.
 - **Not covered:** windows in full screen and on other Spaces, browser tabs,
   snapping and tiling (macOS does that).
 
+## What's new in 1.1.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.0.0
 
 - First release: save your window layout for each monitor setup and get it back when you plug in or undock.

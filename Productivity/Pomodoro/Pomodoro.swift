@@ -12,15 +12,33 @@ final class Pomodoro: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.pomodoro",
         name: "Pomodoro",
-        version: "1.3.1",
+        version: "1.4.0",
         summary: "A focus timer with presets, a progress ring, tags and today's sessions.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(1)), .wake],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Pomodoro",
         accent: .red,
         symbol: "timer"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Pomodoro>] = [
+        PreviewScene("hero", "Twenty-five focused minutes, counting down") { plugin in
+            plugin.session = Session(mode: .focus, minutes: 25, tag: "Deep Work", started: Date().addingTimeInterval(-498), remaining: 25 * 60)
+            plugin.days = [plugin.dayKey: Day(sessions: 3, minutes: 75)]
+        },
+        PreviewScene("break", "A real break between sessions") { plugin in
+            plugin.mode = .rest
+            plugin.session = Session(mode: .rest, minutes: 5, tag: "Deep Work", started: Date().addingTimeInterval(-70), remaining: 5 * 60)
+            plugin.days = [plugin.dayKey: Day(sessions: 4, minutes: 100)]
+        },
+        PreviewScene("widget", "Your focus timer on the desktop", surface: .widget) { plugin in
+            plugin.session = Session(mode: .focus, minutes: 25, tag: "Deep Work", started: Date().addingTimeInterval(-498), remaining: 25 * 60)
+            plugin.days = [plugin.dayKey: Day(sessions: 3, minutes: 75)]
+        },
+    ]
 
     enum Mode: String, Codable, CaseIterable {
         case focus = "Focus", rest = "Break"

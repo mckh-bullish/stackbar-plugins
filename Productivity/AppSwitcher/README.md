@@ -24,6 +24,10 @@ letter. A pinned letter opens the app even when it isn't running. Hold Right
   as in a password field, macOS blocks every keyboard listener. The panel
   tells you which app has it on.
 
+## What's new in 1.1.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.0.0
 
 - First release: hold Right ⌘ and press a letter to switch apps, and pin

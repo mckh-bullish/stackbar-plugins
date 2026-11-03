@@ -21,6 +21,10 @@ of its own. Links use Raycast's template syntax:
   Import Quicklinks, Export Quicklinks (a file Raycast reads too), plus one
   command per quicklink.
 
+## What's new in 1.4.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.3.1
 
 - Its own icon and colour in the Store and in Settings.

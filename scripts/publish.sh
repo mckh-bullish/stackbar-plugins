@@ -22,16 +22,32 @@ ABOUT=$(mktemp)
 trap 'rm -f "$ABOUT"' EXIT
 
 # Every surface in light and dark, for the plugin's page on the Stackbar site.
-# Renders are not part of a signed bundle, so a version missing them (one
-# published before renders existed) gets them on the next run.
+# A plugin with previews (sample-data scenes, Stackbar 0.17.0) is rendered as
+# its `hero` preview, so the store shows it in use, and each preview is
+# rendered too, at previews/<name>/<surface>.png beside a previews.json that
+# lists them. Renders are not part of a signed bundle, so a version missing
+# them (one published before renders existed) gets them on the next run.
 render_shots() {
     out="$SITE/$1/shots/$2/$3"
     [ -d "$out" ] && return 0
+    mkdir -p "$out.tmp"
+    "$CTL" previews "$4" --json > "$out.tmp/previews.json" 2>/dev/null || echo "[]" > "$out.tmp/previews.json"
+    hero=""
+    if python3 -c 'import json,sys; sys.exit(0 if any(p["name"] == "hero" for p in json.load(open(sys.argv[1]))) else 1)' "$out.tmp/previews.json"; then
+        hero="--preview hero"
+    fi
+    scenes=$(python3 -c 'import json,sys; [print(p["name"], p["surface"]) for p in json.load(open(sys.argv[1]))]' "$out.tmp/previews.json")
     for appearance in light dark; do
         flag=""
         [ "$appearance" = dark ] && flag="--dark"
         # shellcheck disable=SC2086
-        "$CTL" render "$4" --png "$out.tmp/$appearance" $flag > /dev/null || echo "warning: could not render $2 $3 $appearance"
+        "$CTL" render "$4" --png "$out.tmp/$appearance" $flag $hero > /dev/null || echo "warning: could not render $2 $3 $appearance"
+        echo "$scenes" | while read -r name surface; do
+            [ -n "$name" ] || continue
+            # shellcheck disable=SC2086
+            "$CTL" render "$4" --preview "$name" --surface "$surface" --png "$out.tmp/$appearance/previews/$name" $flag > /dev/null \
+                || echo "warning: could not render $2 $3 preview $name $appearance"
+        done
     done
     if [ -d "$out.tmp/light" ]; then mv "$out.tmp" "$out"; else rm -rf "$out.tmp"; fi
 }
@@ -74,7 +90,8 @@ done
 touch "$SITE/.nojekyll"
 
 # site.json: each version's renders, for the site's plugin galleries and the
-# app's store, and each plugin's README (description, `- **Label:**` facts and
+# app's store, its previews (name, title, surface and renders, in order), and
+# each plugin's README (description, `- **Label:**` facts and
 # `## What's new in <version>` notes, split the way the site splits them) for
 # the app's plugin page.
 python3 - "$SITE" "$ABOUT" <<'PY'
@@ -120,7 +137,7 @@ for line in open(about_list):
     if os.path.isfile(readme):
         about[plugin] = {"version": version, **parse_readme(open(readme, encoding="utf-8").read())}
 
-plugins = {}
+plugins, previews = {}, {}
 for category in sorted(os.listdir(site)):
     root = os.path.join(site, category, "shots")
     if not os.path.isdir(root):
@@ -135,8 +152,21 @@ for category in sorted(os.listdir(site)):
                         shots.setdefault(name[:-4], {})[appearance] = f"{category}/shots/{plugin}/{version}/{appearance}/{name}"
             if shots:
                 plugins.setdefault(plugin, {})[version] = shots
+            # Previews in the plugin's order, each with the surface it is about.
+            listed = os.path.join(root, plugin, version, "previews.json")
+            scenes = []
+            for preview in json.load(open(listed)) if os.path.isfile(listed) else []:
+                scene = {"name": preview["name"], "title": preview["title"], "surface": preview["surface"]}
+                for appearance in ("light", "dark"):
+                    relative = f"{appearance}/previews/{preview['name']}/{preview['surface']}.png"
+                    if os.path.isfile(os.path.join(root, plugin, version, relative)):
+                        scene[appearance] = f"{category}/shots/{plugin}/{version}/{relative}"
+                if "light" in scene or "dark" in scene:
+                    scenes.append(scene)
+            if scenes:
+                previews.setdefault(plugin, {})[version] = scenes
 with open(os.path.join(site, "site.json"), "w") as out:
-    json.dump({"format": 1, "plugins": plugins, "about": about}, out, indent=2, sort_keys=True)
+    json.dump({"format": 1, "plugins": plugins, "previews": previews, "about": about}, out, indent=2, sort_keys=True)
     out.write("\n")
 PY
 

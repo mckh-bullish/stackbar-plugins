@@ -13,7 +13,7 @@ final class Music: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.music",
         name: "Music",
-        version: "1.2.1",
+        version: "1.3.0",
         summary: "What's playing in Music or Spotify, with play, pause, skip and volume.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(5)), .wake],
@@ -22,11 +22,28 @@ final class Music: StackbarPlugin {
         // Album art: Spotify names its own image URL; for Music the cover
         // is looked up in the iTunes catalog by artist and album.
         capabilities: [.run(commands: ["osascript"]), .network("itunes.apple.com", "*.mzstatic.com", "i.scdn.co")],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Music",
         accent: .pink,
         symbol: "music.note"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Music>] = [
+        PreviewScene("hero", "What's playing, with controls a click away") { plugin in
+            plugin.track = Track(player: .music, playing: true, name: "Harbor Lights", artist: "Juniper Vale", album: "Slow Tides",
+                                 duration: 248, position: 97, volume: 60)
+            plugin.covers = ["Juniper Vale|Slow Tides": ""]
+            plugin.checked = true
+        },
+        PreviewScene("widget", "Now playing, on your desktop", surface: .widget) { plugin in
+            plugin.track = Track(player: .spotify, playing: true, name: "Harbor Lights", artist: "Juniper Vale", album: "Slow Tides",
+                                 duration: 248, position: 97, volume: 60)
+            plugin.covers = ["Juniper Vale|Slow Tides": ""]
+            plugin.checked = true
+        },
+    ]
 
     enum Player: String, CaseIterable {
         case music = "Music"

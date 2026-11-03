@@ -14,16 +14,41 @@ final class Homebrew: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.homebrew",
         name: "Homebrew",
-        version: "1.3.1",
+        version: "1.4.0",
         summary: "Outdated formulae and casks, with upgrades a click away.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(60), .wake],
         capabilities: [.run(commands: ["brew"])],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew",
         accent: .amber,
         symbol: "mug.fill"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Homebrew>] = [
+        PreviewScene("hero", "Every outdated formula and cask, one click to upgrade") { plugin in
+            plugin.packages = samples
+            plugin.checked = Date().addingTimeInterval(-6 * 60)
+            plugin.indexUpdated = Date().addingTimeInterval(-6 * 60)
+        },
+        PreviewScene("widget", "Updates waiting, on your desktop", surface: .widget) { plugin in
+            plugin.packages = samples
+            plugin.checked = Date().addingTimeInterval(-6 * 60)
+            plugin.indexUpdated = Date().addingTimeInterval(-6 * 60)
+        },
+    ]
+
+    static let samples = [
+        Package(name: "node", installed: "22.11.0", current: "22.12.0", isCask: false, pinned: false),
+        Package(name: "git", installed: "2.47.0", current: "2.47.1", isCask: false, pinned: false),
+        Package(name: "ripgrep", installed: "14.1.0", current: "14.1.1", isCask: false, pinned: false),
+        Package(name: "python@3.13", installed: "3.13.0", current: "3.13.1", isCask: false, pinned: true),
+        Package(name: "visual-studio-code", installed: "1.95.1", current: "1.95.3", isCask: true, pinned: false),
+        Package(name: "firefox", installed: "132.0", current: "132.0.2", isCask: true, pinned: false),
+        Package(name: "orbstack", installed: "1.8.1", current: "1.8.2", isCask: true, pinned: false),
+    ]
 
     struct Package: Equatable, Identifiable {
         var name: String

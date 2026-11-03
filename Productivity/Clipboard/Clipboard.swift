@@ -15,18 +15,64 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.4.1",
+        version: "1.5.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
         triggers: [.launch, .clipboard, .every(.seconds(60))],
         capabilities: [.clipboard],
         hotkey: "cmd+shift+v",
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
         accent: .blue,
         symbol: "doc.on.clipboard.fill"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Clipboard>] = [
+        PreviewScene("hero", "Everything you copied, one keystroke away") { plugin in
+            plugin.entries = samples()
+        },
+        PreviewScene("pinned", "Pin what you paste every day") { plugin in
+            plugin.entries = samples().enumerated().map { index, entry in
+                var entry = entry
+                entry.pinned = [1, 4, 6].contains(index)
+                return entry
+            }
+        },
+        PreviewScene("insights", "What you copy, and from where", surface: .window) { plugin in
+            plugin.entries = samples()
+            let counts = [14, 22, 9, 31, 27, 6, 3, 18, 25, 40, 33, 21, 12, 29]
+            plugin.copiesByDay = Dictionary(uniqueKeysWithValues: counts.enumerated().map { offset, count in
+                (day(Date().addingTimeInterval(Double(offset - 13) * 86400)), count)
+            })
+        },
+    ]
+
+    /// A believable afternoon of copies, newest first.
+    static func samples(now: Date = Date()) -> [Entry] {
+        let copies: [(ClipboardItem.Kind, String, String, String, Double, Int, String?)] = [
+            (.text, "func greet(_ name: String) -> String {\n    \"Hello, \\(name)!\"\n}", "com.apple.dt.Xcode", "Xcode", 0.5, 1, nil),
+            (.url, "https://developer.apple.com/documentation/swiftui/view/task(priority:_:)", "com.apple.Safari", "Safari", 3, 2, nil),
+            (.text, "example-token-not-real-0000", "com.apple.Terminal", "Terminal", 6, 1, "GitHub token"),
+            (.text, "Thanks for the review! I moved the retry into the client and added a test for the timeout.", "com.apple.mail", "Mail", 12, 1, nil),
+            (.text, "brew install --cask stackbar", "com.apple.Terminal", "Terminal", 18, 4, nil),
+            (.text, "Invoice #2041 · 3 Nov 2026 · €1,240.00", "com.apple.Preview", "Preview", 26, 1, nil),
+            (.text, "git rebase -i origin/main", "com.apple.Terminal", "Terminal", 41, 7, nil),
+            (.url, "https://stackbar.navbytes.io/plugins/", "com.apple.Safari", "Safari", 55, 1, nil),
+            (.text, "Meeting notes: ship the store page on Friday, previews first, then the hero.", "com.apple.Notes", "Notes", 80, 1, nil),
+            (.text, "SELECT id, email FROM users WHERE created_at > now() - interval '7 days';", "com.apple.dt.Xcode", "Xcode", 120, 2, nil),
+            (.text, "#FF5FA2", "com.apple.Safari", "Safari", 150, 3, nil),
+            (.text, "42 Wallaby Way, Sydney", "com.apple.Notes", "Notes", 210, 1, nil),
+        ]
+        return copies.enumerated().map { index, copy in
+            let (kind, text, appID, appName, minutesAgo, count, secret) = copy
+            let when = now.addingTimeInterval(-minutesAgo * 60)
+            return Entry(id: "sample-\(index)", kind: kind, text: text, appID: appID, appName: appName,
+                         firstCopied: when.addingTimeInterval(-Double(count - 1) * 3600), lastCopied: when, count: count, secret: secret)
+        }
+    }
 
     struct Entry: Codable, Equatable {
         var id: String

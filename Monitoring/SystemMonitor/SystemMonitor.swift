@@ -12,16 +12,50 @@ final class SystemMonitor: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.system-monitor",
         name: "System Monitor",
-        version: "1.2.1",
+        version: "1.3.0",
         summary: "CPU, memory and disk in the menu bar, with the processes using the most.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(10)), .wake],
         capabilities: [.run(commands: ["top", "vm_stat", "df", "kill"])],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
         accent: .green,
         symbol: "gauge.with.dots.needle.67percent"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<SystemMonitor>] = [
+        PreviewScene("hero", "CPU, memory and disk at a glance") { plugin in
+            plugin.sample = samples
+            plugin.disk = Disk(used: 612e9, total: 994e9)
+            plugin.cpuHistory = [18, 22, 31, 27, 24, 41, 38, 33, 29, 35, 52, 47, 39, 34, 30, 28, 36, 44, 40, 34]
+        },
+        PreviewScene("memory", "Find what is eating your memory") { plugin in
+            plugin.sortBy = "Memory"
+            plugin.sample = samples
+            let order = ["Xcode", "Docker", "Safari", "Figma", "Slack", "WindowServer", "Music", "Stackbar"]
+            plugin.sample?.processes.sort { order.firstIndex(of: $0.command) ?? 0 < order.firstIndex(of: $1.command) ?? 0 }
+            plugin.disk = Disk(used: 612e9, total: 994e9)
+        },
+        PreviewScene("widget", "Your Mac's load on the desktop", surface: .widget) { plugin in
+            plugin.sample = samples
+            plugin.disk = Disk(used: 612e9, total: 994e9)
+            plugin.cpuHistory = [18, 22, 31, 27, 24, 41, 38, 33, 29, 35, 52, 47, 39, 34, 30, 28, 36, 44, 40, 34]
+        },
+    ]
+
+    /// A busy afternoon on a 32 GB Mac.
+    static let samples = Sample(cpu: 34, memoryUsed: 21.4 * 1_073_741_824, memoryTotal: 32 * 1_073_741_824, load: [3.12, 2.87, 2.40], processes: [
+        ProcessRow(pid: 812, command: "Xcode", cpu: 48.2, memory: "4.1G"),
+        ProcessRow(pid: 1204, command: "Safari", cpu: 21.7, memory: "2.6G"),
+        ProcessRow(pid: 977, command: "Slack", cpu: 9.4, memory: "1.2G"),
+        ProcessRow(pid: 401, command: "WindowServer", cpu: 7.9, memory: "820M"),
+        ProcessRow(pid: 1530, command: "Docker", cpu: 6.1, memory: "3.3G"),
+        ProcessRow(pid: 2210, command: "Music", cpu: 2.3, memory: "410M"),
+        ProcessRow(pid: 1388, command: "Figma", cpu: 1.8, memory: "1.9G"),
+        ProcessRow(pid: 166, command: "Stackbar", cpu: 0.6, memory: "96M"),
+    ])
 
     struct Sample: Equatable {
         var cpu: Double = 0

@@ -14,16 +14,52 @@ final class LiteLLM: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.litellm",
         name: "LiteLLM",
-        version: "1.2.1",
+        version: "1.3.0",
         summary: "Tokens, spend, budget and model mix from your LiteLLM proxy, with charts.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
         capabilities: [.userServer(secret: "LITELLM_PROXY_URL"), .secret(name: "LITELLM_API_KEY")],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/LiteLLM",
         accent: .pink,
         symbol: "sparkles"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<LiteLLM>] = [
+        PreviewScene("hero", "Spend, tokens and budget for your LLM proxy") { plugin in sample(plugin) },
+        PreviewScene("dashboard", "Half a year of usage, by model", surface: .window) { plugin in sample(plugin) },
+        PreviewScene("widget", "Today's spend on the desktop", surface: .widget) { plugin in sample(plugin) },
+    ]
+
+    /// Half a year of a small team's usage: weekdays busy, weekends quiet,
+    /// growing slowly.
+    static func sample(_ plugin: LiteLLM) {
+        plugin.proxy = "https://llm.example.com"
+        var days: [String: Day] = [:]
+        for offset in -179...0 {
+            let weekday = Calendar.current.component(.weekday, from: Date().addingTimeInterval(Double(offset) * 86400))
+            let weekend = weekday == 1 || weekday == 7
+            let growth = 1 + Double(offset + 180) / 180
+            let wobble = 0.8 + 0.4 * abs(sin(Double(offset) * 1.7))
+            let tokens = (weekend ? 0.6e6 : 3.2e6) * growth * wobble
+            let requests = (tokens / 2600).rounded()
+            days[day(offset)] = Day(tokens: tokens, spend: tokens / 1e6 * 4.1, requests: requests, failed: (requests * 0.012).rounded())
+        }
+        plugin.days = days
+        plugin.models = [
+            Model(name: "claude-sonnet", tokens: 212e6, spend: 868),
+            Model(name: "gpt-5-mini", tokens: 140e6, spend: 214),
+            Model(name: "claude-haiku", tokens: 96e6, spend: 118),
+            Model(name: "text-embedding-3-small", tokens: 61e6, spend: 6),
+            Model(name: "llama-3.3-70b", tokens: 22e6, spend: 19),
+        ]
+        plugin.budget = Budget(spend: 612, max: 1000, resetAt: Calendar.current.date(byAdding: .day, value: 12, to: Date()))
+        plugin.todayDetail = Today(date: day(0), requests: 1490, failed: 17, promptTokens: 2.9e6, cacheReadTokens: 1.1e6, cacheSavings: 3.4)
+        plugin.historyFetched = Date()
+        plugin.lastSuccess = Date()
+    }
 
     /// One day's totals, kept between runs for the heatmap and the trend.
     struct Day: Codable, Equatable {

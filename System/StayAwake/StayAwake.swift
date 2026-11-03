@@ -10,16 +10,48 @@ final class StayAwake: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.stay-awake",
         name: "Stay Awake",
-        version: "1.3.1",
+        version: "1.4.0",
         summary: "Keeps your Mac awake for a while, until a time, while an app runs or on a schedule.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.power],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake",
         accent: .amber,
         symbol: "cup.and.saucer.fill"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<StayAwake>] = [
+        PreviewScene("hero", "Awake for the next hour, then back to normal") { plugin in
+            let now = Date()
+            plugin.session = Session(mode: .until(now.addingTimeInterval(75 * 60)), started: now.addingTimeInterval(-45 * 60))
+            plugin.awakeByDay = sampleWeek(now: now)
+            plugin.batteryTrail = [0.92, 0.91, 0.9, 0.88, 0.87, 0.86, 0.85, 0.83, 0.82, 0.81]
+            try await plugin.refresh()
+        },
+        PreviewScene("while-app", "Awake while your build runs") { plugin in
+            let now = Date()
+            plugin.session = Session(mode: .whileRunning(appID: "com.apple.dt.Xcode", name: "Xcode"), started: now.addingTimeInterval(-20 * 60))
+            plugin.awakeByDay = sampleWeek(now: now)
+            try await plugin.refresh()
+        },
+        PreviewScene("widget", "Your Mac's sleep state on the desktop", surface: .widget) { plugin in
+            let now = Date()
+            plugin.session = Session(mode: .until(now.addingTimeInterval(75 * 60)), started: now.addingTimeInterval(-45 * 60))
+            plugin.awakeByDay = sampleWeek(now: now)
+            try await plugin.refresh()
+        },
+    ]
+
+    /// Seconds kept awake on each of the last seven days.
+    static func sampleWeek(now: Date) -> [String: Double] {
+        let hours = [2.5, 4, 1.5, 6, 3, 0.5, 2]
+        return Dictionary(uniqueKeysWithValues: hours.enumerated().map { offset, value in
+            (day(now.addingTimeInterval(Double(offset - 6) * 86400)), value * 3600)
+        })
+    }
 
     /// What the current session waits for before it ends.
     enum Mode: Codable, Equatable {

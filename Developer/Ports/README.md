@@ -18,6 +18,10 @@ whatever holds it is asked to stop.
 Processes owned by another user, like system services, can't be stopped
 from here.
 
+## What's new in 1.3.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.2.2
 
 - Its own icon and colour in the Store and in Settings.

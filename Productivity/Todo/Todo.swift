@@ -12,15 +12,53 @@ final class Todo: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.todo",
         name: "Todo",
-        version: "1.0.1",
+        version: "1.1.0",
         summary: "A calm to-do list that understands dates as you type them, with reminders and repeats.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(30)), .wake],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Todo",
         accent: .orange,
         symbol: "checklist"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Todo>] = [
+        PreviewScene("hero", "Type it the way you'd say it; dates are understood") { plugin in
+            plugin.tasks = samples(now: plugin.now)
+        },
+        PreviewScene("widget", "Today's list on your desktop", surface: .widget) { plugin in
+            plugin.tasks = samples(now: plugin.now)
+        },
+    ]
+
+    static func samples(now: Date) -> [Item] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: now)
+        func at(_ days: Int, _ hour: Int?) -> Date? {
+            let day = calendar.date(byAdding: .day, value: days, to: today) ?? today
+            return hour.flatMap { calendar.date(bySettingHour: $0, minute: 0, second: 0, of: day) } ?? day
+        }
+        let list: [(String, Int?, Int?, Repeat?, Bool, Bool)] = [
+            ("Send the invoice to Northwind", -1, nil, nil, true, false),
+            ("Call mum", 0, 18, nil, false, false),
+            ("Review Priya's checkout PR", 0, 15, nil, true, false),
+            ("Water the plants", 0, nil, .weekly, false, false),
+            ("Book flights for the offsite", 1, nil, nil, false, false),
+            ("Stand-up notes", 1, 9, .weekdays, false, false),
+            ("Renew passport", 12, nil, nil, false, false),
+            ("Read the SwiftUI layout chapter", nil, nil, nil, false, false),
+            ("Buy coffee beans", 0, nil, nil, false, true),
+        ]
+        return list.enumerated().map { index, entry in
+            let (title, days, hour, repeats, important, finished) = entry
+            var item = Item(id: "sample-\(index)", title: title, due: days.flatMap { at($0, hour) }, hasTime: hour != nil,
+                            repeats: repeats, important: important, created: now.addingTimeInterval(-86400 * 3))
+            if finished { item.done = now.addingTimeInterval(-3600) }
+            return item
+        }
+    }
 
     /// Warm and quiet: the earthy orange of the shared design system.
     let theme = Theme.orange

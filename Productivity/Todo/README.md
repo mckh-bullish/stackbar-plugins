@@ -38,6 +38,10 @@ done.
   from plain words.
 - **Requires:** Stackbar 0.14.0 or later.
 
+## What's new in 1.1.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.0.1
 
 - Its own icon and colour in the Store and in Settings.

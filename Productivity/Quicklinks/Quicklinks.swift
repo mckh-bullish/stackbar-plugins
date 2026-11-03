@@ -15,7 +15,7 @@ final class Quicklinks: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.quicklinks",
         name: "Quicklinks",
-        version: "1.3.1",
+        version: "1.4.0",
         summary: "Open links and folders by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -24,11 +24,38 @@ final class Quicklinks: StackbarPlugin {
         // Site icons come from DuckDuckGo's icon service, which sees the
         // domain of each web link shown in the launcher (off in Settings).
         capabilities: [.openURLs(schemes: ["*"]), .clipboard, .context, .network("icons.duckduckgo.com")],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
         accent: .cyan,
         symbol: "link"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Quicklinks>] = [
+        PreviewScene("hero", "Your searches, sites and folders by name") { plugin in
+            plugin.links = samples
+            plugin.usage = Dictionary(uniqueKeysWithValues: samples.enumerated().map { index, link in
+                (link.commandID, Usage(count: 40 - index * 4, last: Date().addingTimeInterval(-Double(index) * 3600)))
+            })
+        },
+    ]
+
+    static let samples: [Link] = {
+        func link(_ number: Int, _ name: String, _ template: String, tags: [String], symbol: String? = nil) -> Link {
+            Link(id: UUID(uuidString: String(format: "51C00000-0000-4000-8000-%012d", number)) ?? UUID(), name: name, link: template, tags: tags, symbol: symbol)
+        }
+        return [
+            link(1, "Search GitHub", "https://github.com/search?q={Query}", tags: ["Dev"]),
+            link(2, "Jira Ticket", "https://acme.atlassian.net/browse/{Key}", tags: ["Work"]),
+            link(3, "Google Maps", "https://maps.google.com/?q={Place}", tags: ["Everyday"]),
+            link(4, "Translate", "https://translate.google.com/?sl=auto&tl=en&text={Text}", tags: ["Everyday"]),
+            link(5, "Stack Overflow", "https://stackoverflow.com/search?q={Query}", tags: ["Dev"]),
+            link(6, "Downloads", "~/Downloads", tags: ["Folders"], symbol: "folder.fill"),
+            link(7, "Team Calendar", "https://calendar.google.com", tags: ["Work"]),
+            link(8, "Swift Docs", "https://developer.apple.com/search/?q={Query}", tags: ["Dev"]),
+        ]
+    }()
 
     struct Link: Codable, Equatable, Identifiable {
         var id: UUID

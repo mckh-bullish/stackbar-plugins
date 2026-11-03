@@ -15,6 +15,10 @@ by state, ordered by priority.
   issues.
 - **Agent tool:** `assigned` lists your open issues with their branch names.
 
+## What's new in 1.3.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.2.1
 
 - Its own icon and colour in the Store and in Settings.

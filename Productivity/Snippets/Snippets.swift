@@ -17,7 +17,7 @@ final class Snippets: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.snippets",
         name: "Snippets",
-        version: "1.2.1",
+        version: "1.3.0",
         summary: "Paste text by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -25,11 +25,34 @@ final class Snippets: StackbarPlugin {
         // snippets at Raycast's 65,536-character limit.
         capabilities: [.clipboard, .context, .storage(megabytes: 16)],
         hotkey: "ctrl+option+s",
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
         accent: .indigo,
         symbol: "text.insert"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Snippets>] = [
+        PreviewScene("hero", "Text you type often, a keystroke away") { plugin in
+            plugin.snippets = samples
+        },
+    ]
+
+    static let samples: [Snippet] = {
+        func snippet(_ number: Int, _ name: String, _ text: String, keyword: String, tags: [String]) -> Snippet {
+            Snippet(id: UUID(uuidString: String(format: "5A1B0000-0000-4000-8000-%012d", number)) ?? UUID(), name: name, text: text, keyword: keyword, tags: tags)
+        }
+        return [
+            snippet(1, "Email sign-off", "Thanks,\nSam", keyword: ";thx", tags: ["Email"]),
+            snippet(2, "Today's date", "{date}", keyword: ";date", tags: ["Everyday"]),
+            snippet(3, "Meeting link", "Here's the link for our call: https://meet.example.com/sam", keyword: ";meet", tags: ["Work"]),
+            snippet(4, "Shipping address", "Sam Rivera\n12 Harbour Street\nSpringfield", keyword: ";addr", tags: ["Everyday"]),
+            snippet(5, "Bug report", "**Steps**\n1. \n\n**Expected**\n\n**Actual**\n\nVersion: {clipboard}", keyword: ";bug", tags: ["Work"]),
+            snippet(6, "Review reply", "Thanks for the review! I've addressed {Comment} in the latest commit.", keyword: ";rev", tags: ["Work"]),
+            snippet(7, "Swift test", "func test{Name}() throws {\n    \n}", keyword: ";test", tags: ["Code"]),
+        ]
+    }()
 
     static let maxLength = 65_536
 

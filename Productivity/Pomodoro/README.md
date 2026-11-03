@@ -23,6 +23,10 @@ and focused minutes sit under the timer.
 - **Agent tool:** `status` returns the mode, the time left and today's focus.
 - **Requires:** Stackbar 0.14.0 or later.
 
+## What's new in 1.4.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.3.1
 
 - Its own icon and colour in the Store and in Settings.

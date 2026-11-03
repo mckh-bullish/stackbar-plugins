@@ -19,7 +19,7 @@ final class Translate: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.translate",
         name: "Translate",
-        version: "1.3.1",
+        version: "1.4.0",
         summary: "Translate the selected text in place, on your Mac or with Google or DeepL.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -28,11 +28,21 @@ final class Translate: StackbarPlugin {
         // can't translate the pair itself; DeepL's two API hosts (free and
         // paid keys).
         capabilities: [.context, .clipboard, .network("translate.googleapis.com", "api-free.deepl.com", "api.deepl.com"), .secret(name: "DEEPL_API_KEY")],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate",
         accent: .teal,
         symbol: "character.bubble.fill"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Translate>] = [
+        PreviewScene("hero", "Translate on your Mac, without leaving the app you're in") { plugin in
+            plugin.result = (source: "Können wir das Meeting auf Donnerstag verschieben? Ich schicke dir vorher die Folien.",
+                             text: "Can we move the meeting to Thursday? I'll send you the slides beforehand.",
+                             detected: "German", target: "English", by: "On your Mac")
+        },
+    ]
 
     struct Language: Equatable {
         var name: String

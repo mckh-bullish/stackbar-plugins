@@ -19,6 +19,10 @@ first.
 
 Jira Server and Data Center aren't supported: only Atlassian's cloud sites.
 
+## What's new in 1.3.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.2.2
 
 - Its own icon and colour in the Store and in Settings.

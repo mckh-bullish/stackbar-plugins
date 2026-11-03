@@ -29,6 +29,10 @@ share its selection, it uses what you last copied.
   language, and DeepL's formality.
 - **Commands:** Translate Selection, Translate Selection in Google Translate.
 
+## What's new in 1.4.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.3.1
 
 - Its own icon and colour in the Store and in Settings.

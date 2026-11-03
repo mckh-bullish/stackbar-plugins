@@ -17,6 +17,10 @@ crashes, so it can't leave the Mac awake by accident.
   run them from Spotlight, Shortcuts or a `stackbar://` link.
 - **Agent tools:** `awake_status`, `keep_awake` and `allow_sleep`.
 
+## What's new in 1.4.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.3.1
 
 - Its own icon and colour in the Store and in Settings.

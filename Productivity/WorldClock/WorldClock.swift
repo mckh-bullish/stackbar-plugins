@@ -12,15 +12,28 @@ final class WorldClock: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.world-clock",
         name: "World Clock",
-        version: "1.3.1",
+        version: "1.4.0",
         summary: "The time in the cities you work with, with offsets and working hours.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(30)), .wake],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WorldClock",
         accent: .violet,
         symbol: "globe"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<WorldClock>] = [
+        PreviewScene("hero", "Every city you work with, and their working hours") { plugin in
+            plugin.zones = ["America/Los_Angeles", "America/New_York", "Europe/London", "Asia/Kolkata", "Asia/Tokyo"]
+        },
+        PreviewScene("plan", "Slide to find a time that works everywhere") { plugin in
+            plugin.zones = ["America/Los_Angeles", "America/New_York", "Europe/London", "Asia/Kolkata", "Asia/Tokyo"]
+            plugin.offsetHours = 3
+        },
+        PreviewScene("widget", "Your cities on the desktop", surface: .widget) { _ in },
+    ]
 
     /// The real time, from the last refresh.
     var realNow = Date()

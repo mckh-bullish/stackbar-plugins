@@ -21,6 +21,10 @@ the host and pasted back.
   Pause Clipboard History, Ignore Next Copy.
 - **Agent tools:** `recent_clips`, `search_clips` and `copy_clip`.
 
+## What's new in 1.5.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.4.1
 
 - Its own icon and colour in the Store and in Settings.

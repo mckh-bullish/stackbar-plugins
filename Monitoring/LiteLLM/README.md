@@ -30,6 +30,10 @@ red at 90%.
 
 Ported from vee-plugins' `litellm-cost`.
 
+## What's new in 1.3.0
+
+- Store screenshots now show it in use, with sample data, instead of its first-run screen.
+
 ## What's new in 1.2.1
 
 - Its own icon and colour in the Store and in Settings.

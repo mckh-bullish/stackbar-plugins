@@ -13,16 +13,43 @@ final class Linear: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.linear",
         name: "Linear",
-        version: "1.2.1",
+        version: "1.3.0",
         summary: "Your assigned Linear issues, branch names, search and new issues from the palette.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("api.linear.app"), .secret(name: "LINEAR_API_KEY")],
-        minimumStackbar: "0.14.0",
+        minimumStackbar: "0.17.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
         accent: .indigo,
         symbol: "circle.lefthalf.filled"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Linear>] = [
+        PreviewScene("hero", "Your Linear issues, by state and priority") { plugin in
+            plugin.teams = [Team(id: "t1", key: "ENG", name: "Engineering"), Team(id: "t2", key: "DES", name: "Design")]
+            plugin.defaultTeam = "t1"
+            plugin.assigned = samples
+            plugin.loaded = true
+        },
+    ]
+
+    static let samples: [Issue] = {
+        func issue(_ id: String, _ title: String, _ state: String, _ type: String, _ priority: Double) -> Issue {
+            let team = String(id.prefix(3))
+            return Issue(id: id, identifier: id, title: title, url: "https://linear.app/acme/issue/\(id)", branchName: "sam/\(id.lowercased())",
+                         priority: priority, state: .init(name: state, type: type), team: .init(key: team))
+        }
+        return [
+            issue("ENG-231", "Sign-in loops on Safari when cookies are blocked", "In Progress", "started", 1),
+            issue("ENG-228", "Rate-limit the export endpoint", "In Progress", "started", 2),
+            issue("DES-54", "Empty states for the new dashboard", "In Review", "started", 3),
+            issue("ENG-240", "Move cron jobs to the queue", "Todo", "unstarted", 2),
+            issue("ENG-243", "Flaky test: billing webhook retries", "Todo", "unstarted", 3),
+            issue("ENG-219", "Audit log for admin actions", "Backlog", "backlog", 4),
+        ]
+    }()
 
     struct Issue: Codable, Equatable, Identifiable {
         struct State: Codable, Equatable { let name: String; let type: String }
