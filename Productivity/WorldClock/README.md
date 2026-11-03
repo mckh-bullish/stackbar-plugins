@@ -17,3 +17,8 @@ default).
 - **Commands:** World Clock lists your cities with their times; each row can
   be copied or shown in the menu bar.
 - **Agent tool:** `times` returns the time in every city.
+
+## What's new in 1.3.0
+
+- A slider in the panel moves every clock up to 12 hours either way, so you can find a time that works everywhere.
+- A World Clock command lists your cities.

@@ -16,3 +16,7 @@ away.
 - **Settings:** what the menu bar shows (CPU and memory, CPU, or memory)
   and whether processes are sorted by CPU or memory.
 - **Agent tool:** `usage` returns CPU, memory, disk and the busiest processes.
+
+## What's new in 1.2.0
+
+- A bolder look on the Stackbar design system.

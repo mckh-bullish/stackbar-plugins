@@ -14,3 +14,7 @@ by state, ordered by priority.
 - **Settings:** what the menu-bar number counts, and the default team for new
   issues.
 - **Agent tool:** `assigned` lists your open issues with their branch names.
+
+## What's new in 1.2.0
+
+- A bolder look on the Stackbar design system.

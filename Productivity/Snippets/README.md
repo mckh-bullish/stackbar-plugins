@@ -15,3 +15,7 @@ another snippet.
   Snippets (a file Raycast reads too), plus one command per snippet.
 - **Not yet:** keywords are kept but not expanded as you type, because that
   needs a system-wide keyboard monitor.
+
+## What's new in 1.2.0
+
+- A bolder look on the Stackbar design system.

@@ -16,3 +16,8 @@ crashes, so it can't leave the Mac awake by accident.
   and Allow Sleep. Give them a hotkey or an alias in Stackbar's Settings, or
   run them from Spotlight, Shortcuts or a `stackbar://` link.
 - **Agent tools:** `awake_status`, `keep_awake` and `allow_sleep`.
+
+## What's new in 1.3.0
+
+- Commands: Toggle, Keep Awake For… (90m, 2h or until 17:30) and Allow Sleep, so they get hotkeys, Spotlight and Shortcuts.
+- During a timed session, the menu bar can show the time left (setting).

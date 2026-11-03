@@ -20,3 +20,8 @@ of its own. Links use Raycast's template syntax:
 - **Commands:** Search Quicklinks, Create Quicklink, Browse Quicklink Library,
   Import Quicklinks, Export Quicklinks (a file Raycast reads too), plus one
   command per quicklink.
+
+## What's new in 1.3.0
+
+- An empty panel offers eight everyday links in one click, and Browse Quicklink Library lists 40 ready-made searches, sites and folders.
+- The list and the launcher tiles put the links you use most first.

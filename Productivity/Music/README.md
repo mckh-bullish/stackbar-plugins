@@ -16,3 +16,7 @@ pause; right-click for the panel with the track, Previous, Next and volume.
 - **Commands:** Play or Pause Music, Next Track, Previous Track, Copy
   Current Track.
 - **Agent tool:** `now_playing` describes the current track.
+
+## What's new in 1.2.0
+
+- A bolder look on the Stackbar design system.

@@ -29,7 +29,10 @@ A plugin is accepted when all of these hold:
    (the plugins that moved here from Stackbar keep their old ids),
    a `version` (`x.y.z`), a one-sentence `summary`, `minimumStackbar` (the
    oldest Stackbar it builds against) and `homepage` (its folder on GitHub).
-9. **It has a README** saying what it does, what it needs and its settings.
+9. **It has a README** saying what it does, what it needs and its settings,
+   ending with a `## What's new in <version>` list of bullets for the
+   current version. The store shows it on the Update button and the
+   plugin's page; older sections can stay below it as history.
 10. **Any change raises the version.** Published versions are never rewritten,
     and CI fails a source change without a higher `version`.
 

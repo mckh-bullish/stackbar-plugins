@@ -20,3 +20,9 @@ Logs, Open (for a published port), Copy ID and Remove.
 - **Commands:** Docker Containers, Docker Logs (the last 200 lines of one
   container), Remove Stopped Docker Containers.
 - **Agent tool:** `containers` lists every container with its image and state.
+
+## What's new in 1.3.0
+
+- Tells you when a container crashes, turns unhealthy or keeps restarting: a notification (setting, on by default), a red count in the menu bar, a banner in the panel and a crashed badge on the row.
+- Stopping a container yourself, from the panel, `docker stop` or Ctrl-C, doesn't count as a crash.
+- A bolder look on the Stackbar design system.

@@ -74,8 +74,9 @@ done
 touch "$SITE/.nojekyll"
 
 # site.json: each version's renders, for the site's plugin galleries and the
-# app's store, and each plugin's README (description and `- **Label:**` facts,
-# split the way the site splits them) for the app's plugin page.
+# app's store, and each plugin's README (description, `- **Label:**` facts and
+# `## What's new in <version>` notes, split the way the site splits them) for
+# the app's plugin page.
 python3 - "$SITE" "$ABOUT" <<'PY'
 import json, os, re, sys
 site, about_list = sys.argv[1], sys.argv[2]
@@ -84,8 +85,22 @@ def parse_readme(markdown):
     lines = markdown.replace("\r\n", "\n").split("\n")
     if lines and lines[0].startswith("# "):
         lines.pop(0)
-    facts, rest, i = [], [], 0
+    facts, rest, changes, i = [], [], [], 0
     while i < len(lines):
+        # `## What's new in 1.2.0` and its bullets: the release notes the
+        # store shows on the Update button and the plugin's page.
+        heading = re.match(r"^## What's new in (\S+)\s*$", lines[i])
+        if heading:
+            notes = []
+            i += 1
+            while i < len(lines) and not lines[i].startswith("#"):
+                if lines[i].startswith("- "):
+                    notes.append(lines[i][2:].strip())
+                elif re.match(r"^\s{2,}\S", lines[i]) and notes:
+                    notes[-1] += " " + lines[i].strip()
+                i += 1
+            changes.append({"version": heading.group(1), "notes": notes})
+            continue
         fact = re.match(r"^- \*\*(.+?):\*\*\s*(.*)$", lines[i])
         if not fact:
             rest.append(lines[i])
@@ -97,7 +112,7 @@ def parse_readme(markdown):
             text += " " + lines[i].strip()
         facts.append({"label": fact.group(1), "text": text})
         i += 1
-    return {"description": "\n".join(rest).strip(), "facts": facts}
+    return {"description": "\n".join(rest).strip(), "facts": facts, "changes": changes}
 
 about = {}
 for line in open(about_list):

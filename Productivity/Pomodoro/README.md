@@ -22,3 +22,8 @@ and focused minutes sit under the timer.
   your tags.
 - **Agent tool:** `status` returns the mode, the time left and today's focus.
 - **Requires:** Stackbar 0.14.0 or later.
+
+## What's new in 1.3.0
+
+- Commands: Start or Pause, Start a Focus Session, Take a Break, Skip and Reset, for the palette, hotkeys, Shortcuts and links.
+- A stray tap no longer ends a session: once a session is a minute in, changing mode, skipping or resetting asks first.

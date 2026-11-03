@@ -28,3 +28,8 @@ share its selection, it uses what you last copied.
 - **Settings:** the engine, the language to translate into and the second
   language, and DeepL's formality.
 - **Commands:** Translate Selection, Translate Selection in Google Translate.
+
+## What's new in 1.3.0
+
+- Works with no setup. The new Automatic engine translates on your Mac when the languages are downloaded, and uses Google Translate otherwise.
+- DeepL is still there, and opening Google Translate in the browser is now the Browser engine. Results say which engine translated them.

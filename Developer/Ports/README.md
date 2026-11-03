@@ -17,3 +17,7 @@ whatever holds it is asked to stop.
 
 Processes owned by another user, like system services, can't be stopped
 from here.
+
+## What's new in 1.2.1
+
+- Shows full process names. They used to be cut to 9 characters.

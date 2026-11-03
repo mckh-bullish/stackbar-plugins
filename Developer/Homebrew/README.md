@@ -19,3 +19,8 @@ Upgrade All at the bottom.
 - **Commands:** Upgrade All Homebrew Packages, Update Homebrew, Outdated
   Homebrew Packages.
 - **Agent tool:** `outdated` lists what can be upgraded.
+
+## What's new in 1.3.0
+
+- Runs `brew update` in the background when the formula list is more than 6 hours old (setting, on by default), so "Everything's fresh" is never said from a stale list.
+- Says how old the list is, and shows it straight away after launch while the update runs.

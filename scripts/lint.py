@@ -104,6 +104,9 @@ def lint(ctl, base=None):
             problems.append(f"{where}: id {plugin_id} is also used by {seen_ids[plugin_id]}")
         else:
             seen_ids[plugin_id] = where
+        readme = directory / "README.md"
+        if readme.is_file() and f"## What's new in {version}\n" not in readme.read_text():
+            problems.append(f"{where}: README.md needs a \"## What's new in {version}\" section; the store shows it on the Update button")
         if base:
             old = git_show(base, f"{category}/{name}/{name}.swift")
             if old is not None and old != source:

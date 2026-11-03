@@ -18,3 +18,8 @@ first.
 - **Agent tool:** `assigned` lists your open issues.
 
 Jira Server and Data Center aren't supported: only Atlassian's cloud sites.
+
+## What's new in 1.2.1
+
+- The Done stat counts your issues done in the last week. Before, it always showed 0.
+- Search shows errors, and says "No issues match" instead of showing an empty list.

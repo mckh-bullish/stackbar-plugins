@@ -17,3 +17,7 @@ setup comes back by itself, and apps that weren't running are opened.
 - **Agent tools:** `layouts`, `save_layout` and `restore_layout`.
 - **Not covered:** windows in full screen and on other Spaces, browser tabs,
   snapping and tiling (macOS does that).
+
+## What's new in 1.0.0
+
+- First release: save your window layout for each monitor setup and get it back when you plug in or undock.

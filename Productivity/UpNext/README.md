@@ -16,3 +16,7 @@ you when it starts.
   Meetings. Give them a hotkey or an alias in Stackbar's Settings, or run them
   from Spotlight, Shortcuts or a `stackbar://` link.
 - **Agent tools:** `next_meeting`, `agenda` and `join_next`.
+
+## What's new in 1.3.0
+
+- Commands: Join Next Meeting, Copy Next Meeting Link and Today's Meetings.

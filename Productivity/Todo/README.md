@@ -37,3 +37,7 @@ done.
 - **Agent tools:** `tasks` lists open tasks with their dates; `add` adds one
   from plain words.
 - **Requires:** Stackbar 0.14.0 or later.
+
+## What's new in 1.0.0
+
+- First release: a calm to-do list that understands dates as you type them.

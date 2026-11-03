@@ -29,3 +29,7 @@ red at 90%.
 - **Agent tool:** `usage_summary`.
 
 Ported from vee-plugins' `litellm-cost`.
+
+## What's new in 1.2.0
+
+- A bolder look on the Stackbar design system.
