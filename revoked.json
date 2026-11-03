@@ -1,1 +1,6 @@
-[]
+[
+  {
+    "id": "io.navbytes.stackbar.plugins.github",
+    "reason": "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
+  }
+]
