@@ -17,6 +17,10 @@ CTL="$(swift build -c release --show-bin-path)/stackbarctl"
 STACKBAR_PACKAGE="${STACKBAR_PATH:-$(pwd)/.build/checkouts/stackbar}"
 export STACKBAR_PACKAGE
 
+# Each plugin's current version and README, for site.json's "about".
+ABOUT=$(mktemp)
+trap 'rm -f "$ABOUT"' EXIT
+
 # Every surface in light and dark, for the plugin's page on the Stackbar site.
 # Renders are not part of a signed bundle, so a version missing them (one
 # published before renders existed) gets them on the next run.
@@ -39,6 +43,7 @@ for source in */*/*.swift; do
     id=$(echo "$first" | sed -n 's/.*(\(.*\))$/\1/p')
     version=$(echo "$first" | sed -n 's/.* \([0-9][0-9.]*\) (.*)$/\1/p')
     [ -n "$id" ] && [ -n "$version" ] || { echo "can't read the manifest of $source: $first"; exit 1; }
+    printf '%s\t%s\t%s\n' "$id" "$version" "$(dirname "$source")/README.md" >> "$ABOUT"
     mkdir -p "$SITE/$category"
     bundle="$SITE/$category/$id-$version.stackbarplugin"
     if [ -f "$bundle" ]; then
@@ -68,10 +73,38 @@ done
     --revoked revoked.json --key "$KEY"
 touch "$SITE/.nojekyll"
 
-# site.json: each version's renders, for the site's plugin galleries.
-python3 - "$SITE" <<'PY'
-import json, os, sys
-site = sys.argv[1]
+# site.json: each version's renders, for the site's plugin galleries and the
+# app's store, and each plugin's README (description and `- **Label:**` facts,
+# split the way the site splits them) for the app's plugin page.
+python3 - "$SITE" "$ABOUT" <<'PY'
+import json, os, re, sys
+site, about_list = sys.argv[1], sys.argv[2]
+
+def parse_readme(markdown):
+    lines = markdown.replace("\r\n", "\n").split("\n")
+    if lines and lines[0].startswith("# "):
+        lines.pop(0)
+    facts, rest, i = [], [], 0
+    while i < len(lines):
+        fact = re.match(r"^- \*\*(.+?):\*\*\s*(.*)$", lines[i])
+        if not fact:
+            rest.append(lines[i])
+            i += 1
+            continue
+        text = fact.group(2)
+        while i + 1 < len(lines) and re.match(r"^\s{2,}\S", lines[i + 1]):
+            i += 1
+            text += " " + lines[i].strip()
+        facts.append({"label": fact.group(1), "text": text})
+        i += 1
+    return {"description": "\n".join(rest).strip(), "facts": facts}
+
+about = {}
+for line in open(about_list):
+    plugin, version, readme = line.rstrip("\n").split("\t")
+    if os.path.isfile(readme):
+        about[plugin] = {"version": version, **parse_readme(open(readme, encoding="utf-8").read())}
+
 plugins = {}
 for category in sorted(os.listdir(site)):
     root = os.path.join(site, category, "shots")
@@ -88,7 +121,7 @@ for category in sorted(os.listdir(site)):
             if shots:
                 plugins.setdefault(plugin, {})[version] = shots
 with open(os.path.join(site, "site.json"), "w") as out:
-    json.dump({"format": 1, "plugins": plugins}, out, indent=2, sort_keys=True)
+    json.dump({"format": 1, "plugins": plugins, "about": about}, out, indent=2, sort_keys=True)
     out.write("\n")
 PY
 
