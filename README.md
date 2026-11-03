@@ -37,6 +37,7 @@ An update that asks for something new waits for your approval.
 | [Ports](Developer/Ports) | Developer | Which process is listening on which port, and a way to stop it. |
 | [LiteLLM](Monitoring/LiteLLM) | Monitoring | Tokens, spend, budget and model mix from your LiteLLM proxy, with charts. |
 | [System Monitor](Monitoring/SystemMonitor) | Monitoring | CPU, memory and disk in the menu bar, with the processes using the most. |
+| [App Switcher](Productivity/AppSwitcher) | Productivity | Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide. |
 | [Clipboard History](Productivity/Clipboard) | Productivity | Everything you copy, searchable and one keystroke from pasting back. |
 | [Music](Productivity/Music) | Productivity | What's playing in Music or Spotify, with play, pause, skip and volume. |
 | [Pomodoro](Productivity/Pomodoro) | Productivity | A focus timer with presets, a progress ring, tags and today's sessions. |
