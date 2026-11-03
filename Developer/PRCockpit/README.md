@@ -16,9 +16,10 @@ all here, with the same `GITHUB_TOKEN`.
   which needs write access to issues.
 - **Surfaces:** menu bar, panel (To review, Mine, Issues and an optional
   Inbox), window, widget, settings.
-- **Settings:** include team review requests, include drafts, notifications,
-  repositories (include archived, copy clone URLs as SSH or HTTPS, reload),
-  repositories to hide, and the inbox view.
+- **Settings:** include team review requests, include drafts, how recently a
+  pull request or issue must have changed to show (any age, or the last week
+  to three months), notifications, repositories (include archived, copy clone
+  URLs as SSH or HTTPS, reload), repositories to hide, and the inbox view.
 - **Commands:** Search Pull Requests, Review Queue, Open Next Review, Search
   GitHub Repositories (yours first, recently opened on top, then GitHub
   search; each row opens the repository, its pull requests, issues or
@@ -26,6 +27,11 @@ all here, with the same `GITHUB_TOKEN`.
   Create GitHub Issue, Refresh Pull Requests.
 - **Agent tools:** `review_queue`, `my_pull_requests` and `my_issues`.
 
-## What's new in 1.4.3
+## What's new in 1.5.0
 
-- Its own icon and colour in the Store and in Settings.
+- Switching tabs is quicker: a refresh now fetches pull requests, issues and
+  the inbox side by side instead of one after another, and a click no longer
+  waits as long behind it.
+- A new **Updated within** setting shows only pull requests and issues
+  changed in the last week, two weeks, month or three months, and fetches
+  only those pull requests.

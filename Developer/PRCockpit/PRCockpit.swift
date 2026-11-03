@@ -7,8 +7,11 @@ import Foundation
 /// of this one.)
 ///
 /// One GraphQL request a refresh fetches both lists with their checks, review
-/// decision and merge conflicts. It tells you when someone asks for your
-/// review, and when one of your own PRs is approved, gets changes requested,
+/// decision and merge conflicts, alongside (not after) the issues and inbox
+/// requests, so a refresh is as slow as the slowest of them. Clicks wait for a
+/// running refresh, so keeping it short keeps switching tabs quick. A setting
+/// limits the lists to what changed in the last few days. It tells you when
+/// someone asks for your review, and when one of your own PRs is approved, gets changes requested,
 /// or its checks fail. The token is a `GITHUB_TOKEN` secret the host keeps in
 /// the Keychain (a fine-grained token with read access to pull requests,
 /// issues and metadata covers everything but creating issues, which needs
@@ -19,7 +22,7 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.4.3",
+        version: "1.5.0",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
@@ -214,6 +217,9 @@ final class PRCockpit: StackbarPlugin {
     """
 
     var toReview: [PullRequest] = []
+    /// Every review request listed since launch, so one that drops out of the
+    /// age window and comes back with new activity isn't announced as new.
+    var everRequested: Set<String> = []
     var mine: [PullRequest] = []
     var lastError: String?
     var updatedAt: Date?
@@ -235,6 +241,8 @@ final class PRCockpit: StackbarPlugin {
     @Stored("snoozed") var snoozed: [String: Date] = [:]
     @Stored("hiddenRepos") var hiddenRepos: [String] = []
     @Stored("showInbox") var showInbox = false
+    /// Only pull requests and issues updated in this many days; 0 for any age.
+    @Stored("recentDays") var recentDays = 0
     var inbox: [InboxItem] = []
     var inboxError: String?
     var recentlyClosed: [PullRequest] = []
@@ -257,13 +265,24 @@ final class PRCockpit: StackbarPlugin {
             lastError = "Add a GitHub token to see your pull requests."
             return
         }
+        // The three requests run side by side: a refresh takes as long as the
+        // slowest one, not all three, and a tab click waits for less.
+        async let pullRequests: Void = loadPullRequests(token: token)
+        async let notifications: Void = showInbox ? refreshInbox(token: token) : ()
+        async let assigned: Void = loadIssues()
+        _ = await (pullRequests, notifications, assigned)
+    }
+
+    /// Both lists and what closed lately, in one GraphQL request.
+    func loadPullRequests(token: String) async {
         let requested = includeTeams ? "review-requested:@me" : "user-review-requested:@me"
         let draft = includeDrafts ? "" : " draft:false"
-        let since = ISO8601DateFormatter.string(from: Date().addingTimeInterval(-2 * 86400), timeZone: .gmt, formatOptions: [.withFullDate])
+        let recent = recentCutoff.map { " updated:>=\(Self.day($0))" } ?? ""
+        let since = Self.day(Date().addingTimeInterval(-2 * 86400))
         let query = """
         query { \
-        review: search(query: "is:pr is:open archived:false \(requested)\(draft)", type: ISSUE, first: 40) { nodes { ...pr } } \
-        mine: search(query: "is:pr is:open archived:false author:@me", type: ISSUE, first: 40) { nodes { ...pr } } \
+        review: search(query: "is:pr is:open archived:false \(requested)\(draft)\(recent) sort:updated-desc", type: ISSUE, first: 40) { nodes { ...pr } } \
+        mine: search(query: "is:pr is:open archived:false author:@me\(recent) sort:updated-desc", type: ISSUE, first: 40) { nodes { ...pr } } \
         closed: search(query: "is:pr is:closed archived:false author:@me closed:>=\(since)", type: ISSUE, first: 20) { nodes { ...pr } } \
         } \(Self.fragment)
         """
@@ -284,9 +303,22 @@ final class PRCockpit: StackbarPlugin {
         } catch {
             lastError = "\(error)"
         }
-        if showInbox { await refreshInbox(token: token) }
-        await loadIssues()
     }
+
+    /// A date as GitHub's search wants it: 2026-11-03.
+    static func day(_ date: Date) -> String {
+        ISO8601DateFormatter.string(from: date, timeZone: .gmt, formatOptions: [.withFullDate])
+    }
+
+    /// The choices for how far back to look, and the days each one means.
+    static let ages: [(title: String, days: Int)] = [("Any age", 0), ("1 week", 7), ("2 weeks", 14), ("1 month", 30), ("3 months", 90)]
+
+    /// The oldest update still shown, or nil to show any age.
+    var recentCutoff: Date? {
+        recentDays > 0 ? Date().addingTimeInterval(-Double(recentDays) * 86400) : nil
+    }
+
+    func isRecent(_ date: Date) -> Bool { recentCutoff.map { date >= $0 } ?? true }
 
     /// GitHub's notifications inbox. The REST API takes a classic token with
     /// the `notifications` scope; fine-grained tokens can't read it.
@@ -347,8 +379,7 @@ final class PRCockpit: StackbarPlugin {
             for pr in closed where wasOpen.contains(pr.id) && announce(pr, "closed", as: pr.state ?? "CLOSED") {
                 Stackbar.notify(pr.state == "MERGED" ? "Merged: \(pr.title)" : "Closed: \(pr.title)", body: pr.id, actions: [NotificationAction("Open", url: pr.url)])
             }
-            let known = Set(toReview.map(\.id))
-            let added = review.filter { !known.contains($0.id) }
+            let added = review.filter { !everRequested.contains($0.id) }
             if added.count == 1, let pr = added.first {
                 Stackbar.notify("Review requested: \(pr.title)", body: "\(pr.id) by \(pr.author?.login ?? "someone")", actions: [NotificationAction("Review", url: pr.url + "/files")])
             } else if added.count > 1 {
@@ -385,6 +416,7 @@ final class PRCockpit: StackbarPlugin {
         }
         let tracked = Set((newMine + closed).map(\.id))
         announced = announced.filter { tracked.contains(String($0.key.split(separator: " ").first ?? "")) }
+        everRequested.formUnion(review.map(\.id))
         recentlyClosed = closed.sorted { $0.updatedAt > $1.updatedAt }
         toReview = review.sorted { $0.updatedAt > $1.updatedAt }
         mine = newMine.sorted { $0.updatedAt > $1.updatedAt }
@@ -404,6 +436,9 @@ final class PRCockpit: StackbarPlugin {
     // MARK: Filtering and attention
 
     func isShown(_ pr: PullRequest) -> Bool {
+        // Also checked here, so a new setting applies before the next fetch
+        // and a PR ages out between fetches.
+        if !isRecent(pr.updatedAt) { return false }
         if hiddenRepos.contains(pr.repo) { return false }
         if let at = snoozed[pr.url], pr.updatedAt <= at { return false }
         return true
@@ -411,7 +446,11 @@ final class PRCockpit: StackbarPlugin {
 
     var shownReview: [PullRequest] { toReview.filter(isShown) }
     var shownMine: [PullRequest] { mine.filter(isShown) }
-    var hiddenCount: Int { toReview.count + mine.count - shownReview.count - shownMine.count }
+    /// Snoozed or in a hidden repository; not the ones too old to show.
+    var hiddenCount: Int {
+        (toReview + mine).filter { isRecent($0.updatedAt) }.count - shownReview.count - shownMine.count
+    }
+    var shownIssues: [Issue] { issues.filter { isRecent($0.updated_at) } }
 
     func isNew(_ pr: PullRequest) -> Bool {
         guard let at = seen[pr.url] else { return true }
@@ -467,6 +506,8 @@ final class PRCockpit: StackbarPlugin {
     /// Open issues assigned to you, telling you about new ones.
     func loadIssues() async {
         do {
+            // Every assigned issue, not only recent ones: an old one that
+            // changes must not look newly assigned. `shownIssues` filters by age.
             let data = try await rest("/issues?filter=assigned&state=open&per_page=50&sort=updated")
             let fresh = try Self.restDecoder.decode([Issue].self, from: data).filter { $0.pull_request == nil }
             if notifyChanges, issuesLoaded {
@@ -700,10 +741,10 @@ final class PRCockpit: StackbarPlugin {
                     }
                 } else if currentTab == .issues {
                     if let issuesError { Banner(issuesError) }
-                    if issues.isEmpty {
+                    if shownIssues.isEmpty {
                         if issuesError == nil { EmptyState("No issues assigned", symbol: "checkmark", message: "Open issues assigned to you show up here.", theme: .success) }
                     } else {
-                        List(issues, searchable: true) { issue in issueRow(issue) }
+                        List(shownIssues, searchable: true) { issue in issueRow(issue) }
                     }
                 } else if currentTab == .mine {
                     list(shownMine, showAuthor: false, empty: ("Nothing of yours open", "Pull requests you open show up here."))
@@ -720,17 +761,31 @@ final class PRCockpit: StackbarPlugin {
         }
     }
 
+    /// Fetches again after a setting changed what is fetched. Pull requests
+    /// the new search brings in were there all along, so they are not
+    /// announced as new review requests.
+    func refetch() async throws {
+        everRequested = []
+        updatedAt = nil
+        try await refresh()
+    }
+
     /// Stackbar's Settings window, so the panel stays about the pull requests.
     var settings: ViewContent {
         Section("What to show") {
             Toggle("Include requests to my teams", isOn: includeTeams) { on in
                 self.includeTeams = on
-                try await self.refresh()
+                try await self.refetch()
             }
             Toggle("Include drafts to review", isOn: includeDrafts) { on in
                 self.includeDrafts = on
-                try await self.refresh()
+                try await self.refetch()
             }
+            Picker("Updated within", options: Self.ages.map(\.title), selection: (Self.ages.first { $0.days == recentDays } ?? Self.ages[0]).title) { chosen in
+                self.recentDays = Self.ages.first { $0.title == chosen }?.days ?? 0
+                try await self.refetch()
+            }
+            Text("Pull requests and issues nobody has touched for longer stay out of the lists, and fewer to fetch makes refreshing quicker.").style(.caption).role(.secondary)
         }
         Section("Notifications") {
             Toggle("Notify me about changes", isOn: notifyChanges) { self.notifyChanges = $0 }
@@ -860,7 +915,7 @@ final class PRCockpit: StackbarPlugin {
         switch tab {
         case .review: count = shownReview.count
         case .mine: count = shownMine.count
-        case .issues: count = issues.count
+        case .issues: count = shownIssues.count
         case .inbox: count = inbox.filter(\.unread).count
         }
         return count > 0 ? "\(tab.title) \(count)" : tab.title
@@ -919,10 +974,10 @@ final class PRCockpit: StackbarPlugin {
             .view(search: { _ in await self.loadIssues() }) { _ in
                 if let problem = self.issuesError {
                     ContentUnavailableView("Can't reach GitHub", symbol: "exclamationmark.triangle", message: problem)
-                } else if self.issues.isEmpty {
+                } else if self.shownIssues.isEmpty {
                     ContentUnavailableView("Nothing assigned to you", symbol: "checkmark.circle")
                 } else {
-                    List(self.issues, searchable: true) { issue in self.issueRow(issue) }
+                    List(self.shownIssues, searchable: true) { issue in self.issueRow(issue) }
                 }
             }
         Command("create-issue", title: "Create GitHub Issue", symbol: "plus.circle", keywords: ["github", "issue", "new", "bug", "gh"])
