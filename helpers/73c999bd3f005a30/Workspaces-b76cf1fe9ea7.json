@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.workspaces",
+  "protocol" : 15,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "0194cef1ecaec3e4b7923c1a9662d5ee6461ffef8d3297c3ab1cd03271272855",
+  "signature" : "PKkS/M5gGmH2ZtMcq6sJYqrzTg+u2KNioOQrxRZqnx1UeCbWwjwHnjoXuewoDM1QcPShh6xdrj9Zw4wCLNaGCg==",
+  "size" : 4933080,
+  "sourceDigest" : "b76cf1fe9ea78cd33acb1b76154689b1ca0701c1f6b2b0045bfd716a51596862",
+  "stackbarKit" : "73c999bd3f005a3060054110541202c9761a91d1fdff6f4d1e43eccb5f7ab128",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-73c999bd3f005a30/Workspaces-b76cf1fe9ea7",
+  "version" : "1.1.0"
+}
