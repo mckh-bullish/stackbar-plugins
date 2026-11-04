@@ -4,7 +4,7 @@
 #   2. the plugins' own tests (Tests/PluginTests)
 #   3. house rules and the README table (scripts/lint.py)
 #   4. every plugin renders every surface it declares, and every preview,
-#      with stackbarctl
+#      with stackbarctl, and its demo loop in demos.json records and moves
 # On macOS it also soaks each plugin for a minute (pass SOAK_MINUTES to change).
 #
 #   scripts/check.sh [--base <git ref>]   --base also requires version bumps
@@ -51,6 +51,8 @@ for source in */*/*.swift; do
             echo "::error file=$source::preview $name failed to set up"; exit 1
         fi
     done
+    # Its demo loop in demos.json, if it has one, records and moves.
+    STACKBARCTL="$CTL" python3 scripts/check_demo.py "$source" "$(echo "$manifest" | head -1 | sed -n 's/.*(\(.*\))$/\1/p')"
     if [ "$(uname)" = Darwin ]; then
         "$CTL" soak "$source" --minutes "${SOAK_MINUTES:-1}" --press
     fi

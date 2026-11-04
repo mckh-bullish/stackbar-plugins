@@ -68,6 +68,26 @@ scripts/check.sh                          # what CI runs
 To build against a local Stackbar checkout instead of the pinned release, set
 `STACKBAR_PATH=/path/to/stackbar`.
 
+## Demo loops
+
+A plugin can have a short silent loop on its store page and the site's hero:
+an entry in `demos.json`, keyed by plugin id, that scripts one of its
+previews with `stackbarctl render` arguments. Each `--event` or `--copy` adds
+a frame, `--hold <seconds>` sets how long the last frame shows, and
+`--wait <seconds>` adds a frame later (for a clock or countdown).
+
+```json
+"io.navbytes.stackbar.plugins.world-clock": {
+  "preview": "hero", "surface": "panel",
+  "steps": ["--hold", "1.5", "--event", "slider/time-travel=3", "--hold", "2.5"]
+}
+```
+
+Try it with `stackbarctl render <file> --preview hero --frames demo.png <steps>`
+(text frames off macOS). `scripts/check.sh` fails a demo whose action ids
+don't exist or whose frames never change. Publishing records it in light and
+dark; changing the entry records it again, with no version bump.
+
 ## Review
 
 The job summary of each CI run lists what every plugin asks for. That list is

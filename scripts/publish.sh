@@ -52,6 +52,34 @@ render_shots() {
     if [ -d "$out.tmp/light" ]; then mv "$out.tmp" "$out"; else rm -rf "$out.tmp"; fi
 }
 
+# Demo loops (demos.json): a scripted run of one preview recorded as an
+# animated PNG with `stackbarctl render --frames`, light and dark, at
+# <appearance>/demo/<script hash>/<surface>.png. The hash is of the plugin's
+# entry, so changing the script records it again; like the other renders it
+# is added to versions published before it existed.
+render_demo() {
+    spec=$(python3 -c 'import json,sys; d=json.load(open("demos.json")).get(sys.argv[1]); print(json.dumps(d, sort_keys=True) if d else "")' "$2")
+    [ -n "$spec" ] || return 0
+    hash=$(printf '%s' "$spec" | shasum -a 256 | cut -c1-12)
+    base="$SITE/$1/shots/$2/$3"
+    for appearance in light dark; do
+        out="$base/$appearance/demo/$hash"
+        [ -d "$out" ] && continue
+        flag=""
+        [ "$appearance" = dark ] && flag="--dark"
+        python3 - "$spec" "$CTL" "$4" "$out.tmp" $flag <<'PY' || { echo "warning: could not record the $2 $3 demo ($appearance)"; rm -rf "$out.tmp"; continue; }
+import json, os, subprocess, sys
+spec, ctl, source, out = json.loads(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
+os.makedirs(out, exist_ok=True)
+surface = spec.get("surface", "panel")
+command = [ctl, "render", source, "--preview", spec.get("preview", "hero"), "--surface", surface,
+           "--frames", os.path.join(out, f"{surface}.png"), *sys.argv[5:], *spec["steps"]]
+subprocess.run(command, check=True, stdout=subprocess.DEVNULL)
+PY
+        if [ -d "$out.tmp" ]; then mkdir -p "$(dirname "$out")"; mv "$out.tmp" "$out"; fi
+    done
+}
+
 for source in */*/*.swift; do
     case "$source" in scripts/*|.build/*|Tests/*) continue ;; esac
     category=${source%%/*}
@@ -73,10 +101,12 @@ if published != current:
 PY
         echo "unchanged: $id $version"
         render_shots "$category" "$id" "$version" "$source"
+        render_demo "$category" "$id" "$version" "$source"
         continue
     fi
     "$CTL" sign "$source" --publisher navbytes --key "$KEY" -o "$bundle"
     render_shots "$category" "$id" "$version" "$source"
+    render_demo "$category" "$id" "$version" "$source"
     shots="$SITE/$category/shots/$id/$version/light"
     for surface in panel menuBar window widget; do
         if [ -f "$shots/$surface.png" ]; then cp "$shots/$surface.png" "$SITE/$category/$id.png"; break; fi
@@ -144,7 +174,25 @@ for line in open(about_list):
     if os.path.isfile(readme):
         about[plugin] = {"version": version, **parse_readme(open(readme, encoding="utf-8").read())}
 
-plugins, previews = {}, {}
+def apng_seconds(path):
+    """How long one pass of an animated PNG lasts: the sum of its frame delays."""
+    data, at, total = open(path, "rb").read(), 8, 0.0
+    while at + 8 <= len(data):
+        length = int.from_bytes(data[at:at + 4], "big")
+        kind = data[at + 4:at + 8]
+        if kind == b"fcTL":
+            body = data[at + 8:at + 8 + length]
+            num, den = int.from_bytes(body[20:22], "big"), int.from_bytes(body[22:24], "big") or 100
+            total += num / den
+        at += 12 + length
+    return round(total, 2)
+
+def demo_hash(plugin):
+    import hashlib
+    spec = json.load(open("demos.json")).get(plugin) if os.path.isfile("demos.json") else None
+    return hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()[:12] if spec else None
+
+plugins, previews, demos = {}, {}, {}
 for category in sorted(os.listdir(site)):
     root = os.path.join(site, category, "shots")
     if not os.path.isdir(root):
@@ -172,8 +220,20 @@ for category in sorted(os.listdir(site)):
                     scenes.append(scene)
             if scenes:
                 previews.setdefault(plugin, {})[version] = scenes
+            # The demo loop recorded from the plugin's current demos.json entry.
+            current = demo_hash(plugin)
+            demo = {}
+            for appearance in ("light", "dark"):
+                folder = os.path.join(root, plugin, version, appearance, "demo", current or "-")
+                for name in sorted(os.listdir(folder)) if current and os.path.isdir(folder) else []:
+                    if name.endswith(".png"):
+                        demo["surface"] = name[:-4]
+                        demo[appearance] = f"{category}/shots/{plugin}/{version}/{appearance}/demo/{current}/{name}"
+                        demo["seconds"] = apng_seconds(os.path.join(folder, name))
+            if "light" in demo or "dark" in demo:
+                demos.setdefault(plugin, {})[version] = demo
 with open(os.path.join(site, "site.json"), "w") as out:
-    json.dump({"format": 1, "plugins": plugins, "previews": previews, "about": about}, out, indent=2, sort_keys=True)
+    json.dump({"format": 1, "plugins": plugins, "previews": previews, "demos": demos, "about": about}, out, indent=2, sort_keys=True)
     out.write("\n")
 PY
 
