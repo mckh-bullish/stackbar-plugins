@@ -12,7 +12,7 @@ final class UpNext: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.up-next",
         name: "Up Next",
-        version: "1.4.0",
+        version: "1.4.1",
         summary: "Your next meeting in the menu bar, with a countdown and one-click join.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(30)), .wake],

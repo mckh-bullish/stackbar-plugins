@@ -104,6 +104,13 @@ def parse_readme(markdown):
         lines.pop(0)
     facts, rest, changes, i = [], [], [], 0
     while i < len(lines):
+        # `## Highlights` and `## FAQ` are for the website (navbytes/stackbar
+        # site/scripts/store.mjs); keep them out of the app's description.
+        if re.match(r"^## (Highlights|FAQ|Questions)\s*$", lines[i]):
+            i += 1
+            while i < len(lines) and not lines[i].startswith("## "):
+                i += 1
+            continue
         # `## What's new in 1.2.0` and its bullets: the release notes the
         # store shows on the Update button and the plugin's page.
         heading = re.match(r"^## What's new in (\S+)\s*$", lines[i])

@@ -24,6 +24,20 @@ letter. A pinned letter opens the app even when it isn't running. Hold Right
   as in a password field, macOS blocks every keyboard listener. The panel
   tells you which app has it on.
 
+## Highlights
+
+### A letter for every app
+Hold Right ⌘ and press S for Safari, X for Xcode. Press again to cycle through
+apps that share a letter, or to hide the app in front.
+
+### Pin the apps you use most
+Right ⌘ ⌥ plus a letter pins the app in front to it. A pinned letter opens the
+app even when it isn't running.
+
+### Stays out of your way
+Letters with no app pass straight through, so Right ⌘ C still copies. Hold
+Right ⌘ on its own to see the whole letter map.
+
 ## What's new in 1.1.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

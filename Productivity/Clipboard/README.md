@@ -21,6 +21,25 @@ the host and pasted back.
   Pause Clipboard History, Ignore Next Copy.
 - **Agent tools:** `recent_clips`, `search_clips` and `copy_clip`.
 
+## Highlights
+
+### One keystroke from anything you copied
+⌘⇧V opens your history from anywhere. Type to filter, then Return pastes it
+into the app you were in. ⌥Return pastes it as plain text.
+
+### Pin what you paste every day
+Pinned items stay at the top and are never pushed out by new copies.
+<!-- preview: pinned -->
+
+### Secrets don't stick around
+Copies from password managers are skipped. Anything that looks like a token,
+key or card number is masked, kept away from agent tools, and dropped after
+15 minutes unless you pin it.
+
+### See what you copy
+The window shows how much you copy, and from which apps.
+<!-- preview: insights -->
+
 ## What's new in 1.5.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

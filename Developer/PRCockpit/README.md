@@ -27,6 +27,25 @@ all here, with the same `GITHUB_TOKEN`.
   Create GitHub Issue, Refresh Pull Requests.
 - **Agent tools:** `review_queue`, `my_pull_requests` and `my_issues`.
 
+## Highlights
+
+### Everything waiting on your review
+Every pull request waiting on you, with its CI, review state and conflicts.
+Open the next one with a single command, or snooze one until it changes.
+
+### Your own pull requests at a glance
+See which of yours passed their checks, got approved or need changes, and get
+a notification the moment that changes.
+<!-- preview: mine -->
+
+### All of GitHub from the palette
+Search your repositories (recently opened first), jump to their pull
+requests, issues or Actions, copy a clone URL, or start a new issue.
+
+### On your desktop too
+A widget keeps the review queue in view.
+<!-- preview: widget -->
+
 ## What's new in 1.6.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

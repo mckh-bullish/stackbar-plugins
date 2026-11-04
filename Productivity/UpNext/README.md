@@ -17,6 +17,30 @@ you when it starts.
   from Spotlight, Shortcuts or a `stackbar://` link.
 - **Agent tools:** `next_meeting`, `agenda` and `join_next`.
 
+## Highlights
+
+### Join from the menu bar
+The menu bar counts down to your next meeting. One click, or ⌃⌥J from
+anywhere, opens the call. Up Next finds the link in the location, URL or notes
+for Zoom, Meet, Teams, Webex and a dozen more.
+
+### Never miss the start
+It reminds you a few minutes before, can show a full-screen alert, and can
+open the call for you when it starts.
+
+### See your whole week
+The window lays out today and the week's meeting load, so you can see a
+crowded afternoon coming.
+<!-- preview: week -->
+
+### On your desktop too
+A widget keeps what's next in view without opening anything.
+<!-- preview: widget -->
+
+## What's new in 1.4.1
+
+- Its store screenshots no longer show a meeting under both Today and Tomorrow.
+
 ## What's new in 1.4.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

@@ -18,6 +18,24 @@ default).
   be copied or shown in the menu bar.
 - **Agent tool:** `times` returns the time in every city.
 
+## Highlights
+
+### Every city you work with
+Each city shows its offset from you, whether it is already tomorrow there, and
+whether it is working hours.
+
+### Find a time that works everywhere
+Slide up to 12 hours either way and every clock moves with you, so you can see
+what 3pm here means for everyone. Now puts it back.
+<!-- preview: plan -->
+
+### Type a city, not a time zone
+Add `Tokyo` or `Asia/Tokyo`, and pick which city the menu bar shows.
+
+### On your desktop too
+A widget keeps your cities on the desktop.
+<!-- preview: widget -->
+
 ## What's new in 1.4.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

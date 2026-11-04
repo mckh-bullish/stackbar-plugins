@@ -17,6 +17,25 @@ away.
   and whether processes are sorted by CPU or memory.
 - **Agent tool:** `usage` returns CPU, memory, disk and the busiest processes.
 
+## Highlights
+
+### CPU and memory, always in view
+The menu bar shows CPU and memory. The panel adds five minutes of CPU
+history, load averages, and memory and disk bars.
+
+### Find what's slowing you down
+The busiest processes are one click away, sorted by CPU or memory, each with
+Copy PID and Quit Process.
+<!-- preview: memory -->
+
+### Counts memory like Activity Monitor
+App memory, wired and compressed, without the file cache, so the number means
+the same thing it does in Activity Monitor.
+
+### On your desktop too
+A widget shows your Mac's load without opening anything.
+<!-- preview: widget -->
+
 ## What's new in 1.3.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.
