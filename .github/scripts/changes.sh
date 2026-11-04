@@ -17,10 +17,10 @@ else
         [ -n "$path" ] || continue
         case "$path" in
             # Docs and READMEs (the Linux lint checks the plugin table), and
-            # what only the publish and canary workflows run.
+            # what only the publish, helpers and canary workflows run.
             *.md|LICENSE|.gitignore|revoked.json \
-            |.github/workflows/publish.yml|.github/workflows/canary.yml \
-            |scripts/publish.sh|scripts/push-signed.py|scripts/lint.py) ;;
+            |.github/workflows/publish.yml|.github/workflows/canary.yml|.github/workflows/helpers.yml \
+            |scripts/publish.sh|scripts/helpers.sh|scripts/push-signed.py|scripts/lint.py) ;;
             *) macos=true ;;
         esac
     done

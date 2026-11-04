@@ -69,6 +69,12 @@ Up Next and PR Cockpit) live in the Stackbar repository and update with the app.
   `<Category>/shots/<id>/<version>/`, listed in `site.json` for the plugin's
   page on [stackbar.navbytes.io](https://stackbar.navbytes.io/plugins/), where
   the branch's own address redirects.
+- The Helpers workflow (`scripts/helpers.sh`, hourly and after each publish)
+  builds every plugin against the StackbarKit of the latest Stackbar releases.
+  The binaries are assets of `helpers-<digest>` releases, and their signed
+  records are in `helpers.json` on `gh-pages`. Stackbar installs these, so a
+  Mac without Xcode or the Command Line Tools runs store plugins. A record
+  names the exact source it was built from.
 - `revoked.json` withdraws a published version; Stackbar removes it from Macs
   that installed it.
 - A nightly canary builds everything against Stackbar's `main`.

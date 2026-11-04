@@ -1,0 +1,56 @@
+name: Helpers
+
+# Builds prebuilt plugin helpers for the latest Stackbar releases, so a Mac
+# without Xcode or the Command Line Tools can run store plugins
+# (scripts/helpers.sh). Hourly, so a new Stackbar release gets helpers soon,
+# and after each publish, so a new plugin version does.
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_run:
+    workflows: [Publish]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Shares Publish's group: both write gh-pages.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  helpers:
+    runs-on: macos-26
+    timeout-minutes: 180
+    environment: release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Check out gh-pages
+        run: |
+          git fetch --depth 1 origin gh-pages
+          git worktree add site origin/gh-pages
+          cd site && git checkout -B gh-pages
+      - name: Build helpers
+        env:
+          STACKBAR_PUBLISHER_KEY: ${{ secrets.STACKBAR_PUBLISHER_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$STACKBAR_PUBLISHER_KEY" ]; then
+            echo "::warning::STACKBAR_PUBLISHER_KEY is not set; nothing built"
+            exit 0
+          fi
+          umask 077
+          printf '%s' "$STACKBAR_PUBLISHER_KEY" > "$RUNNER_TEMP/publisher.key"
+          scripts/helpers.sh site "$RUNNER_TEMP/publisher.key"
+          rm -f "$RUNNER_TEMP/publisher.key"
+      - name: Push gh-pages
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          cd site
+          git add -A
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          ../scripts/push-signed.py . gh-pages "Helpers ${GITHUB_SHA::7}"
