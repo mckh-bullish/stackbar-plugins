@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-04T07:41:59Z",
+  "generated" : "2026-11-04T07:47:50Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -1960,5 +1960,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "2ckonQydmUmtZnSNsHw07T6vaKlLwCUIiI9T1cFwO+dPVk+TTt0s6C/JGGre2wcUEQ2FU26mRncIP22PAZz/Ag=="
+  "signature" : "6ZGHZVkU4DAOu9g61ck4MV7eQJq47h549BbGSlAMMBBaicDNRLBMwfu/EBVobOEfg0yVkYWh/Le7/ezrQt2QDg=="
 }
