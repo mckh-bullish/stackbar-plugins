@@ -42,6 +42,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.emoji",
+      "protocol": 14,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "37cb226af35bc0f47c34b13521768c6cbde9d260a4b902a5add84bad16c1020f",
+      "signature": "63IGo0mABsZRglxoyUcDa+VIfWWgGIexDPyBg1CC/4J6ZscWX/k6kAUSjMbUWdHk2DxuJ/P/SP58CGOcaQEnAA==",
+      "size": 4650568,
+      "sourceDigest": "ac261a118b6c1a4064147520c96c595c8d93506684ddcbfb35e623b80908fdf6",
+      "stackbarKit": "f7705597fb786e328770b127317d2141f6bcfee301bb0c925c2625e6c8218a46",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-f7705597fb786e32/Emoji-ac261a118b6c",
+      "version": "1.0.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.homebrew",
       "protocol": 14,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -224,6 +237,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.window-layouts",
+      "protocol": 14,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "e86ef813d9d5353e9a8fcc9b8b6d521ace279233ac3b40a5462d2d4a61c52f5e",
+      "signature": "fTb6u1YLxquWlW6e/ISxXfsKuQBB+10z01dP2r6JNtWKeetd1lMclas0RFNxqLSLNbg5tRvNofW1R5zWKGoICg==",
+      "size": 4581008,
+      "sourceDigest": "ca17b0462f8ab1d171c08c543ae2f00f2fc6a2a7fd309d7cb8cc4f1d84bf8d72",
+      "stackbarKit": "f7705597fb786e328770b127317d2141f6bcfee301bb0c925c2625e6c8218a46",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-f7705597fb786e32/WindowLayouts-ca17b0462f8a",
+      "version": "1.0.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.workspaces",
       "protocol": 14,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -286,6 +312,19 @@
       "stackbarKit": "842fdb35e6340d54ff45e03372678dc616b29ed84b9bb35ab698499f260934a4",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-842fdb35e6340d54/Docker-200b64f72a83",
       "version": "1.4.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.emoji",
+      "protocol": 15,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "3e1d3f5bb1ccb4a531576e48368bdab642196901f31d0ba42fb1b6276b4a1ada",
+      "signature": "ylGxLrxhuRlnk51wIgKoCRTdueEShj/iIDT4rCybf965DZhOGT4fBNP1u9LjNF4T0pUo2AuyiFY1e7V9GotWCA==",
+      "size": 4888568,
+      "sourceDigest": "ac261a118b6c1a4064147520c96c595c8d93506684ddcbfb35e623b80908fdf6",
+      "stackbarKit": "842fdb35e6340d54ff45e03372678dc616b29ed84b9bb35ab698499f260934a4",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-842fdb35e6340d54/Emoji-ac261a118b6c",
+      "version": "1.0.0"
     },
     {
       "arch": "arm64",
@@ -484,6 +523,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.window-layouts",
+      "protocol": 15,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "1c67903d09a2a1529fd8a8bf2863d4f26574aaf95e7302b4ed960e3c07e478e8",
+      "signature": "ctXVuXsDlCntaEWpQpni9/OeXFVgc5+wWNzZFpKJn3Tx6AUVH/osDhAzRUfuXvt9E0U7iiqbPuSJpKltvfhUDg==",
+      "size": 4819008,
+      "sourceDigest": "ca17b0462f8ab1d171c08c543ae2f00f2fc6a2a7fd309d7cb8cc4f1d84bf8d72",
+      "stackbarKit": "842fdb35e6340d54ff45e03372678dc616b29ed84b9bb35ab698499f260934a4",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-842fdb35e6340d54/WindowLayouts-ca17b0462f8a",
+      "version": "1.0.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.workspaces",
       "protocol": 15,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -546,6 +598,19 @@
       "stackbarKit": "73c999bd3f005a3060054110541202c9761a91d1fdff6f4d1e43eccb5f7ab128",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-73c999bd3f005a30/Docker-200b64f72a83",
       "version": "1.4.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.emoji",
+      "protocol": 15,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "4063339538c1ccf7dda2021d43631cd6b94071308afcab8a580d757b0c975fd5",
+      "signature": "7HTiLYuBJQKahjMbRNwcHJ16JCY6UJHJL8DZs70rgYNSgukcKr1tKyArX+1N/igb/n4qiSCXifxcduqS8aa/Aw==",
+      "size": 4888568,
+      "sourceDigest": "ac261a118b6c1a4064147520c96c595c8d93506684ddcbfb35e623b80908fdf6",
+      "stackbarKit": "73c999bd3f005a3060054110541202c9761a91d1fdff6f4d1e43eccb5f7ab128",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-73c999bd3f005a30/Emoji-ac261a118b6c",
+      "version": "1.0.0"
     },
     {
       "arch": "arm64",
@@ -741,6 +806,19 @@
       "stackbarKit": "73c999bd3f005a3060054110541202c9761a91d1fdff6f4d1e43eccb5f7ab128",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-73c999bd3f005a30/UpNext-55f18e34b685",
       "version": "1.4.1"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.window-layouts",
+      "protocol": 15,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "f468c5ab43cfaa7aee2324f21743e2c614e39ba43dbe6c39a915e04993fb9fc6",
+      "signature": "VjjKlF6q/VImgrpkdmXv++gkdztK96Yf6KcK5y2XcQ3ya/rChhtbxYiG4+JhkK3lStFw7ZY04asIy0qAVVqSDQ==",
+      "size": 4819008,
+      "sourceDigest": "ca17b0462f8ab1d171c08c543ae2f00f2fc6a2a7fd309d7cb8cc4f1d84bf8d72",
+      "stackbarKit": "73c999bd3f005a3060054110541202c9761a91d1fdff6f4d1e43eccb5f7ab128",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-73c999bd3f005a30/WindowLayouts-ca17b0462f8a",
+      "version": "1.0.0"
     },
     {
       "arch": "arm64",
