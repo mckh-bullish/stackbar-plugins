@@ -927,6 +927,40 @@
       "version": "1.4.1"
     }
   },
+  "demos": {
+    "io.navbytes.stackbar.clipboard": {
+      "1.5.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.5.0/dark/demo/b07000be5086/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.5.0/light/demo/b07000be5086/panel.png",
+        "seconds": 7.2,
+        "surface": "panel"
+      }
+    },
+    "io.navbytes.stackbar.plugins.pomodoro": {
+      "1.4.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.4.0/dark/demo/136e9e2e0dae/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.4.0/light/demo/136e9e2e0dae/panel.png",
+        "seconds": 4.0,
+        "surface": "panel"
+      }
+    },
+    "io.navbytes.stackbar.plugins.world-clock": {
+      "1.4.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.4.0/dark/demo/6b74b0a73db2/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.4.0/light/demo/6b74b0a73db2/panel.png",
+        "seconds": 5.75,
+        "surface": "panel"
+      }
+    },
+    "io.navbytes.stackbar.pr-cockpit": {
+      "1.6.0": {
+        "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.6.0/dark/demo/526649a16612/panel.png",
+        "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.6.0/light/demo/526649a16612/panel.png",
+        "seconds": 5.0,
+        "surface": "panel"
+      }
+    }
+  },
   "format": 1,
   "plugins": {
     "io.navbytes.stackbar.clipboard": {
