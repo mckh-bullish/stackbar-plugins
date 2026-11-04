@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-04T07:47:50Z",
+  "generated" : "2026-11-04T12:55:35Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -1952,6 +1952,32 @@
       "symbol" : "calendar",
       "updated" : "2026-11-04",
       "version" : "1.4.0"
+    },
+    {
+      "accent" : "red",
+      "bundle" : "Productivity/io.navbytes.stackbar.up-next-1.4.1.stackbarplugin",
+      "capabilities" : [
+        "Reads your calendar events"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
+      "id" : "io.navbytes.stackbar.up-next",
+      "minimumStackbar" : "0.17.0",
+      "name" : "Up Next",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.up-next.png",
+      "sha256" : "f5faa4a24e71f7297c89dc474b7faea37062599f16e31b81c2aa40e4c69c0704",
+      "summary" : "Your next meeting in the menu bar, with a countdown and one-click join.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "calendar",
+      "updated" : "2026-11-04",
+      "version" : "1.4.1"
     }
   ],
   "revoked" : [
@@ -1960,5 +1986,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "6ZGHZVkU4DAOu9g61ck4MV7eQJq47h549BbGSlAMMBBaicDNRLBMwfu/EBVobOEfg0yVkYWh/Le7/ezrQt2QDg=="
+  "signature" : "3Tu6FjkU3BQPFfqiJYDJqM/aIuco8VCo+j83d68onYkuzz+V+3nw+rJkn9g5NhXojoJqZ2aPcptdnMs1uo8ACw=="
 }

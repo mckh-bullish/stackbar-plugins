@@ -884,6 +884,12 @@
       "changes": [
         {
           "notes": [
+            "Its store screenshots no longer show a meeting under both Today and Tomorrow."
+          ],
+          "version": "1.4.1"
+        },
+        {
+          "notes": [
             "Store screenshots now show it in use, with sample data, instead of its first-run screen."
           ],
           "version": "1.4.0"
@@ -918,7 +924,7 @@
           "text": "`next_meeting`, `agenda` and `join_next`."
         }
       ],
-      "version": "1.4.0"
+      "version": "1.4.1"
     }
   },
   "format": 1,
@@ -1533,6 +1539,16 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.0/light/panel.png"
         }
+      },
+      "1.4.1": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/light/panel.png"
+        }
       }
     }
   },
@@ -1914,6 +1930,29 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.0/dark/previews/widget/widget.png",
           "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "What's next, on your desktop"
+        }
+      ],
+      "1.4.1": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your next meeting, one click from joining"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/dark/previews/week/window.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/light/previews/week/window.png",
+          "name": "week",
+          "surface": "window",
+          "title": "The day and the week's meeting load"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/dark/previews/widget/widget.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "What's next, on your desktop"
