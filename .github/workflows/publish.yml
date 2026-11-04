@@ -46,11 +46,21 @@ jobs:
           printf '%s' "$STACKBAR_PUBLISHER_KEY" > "$RUNNER_TEMP/publisher.key"
           scripts/publish.sh site "$RUNNER_TEMP/publisher.key"
           rm -f "$RUNNER_TEMP/publisher.key"
+      # Through the GitHub API rather than `git push`, so GitHub signs the
+      # commit and it shows as Verified (scripts/push-signed.py).
       - name: Push gh-pages
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           cd site
           git add -A
           if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
-          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit -qm "Publish ${GITHUB_SHA::7}"
-          git push origin gh-pages
+          if git rev-parse -q --verify HEAD > /dev/null; then
+            ../scripts/push-signed.py . gh-pages "Publish ${GITHUB_SHA::7}"
+          else
+            # First publish ever: the branch has to exist before the API can
+            # move it, so this one commit goes up unsigned.
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -qm "Publish ${GITHUB_SHA::7}"
+            git push origin gh-pages
+          fi
