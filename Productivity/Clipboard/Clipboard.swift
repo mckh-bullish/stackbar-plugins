@@ -15,14 +15,14 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.5.0",
+        version: "1.6.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
         triggers: [.launch, .clipboard, .every(.seconds(60))],
         capabilities: [.clipboard],
         hotkey: "cmd+shift+v",
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.20.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
         accent: .blue,
         symbol: "doc.on.clipboard.fill"
@@ -216,6 +216,8 @@ final class Clipboard: StackbarPlugin {
     @Stored("ignoredApps") var ignoredApps = Clipboard.defaultIgnored
     @Stored("paused") var paused = false
     @Stored("plainByDefault") var plainByDefault = false
+    /// Matching copies show in the palette's own results as you type.
+    @Stored("inPalette") var inPalette = true
     /// Regular expressions; a copy whose text matches one is not recorded
     /// (tokens, one-time codes).
     @Stored("ignoredPatterns") var ignoredPatterns: [String] = []
@@ -500,6 +502,7 @@ final class Clipboard: StackbarPlugin {
         Section("Pasting") {
             Toggle("Paste into the app on click", isOn: pasteDirectly) { self.pasteDirectly = $0 }
             Toggle("Always paste as plain text", isOn: plainByDefault) { self.plainByDefault = $0 }
+            Toggle("Show matching copies in the palette's results", isOn: inPalette) { self.inPalette = $0 }
         }
         Section("History") {
             Picker("Order", options: Order.allCases.map(\.rawValue), selection: order.rawValue, style: .segmented) { self.order = Order(rawValue: $0) ?? .recent }
@@ -624,7 +627,7 @@ final class Clipboard: StackbarPlugin {
     // MARK: Commands
 
     var commands: [Command] {
-        Command("search", title: "Search Clipboard History", subtitle: "Paste anything you copied", symbol: "list.clipboard", keywords: ["paste", "copy", "history"])
+        let search = Command("search", title: "Search Clipboard History", subtitle: "Paste anything you copied", symbol: "list.clipboard", keywords: ["paste", "copy", "history"])
             .view { _ in
                 let all = self.sorted
                 if all.isEmpty {
@@ -643,6 +646,8 @@ final class Clipboard: StackbarPlugin {
                     }
                 }
             }
+        // What you copied shows in the palette's results as you type.
+        if inPalette { search.rootSearch() } else { search }
         Command("paste-plain", title: "Paste Last Copy as Plain Text", symbol: "doc.plaintext", keywords: ["clipboard", "format"]) { _ in
             guard let latest = self.sorted.first(where: { !$0.pinned }) ?? self.sorted.first else { return .message("Nothing copied yet") }
             await self.use(latest, paste: true, plain: true)

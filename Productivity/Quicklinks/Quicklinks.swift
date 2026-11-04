@@ -4,6 +4,10 @@ import Foundation
 /// Quicklinks: links and folders you open by name from the palette,
 /// Spotlight, a hotkey or a link, with placeholders filled in as you go.
 ///
+/// A search quicklink can be a fallback: it is offered under the palette's
+/// results for whatever you typed. The everyday search engines start as
+/// fallbacks; switch it in a quicklink's form.
+///
 /// Each quicklink becomes a command of its own. Its link is a template in
 /// Raycast's syntax: `https://github.com/search?q={argument name="query"}`
 /// asks for a query, `{clipboard}` and `{selection}` take what you copied or
@@ -15,7 +19,7 @@ final class Quicklinks: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.quicklinks",
         name: "Quicklinks",
-        version: "1.4.0",
+        version: "1.5.0",
         summary: "Open links and folders by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -24,7 +28,7 @@ final class Quicklinks: StackbarPlugin {
         // Site icons come from DuckDuckGo's icon service, which sees the
         // domain of each web link shown in the launcher (off in Settings).
         capabilities: [.openURLs(schemes: ["*"]), .clipboard, .context, .network("icons.duckduckgo.com")],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.20.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
         accent: .cyan,
         symbol: "link"
@@ -66,6 +70,9 @@ final class Quicklinks: StackbarPlugin {
         var openWith: String?
         var tags: [String] = []
         var symbol: String?
+        /// Offered under the palette's results for anything typed, which
+        /// fills its first argument ("Use “…” with Google").
+        var fallback: Bool?
 
         var commandID: String { "ql-" + id.uuidString.lowercased() }
         var template: Template? { try? Template(link) }
@@ -78,6 +85,9 @@ final class Quicklinks: StackbarPlugin {
     /// How often and how lately each quicklink was opened, by id, so the
     /// ones you use come first.
     @Stored("usage") var usage: [String: Usage] = [:]
+    /// The search engines saved before fallbacks existed were made fallbacks
+    /// once.
+    @Stored("fallbacksSeeded") var fallbacksSeeded = false
 
     struct Usage: Codable, Equatable {
         var count: Int
@@ -158,8 +168,20 @@ final class Quicklinks: StackbarPlugin {
 
     func add(_ starters: [Starter]) -> Int {
         let new = starters.filter { !has($0) }
-        links += new.map { Link(id: UUID(), name: $0.name, link: $0.link, tags: [$0.tag]) }
+        links += new.map { Link(id: UUID(), name: $0.name, link: $0.link, tags: [$0.tag], fallback: Self.fallbacks.contains($0.name) ? true : nil) }
         return new.count
+    }
+
+    /// Starters that are fallbacks when added: general searches.
+    static let fallbacks: Set<String> = ["Google", "DuckDuckGo", "Kagi", "Perplexity", "Ask Claude", "Wikipedia"]
+
+    func refresh() async throws {
+        guard !fallbacksSeeded else { return }
+        fallbacksSeeded = true
+        let engines = Set(Self.library.filter { Self.fallbacks.contains($0.name) }.map(\.link))
+        for index in links.indices where links[index].fallback == nil && engines.contains(links[index].link) {
+            links[index].fallback = true
+        }
     }
 
     @ViewBuilder func libraryView(tag: String?) -> ViewContent {
@@ -175,7 +197,7 @@ final class Quicklinks: StackbarPlugin {
             ForEach(Self.libraryTags.filter { tag == nil || tag == "All" || $0 == tag }) { group in
                 Section(group) {
                     ForEach(shown.filter { $0.tag == group }) { starter in
-                        let link = Link(id: UUID(), name: starter.name, link: starter.link, tags: [starter.tag])
+                        let link = Link(id: UUID(), name: starter.name, link: starter.link, tags: [starter.tag], fallback: Self.fallbacks.contains(starter.name) ? true : nil)
                         let row = Row(starter.name, subtitle: Self.readable(link), symbol: Self.symbol(for: link), key: "starter-\(starter.link)")
                         if self.has(starter) {
                             row.badge("Added", role: .secondary)
@@ -376,9 +398,12 @@ final class Quicklinks: StackbarPlugin {
                 return .failure("\(link.name): \(error)")
             }
         }
-        for argument in link.template?.arguments ?? [] {
+        let arguments = link.template?.arguments ?? []
+        for argument in arguments {
             command = command.argument(argument.name, placeholder: argument.placeholder, required: argument.required, default: argument.defaultValue, options: argument.options)
         }
+        // The typed text fills the first argument, so a fallback needs one.
+        if link.fallback == true, !arguments.isEmpty { command = command.fallback() }
         return command
     }
 
@@ -437,6 +462,7 @@ final class Quicklinks: StackbarPlugin {
             FormField.application("Open with", name: "app", bundleID: existing?.openWith)
             FormField.text("Tags", name: "tags", value: existing?.tags.joined(separator: ", ") ?? "", placeholder: "work, docs")
             FormField.picker("Symbol", name: "symbol", options: Self.symbols, selection: existing?.symbol.flatMap { Self.symbols.contains($0) ? $0 : nil } ?? "Automatic")
+            FormField.toggle("Offer for anything typed in the palette", name: "fallback", isOn: existing?.fallback ?? false)
         } onSubmit: { values in
             self.save(values, editing: id)
         }
@@ -455,14 +481,16 @@ final class Quicklinks: StackbarPlugin {
         let tags = (values.string("tags") ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         let app = values.string("app").flatMap { $0.isEmpty ? nil : $0 }
         let symbol = values.string("symbol").flatMap { $0.isEmpty || $0 == "Automatic" ? nil : $0 }
+        let fallback = values.bool("fallback") ?? false
         if let id, let index = links.firstIndex(where: { $0.id == id }) {
             links[index].name = name
             links[index].link = text
             links[index].openWith = app
             links[index].tags = tags
             links[index].symbol = symbol
+            links[index].fallback = fallback
         } else {
-            links.append(Link(id: UUID(), name: name, link: text, openWith: app, tags: tags, symbol: symbol))
+            links.append(Link(id: UUID(), name: name, link: text, openWith: app, tags: tags, symbol: symbol, fallback: fallback))
         }
     }
 
