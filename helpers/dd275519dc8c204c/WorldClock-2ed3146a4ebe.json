@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.world-clock",
+  "protocol" : 16,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "f29899cdf8dac74a68c2c76f9370f59b44c7d584790b92891bfec0dd126c4810",
+  "signature" : "M6OIknJCXCu68UF/5p0IG9y1BLCZ5Hh5i1UmLVg7QrHV9XsYHlZky79yUZaD8Y8oFzgm4AygPFYaqqKDQkTGBA==",
+  "size" : 5008664,
+  "sourceDigest" : "2ed3146a4ebe71b8aba65dea74743c7d57e20a60712f1368384abbc098143c32",
+  "stackbarKit" : "dd275519dc8c204c5787547b552f9f9c01741a96cf5380726072c9f1e10df5d0",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-dd275519dc8c204c/WorldClock-2ed3146a4ebe",
+  "version" : "1.4.0"
+}

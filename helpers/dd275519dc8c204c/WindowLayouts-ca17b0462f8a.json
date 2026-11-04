@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.window-layouts",
+  "protocol" : 16,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "b807bb5b679d2fb74cf289758f4f560f74cb6933a3bdc47367b68845784313d5",
+  "signature" : "mv6YyBtv7bxXhuMOlrRAYR8K61MfPN48WNV9JJmR1K476whibS/PJZjw4O/7czu+R/+sEHrSThL75MPyjLOvDg==",
+  "size" : 4966992,
+  "sourceDigest" : "ca17b0462f8ab1d171c08c543ae2f00f2fc6a2a7fd309d7cb8cc4f1d84bf8d72",
+  "stackbarKit" : "dd275519dc8c204c5787547b552f9f9c01741a96cf5380726072c9f1e10df5d0",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-dd275519dc8c204c/WindowLayouts-ca17b0462f8a",
+  "version" : "1.0.0"
+}
