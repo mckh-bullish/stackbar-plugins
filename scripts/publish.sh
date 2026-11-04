@@ -242,7 +242,7 @@ cat > "$SITE/index.html" <<'HTML'
 <!doctype html>
 <meta charset="utf-8">
 <title>Stackbar Plugins</title>
-<link rel="canonical" href="https://stackbar.navbytes.io/plugins/">
-<meta http-equiv="refresh" content="0; url=https://stackbar.navbytes.io/plugins/">
-<p><a href="https://stackbar.navbytes.io/plugins/">Stackbar Plugins</a></p>
+<link rel="canonical" href="https://stackbar.app/plugins/">
+<meta http-equiv="refresh" content="0; url=https://stackbar.app/plugins/">
+<p><a href="https://stackbar.app/plugins/">Stackbar Plugins</a></p>
 HTML
