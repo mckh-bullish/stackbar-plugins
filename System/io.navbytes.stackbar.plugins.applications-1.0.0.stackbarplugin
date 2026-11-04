@@ -1,0 +1,44 @@
+{
+  "format" : 1,
+  "manifest" : {
+    "accent" : "blue",
+    "capabilities" : [
+      {
+        "apps" : {
+
+        }
+      },
+      {
+        "openURLs" : {
+          "schemes" : [
+            "x-apple.systempreferences"
+          ]
+        }
+      }
+    ],
+    "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/Applications",
+    "id" : "io.navbytes.stackbar.plugins.applications",
+    "minimumStackbar" : "0.20.0",
+    "name" : "Applications",
+    "summary" : "Open any app or System Settings pane from the command palette by typing a few letters.",
+    "surfaces" : [
+      "panel"
+    ],
+    "symbol" : "square.grid.3x3.fill",
+    "triggers" : [
+      {
+        "launch" : {
+
+        }
+      }
+    ],
+    "version" : "1.0.0"
+  },
+  "publisher" : {
+    "name" : "navbytes",
+    "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w="
+  },
+  "signature" : "Bt6Hw1WaOa1GI5oGaWJQXjJzEdrXx3Cm6gNEWiiMc9cmwHZaa7wv2JcWtPihll5Q+ABr/vkU1m6Srewvos7DAg==",
+  "source" : "import StackbarKit\nimport Foundation\n\n/// Your apps and System Settings panes in the command palette, as Spotlight\n/// and Raycast have them: type a few letters (\"saf\", \"vsc\", \"wi-fi\") and the\n/// app comes first; Return opens it. The ones you open most rank higher.\n@main\nfinal class Applications: StackbarPlugin {\n    static let manifest = Manifest(\n        id: \"io.navbytes.stackbar.plugins.applications\",\n        name: \"Applications\",\n        version: \"1.0.0\",\n        summary: \"Open any app or System Settings pane from the command palette by typing a few letters.\",\n        surfaces: [.panel],\n        triggers: [.launch],\n        // Listing and opening apps; opening Settings panes by their link.\n        capabilities: [.apps, .openURLs(schemes: [\"x-apple.systempreferences\"])],\n        minimumStackbar: \"0.20.0\",\n        homepage: \"https://github.com/navbytes/stackbar-plugins/tree/main/System/Applications\",\n        accent: .blue,\n        symbol: \"square.grid.3x3.fill\"\n    )\n\n    static let previews: [PreviewScene<Applications>] = [\n        PreviewScene(\"hero\", \"Every app a few letters away\") { plugin in\n            try await plugin.load(force: true)\n            plugin.opens = [\"com.apple.Safari\": 12, \"com.apple.dt.Xcode\": 8, \"com.google.Chrome\": 3]\n        },\n    ]\n\n    let theme = Theme.blue\n\n    var apps: [InstalledApp] = []\n    var loadedAt: Date?\n    var problem: String?\n    var results: [InstalledApp] = []\n    /// How often each app or pane was opened from here, by id.\n    @Stored(\"opens\") var opens: [String: Int] = [:]\n\n    /// The list from the host, at most every few minutes: a new app shows\n    /// up the next time the palette asks after that.\n    func load(force: Bool = false) async throws {\n        if !force, let loadedAt, Date().timeIntervalSince(loadedAt) < 120 { return }\n        do {\n            apps = try await Stackbar.installedApps()\n            loadedAt = Date()\n            problem = nil\n        } catch {\n            problem = \"Can't list your apps: \\(error)\"\n        }\n    }\n\n    func refresh() async throws {\n        try await load()\n    }\n\n    // MARK: Matching\n\n    /// How well `typed` matches `name`, or nil: the start of the name beats\n    /// the start of a word, which beats letters in order (\"vsc\" → Visual\n    /// Studio Code).\n    static func score(_ typed: String, in name: String) -> Int? {\n        let name = name.lowercased()\n        guard !typed.isEmpty else { return nil }\n        if name == typed { return 1200 }\n        if name.hasPrefix(typed) { return 1000 - min(name.count, 100) }\n        let words = name.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)\n        if words.contains(where: { $0.hasPrefix(typed) }) { return 800 - min(name.count, 100) }\n        let initials = String(words.compactMap(\\.first))\n        if initials.hasPrefix(typed) { return 700 }\n        if name.contains(typed) { return 500 - min(name.count, 100) }\n        // Every letter, in order.\n        var rest = Substring(typed)\n        for character in name where character == rest.first {\n            rest.removeFirst()\n            if rest.isEmpty { return 200 - min(name.count, 100) }\n        }\n        return nil\n    }\n\n    static func matches(_ query: String, in apps: [InstalledApp], opens: [String: Int] = [:], limit: Int = 12) -> [InstalledApp] {\n        let typed = query.lowercased().trimmingCharacters(in: .whitespaces)\n        guard !typed.isEmpty else { return [] }\n        return apps.compactMap { app -> (InstalledApp, Int)? in\n            guard let best = ([app.name] + app.keywords).compactMap({ score(typed, in: $0) }).max() else { return nil }\n            // Apps first on a tie: a pane named like an app rarely wins.\n            let used = min(300, Int(60 * log2(1 + Double(opens[app.id] ?? 0))))\n            return (app, best + used + (app.kind == .app ? 5 : 0))\n        }\n        .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0.name < $1.0.name }\n        .prefix(limit)\n        .map(\\.0)\n    }\n\n    // MARK: Opening\n\n    func open(_ app: InstalledApp) async throws {\n        opens[app.id, default: 0] += 1\n        if app.kind == .settingsPane, let url = app.url {\n            Stackbar.open(url)\n        } else {\n            try await Stackbar.activateApp(app.id, launch: true)\n        }\n    }\n\n    func row(_ app: InstalledApp) -> Row {\n        let pane = app.kind == .settingsPane\n        return Row(app.name, subtitle: pane ? \"System Settings\" : nil, symbol: pane ? \"gearshape\" : \"app\", key: app.id)\n            .appIcon(pane ? \"com.apple.systempreferences\" : app.id)\n            .action(\"Open\") { try await self.open(app) }\n            .action(\"Copy Path\", shortcut: \"cmd+shift+c\") { Stackbar.copy(app.path) }\n            .action(\"Copy Bundle ID\") { Stackbar.copy(app.id) }\n    }\n\n    // MARK: Commands\n\n    var commands: [Command] {\n        Command(\"search\", title: \"Search Applications\", subtitle: \"Open an app or a Settings pane\", symbol: \"square.grid.3x3\", keywords: [\"app\", \"launch\", \"open\", \"settings\"])\n            .view(search: { invocation in\n                try await self.load()\n                self.results = Self.matches(invocation.text, in: self.apps, opens: self.opens)\n            }) { invocation in\n                if let problem = self.problem {\n                    ContentUnavailableView(\"No apps\", symbol: \"exclamationmark.triangle\", message: problem)\n                } else if invocation.text.trimmingCharacters(in: .whitespaces).isEmpty {\n                    // The most opened first, then every app by name.\n                    let top = self.mostOpened(12)\n                    let shown = Set(top.map(\\.id))\n                    List {\n                        ForEach(top + self.apps.filter { $0.kind == .app && !shown.contains($0.id) }) { app in self.row(app) }\n                    }\n                } else {\n                    List {\n                        ForEach(self.results) { app in self.row(app) }\n                    }\n                }\n            }\n            .rootSearch(section: \"Applications\")\n    }\n\n    func mostOpened(_ count: Int) -> [InstalledApp] {\n        let byID = Dictionary(apps.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })\n        return opens.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }\n            .prefix(count)\n            .compactMap { byID[$0.key] }\n    }\n\n    // MARK: Panel\n\n    var panel: ViewContent {\n        PanelHeader(\"Applications\", subtitle: \"\\(apps.filter { $0.kind == .app }.count) apps · type in the palette\", symbol: \"square.grid.3x3.fill\", theme: theme)\n        if let problem {\n            Banner(problem, theme: .warning)\n        }\n        let top = mostOpened(8)\n        if top.isEmpty {\n            EmptyState(\"Open apps from the palette\", symbol: \"square.grid.3x3\", message: \"Press ⌃⌥Space and type a few letters of an app or a Settings pane. Return opens it.\", theme: theme)\n        } else {\n            Card(\"Most opened\", spacing: 0, padding: Space.s) {\n                ForEach(top) { app in self.row(app) }\n            }\n        }\n    }\n}\n",
+  "sourceDigest" : "501c65b3d74c6dcd8e74d957bb98964b742843caeb1cac497c0042ce6b8dd0c2"
+}

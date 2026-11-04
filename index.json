@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-04T14:47:51Z",
+  "generated" : "2026-11-04T17:12:11Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -101,10 +101,35 @@
       "version" : "1.5.0"
     },
     {
+      "accent" : "blue",
+      "bundle" : "Productivity/io.navbytes.stackbar.clipboard-1.6.0.stackbarplugin",
+      "capabilities" : [
+        "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
+      "id" : "io.navbytes.stackbar.clipboard",
+      "minimumStackbar" : "0.20.0",
+      "name" : "Clipboard History",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.clipboard.png",
+      "sha256" : "7de1a908445c25018e15f08de86eeebec32123bb8c9b65fe8f01dc34d8387b0b",
+      "summary" : "Everything you copy, searchable and one keystroke from pasting back.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "settings"
+      ],
+      "symbol" : "doc.on.clipboard.fill",
+      "updated" : "2026-11-04",
+      "version" : "1.6.0"
+    },
+    {
       "accent" : "indigo",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.app-switcher-1.0.0.stackbarplugin",
       "capabilities" : [
-        "Sees which apps are running, and switches to, opens or hides them",
+        "Sees which apps are installed and running, and switches to, opens or hides them",
         "Listens for a key you hold (like Right ⌘) and the letter you press with it",
         "Opens x-apple.systempreferences: links"
       ],
@@ -130,7 +155,7 @@
       "accent" : "indigo",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.app-switcher-1.1.0.stackbarplugin",
       "capabilities" : [
-        "Sees which apps are running, and switches to, opens or hides them",
+        "Sees which apps are installed and running, and switches to, opens or hides them",
         "Listens for a key you hold (like Right ⌘) and the letter you press with it",
         "Opens x-apple.systempreferences: links"
       ],
@@ -151,6 +176,51 @@
       "symbol" : "command",
       "updated" : "2026-11-04",
       "version" : "1.1.0"
+    },
+    {
+      "accent" : "blue",
+      "bundle" : "System/io.navbytes.stackbar.plugins.applications-1.0.0.stackbarplugin",
+      "capabilities" : [
+        "Sees which apps are installed and running, and switches to, opens or hides them",
+        "Opens x-apple.systempreferences: links"
+      ],
+      "category" : "System",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/Applications",
+      "id" : "io.navbytes.stackbar.plugins.applications",
+      "minimumStackbar" : "0.20.0",
+      "name" : "Applications",
+      "publisher" : "navbytes",
+      "screenshot" : "System/io.navbytes.stackbar.plugins.applications.png",
+      "sha256" : "074b4d523f6e3e830f8e589b93c3f01b30a841256ae059c33c9ee73040f7bed2",
+      "summary" : "Open any app or System Settings pane from the command palette by typing a few letters.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "square.grid.3x3.fill",
+      "updated" : "2026-11-04",
+      "version" : "1.0.0"
+    },
+    {
+      "accent" : "orange",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.calculator-1.0.0.stackbarplugin",
+      "capabilities" : [
+
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Calculator",
+      "id" : "io.navbytes.stackbar.plugins.calculator",
+      "minimumStackbar" : "0.20.0",
+      "name" : "Calculator",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.calculator.png",
+      "sha256" : "638c37754fec1721c9253e8eb0038c5f9150e73e71e7b8bde6fdc64045d30ce2",
+      "summary" : "Sums and unit conversions answered right in the command palette.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "equal.square.fill",
+      "updated" : "2026-11-04",
+      "version" : "1.0.0"
     },
     {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.docker-1.0.0.stackbarplugin",
@@ -246,6 +316,51 @@
       "symbol" : "shippingbox.fill",
       "updated" : "2026-11-04",
       "version" : "1.4.0"
+    },
+    {
+      "accent" : "amber",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.emoji-1.0.0.stackbarplugin",
+      "capabilities" : [
+        "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Emoji",
+      "id" : "io.navbytes.stackbar.plugins.emoji",
+      "minimumStackbar" : "0.20.0",
+      "name" : "Emoji",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.emoji.png",
+      "sha256" : "5eec73d2efc2f99ee627d68baea453e11bf22f38ed8e59560d3091aaba946fde",
+      "summary" : "Search every emoji by name in a grid, and paste it where you were typing.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "face.smiling",
+      "updated" : "2026-11-04",
+      "version" : "1.0.0"
+    },
+    {
+      "accent" : "cyan",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.file-search-1.0.0.stackbarplugin",
+      "capabilities" : [
+        "Finds files and folders in your home folder by name, with Spotlight",
+        "Opens any link, file or folder, in any app"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/FileSearch",
+      "id" : "io.navbytes.stackbar.plugins.file-search",
+      "minimumStackbar" : "0.20.0",
+      "name" : "File Search",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.file-search.png",
+      "sha256" : "3e0b531ac5b3453df1ae9eda19910dc2822af67fd2dc39d0180608b2c9050127",
+      "summary" : "Find files and folders by name from the command palette, most recently used first.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "doc.text.magnifyingglass",
+      "updated" : "2026-11-04",
+      "version" : "1.0.0"
     },
     {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.github-1.0.0.stackbarplugin",
@@ -1238,6 +1353,29 @@
       "version" : "1.4.0"
     },
     {
+      "accent" : "indigo",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.window-layouts-1.0.0.stackbarplugin",
+      "capabilities" : [
+        "Sees which windows you have open and where, moves them, and opens apps"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WindowLayouts",
+      "id" : "io.navbytes.stackbar.plugins.window-layouts",
+      "minimumStackbar" : "0.20.0",
+      "name" : "Window Layouts",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.window-layouts.png",
+      "sha256" : "edd85681997901dbb9ab2caef0eb13265a9cecebd7063923d17df80f8daa1a0b",
+      "summary" : "Snap the front window to halves, quarters, thirds or the whole screen from the palette or a hotkey.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "rectangle.split.2x1",
+      "updated" : "2026-11-04",
+      "version" : "1.0.0"
+    },
+    {
       "accent" : "graphite",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.workspaces-1.0.0.stackbarplugin",
       "capabilities" : [
@@ -1662,6 +1800,32 @@
       "version" : "1.4.0"
     },
     {
+      "accent" : "cyan",
+      "bundle" : "Productivity/io.navbytes.stackbar.quicklinks-1.5.0.stackbarplugin",
+      "capabilities" : [
+        "Opens any link, file or folder, in any app",
+        "Reads everything you copy, and pastes into the app you're using",
+        "Reads the text you select and which app you're in",
+        "Connects to icons.duckduckgo.com"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
+      "id" : "io.navbytes.stackbar.quicklinks",
+      "minimumStackbar" : "0.20.0",
+      "name" : "Quicklinks",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.quicklinks.png",
+      "sha256" : "ee51e9c5de931571fd75ac1fcf5a3331181d680791c1f070e785aa1de4be56af",
+      "summary" : "Open links and folders by name, with placeholders filled in.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "link",
+      "updated" : "2026-11-04",
+      "version" : "1.5.0"
+    },
+    {
       "bundle" : "Productivity/io.navbytes.stackbar.snippets-1.0.1.stackbarplugin",
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using",
@@ -1986,5 +2150,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "7Ys3aKyBesGJMP+pGwyqb3vfpycx2qQ2IvFmgwD0CRR/cPPoPX7WpXwdLd2OEEe6IwmGNme4o1Zs93k7fM7gAw=="
+  "signature" : "NhYQaoUTU9rSeF5fc4veD1o6mFUP+86rtWkRGxB+uzIYBq9XwBhozZh0shcXIi8rkC38APkM3u7jGdCNnCycDg=="
 }

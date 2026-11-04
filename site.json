@@ -4,6 +4,12 @@
       "changes": [
         {
           "notes": [
+            "Matching copies show in the command palette's own results as you type, so you can paste one without opening the history first (Stackbar 0.20.0). Turn it off in Settings."
+          ],
+          "version": "1.6.0"
+        },
+        {
+          "notes": [
             "Store screenshots now show it in use, with sample data, instead of its first-run screen."
           ],
           "version": "1.5.0"
@@ -27,7 +33,7 @@
         },
         {
           "label": "Settings",
-          "text": "how many items to keep, the order, pasting directly or only copying, keeping images, plain text by default, how long to keep secrets (not at all, 5 minutes to an hour, or like any copy), apps and text patterns to ignore, and pausing the history."
+          "text": "how many items to keep, the order, pasting directly or only copying, showing matching copies in the palette's results, keeping images, plain text by default, how long to keep secrets (not at all, 5 minutes to an hour, or like any copy), apps and text patterns to ignore, and pausing the history."
         },
         {
           "label": "Commands",
@@ -38,7 +44,7 @@
           "text": "`recent_clips`, `search_clips` and `copy_clip`."
         }
       ],
-      "version": "1.5.0"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.plugins.app-switcher": {
       "changes": [
@@ -83,6 +89,66 @@
         }
       ],
       "version": "1.1.0"
+    },
+    "io.navbytes.stackbar.plugins.applications": {
+      "changes": [
+        {
+          "notes": [
+            "First release: the palette's app search, now a plugin."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Your apps and System Settings panes in the command palette, as Spotlight and\nRaycast have them. Type a few letters (\"saf\", \"vsc\", \"wi-fi\") and the app\ncomes first in the results; Return opens it, \u2318K copies its path or bundle id.\nThe ones you open most rank higher. Search Applications lists them all.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "the list of installed apps and opening them (`.apps`), and opening System Settings panes by their link. Stackbar 0.20.0 or later."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel (your most opened apps)."
+        },
+        {
+          "label": "Commands",
+          "text": "Search Applications, which also feeds the palette's results."
+        },
+        {
+          "label": "Looks in",
+          "text": "/Applications (one folder deep), ~/Applications and the system's own apps, plus every pane System Settings lists."
+        }
+      ],
+      "version": "1.0.0"
+    },
+    "io.navbytes.stackbar.plugins.calculator": {
+      "changes": [
+        {
+          "notes": [
+            "First release: the palette's calculator, now a plugin."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Sums and unit conversions answered right in the command palette. Type\n`12*(3+4)`, `2^10`, `15% * 80`, `sqrt(2)`, `3h in min`, `72 f to c` or\n`5 km in mi`, and the answer comes first in the results. Return copies it and\n\u2318Return pastes it. Plain numbers and words get no answer, so it never crowds a\nnormal search. The panel keeps your last ten answers.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "nothing. Stackbar 0.20.0 or later."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel."
+        },
+        {
+          "label": "Commands",
+          "text": "Calculate."
+        },
+        {
+          "label": "Units",
+          "text": "length, mass, time, data, volume and temperature. No currencies."
+        }
+      ],
+      "version": "1.0.0"
     },
     "io.navbytes.stackbar.plugins.docker": {
       "changes": [
@@ -131,6 +197,62 @@
         }
       ],
       "version": "1.4.0"
+    },
+    "io.navbytes.stackbar.plugins.emoji": {
+      "changes": [
+        {
+          "notes": [
+            "First release: every emoji in a searchable grid in the palette."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "An emoji picker in the command palette. Search Emoji opens a grid of every\nemoji, grouped as Unicode groups them, with the ones you use most at the top.\nType to narrow it (\"party\", \"thumbs up\", \"flag japan\"), move with the arrow\nkeys, and press Return to paste the emoji where you were typing. \u2318K copies it\ninstead. The panel keeps your frequent ones a click from the clipboard.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "the clipboard, to paste (your clipboard is put back afterwards). Stackbar 0.20.0 or later, which draws grids in the palette."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel."
+        },
+        {
+          "label": "Commands",
+          "text": "Search Emoji. Give it a hotkey in Settings \u203a Commands."
+        },
+        {
+          "label": "Data",
+          "text": "Unicode's Emoji 15.1 list and English names, without skin-tone variants. Nothing leaves your Mac."
+        }
+      ],
+      "version": "1.0.0"
+    },
+    "io.navbytes.stackbar.plugins.file-search": {
+      "changes": [
+        {
+          "notes": [
+            "First release: the palette's file search, now a plugin."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Files and folders by name in the command palette, from Spotlight's index.\nType three letters or more and the best matches show under Files in the\nresults, most recently used first, each with its Finder icon. Return opens\none; \u2318K shows it in Finder or copies its path. Search Files lists up to 20.\nApps, anything inside an app or bundle, hidden files and Library internals\nare left out.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "finding files by name with Spotlight (names and paths in your home folder only, nothing is read from inside them), and opening what you pick. Stackbar 0.20.0 or later."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel (what you opened lately)."
+        },
+        {
+          "label": "Commands",
+          "text": "Search Files, which also feeds the palette's results."
+        }
+      ],
+      "version": "1.0.0"
     },
     "io.navbytes.stackbar.plugins.homebrew": {
       "changes": [
@@ -627,6 +749,40 @@
       ],
       "version": "1.4.0"
     },
+    "io.navbytes.stackbar.plugins.window-layouts": {
+      "changes": [
+        {
+          "notes": [
+            "First release: snap the front window from the palette or a hotkey."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Snaps the front window to a half, a quarter, a third, the middle or the whole\nscreen, or sends it to the next display. Every layout is a command, so you can\ntype \"left half\" in the palette or give any layout a hotkey in Settings \u203a\nCommands. Restore puts the window back where it was before its last snap.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "`.windows`: the host moves windows through Accessibility, so Stackbar asks for Accessibility access the first time. Stackbar 0.20.0 or later."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel (a button for every layout), settings."
+        },
+        {
+          "label": "Settings",
+          "text": "the gap left around snapped windows."
+        },
+        {
+          "label": "Commands",
+          "text": "Left Half, Right Half, Top Half, Bottom Half, the four quarters, First / Center / Last Third, First / Last Two Thirds, Maximize, Almost Maximize, Center, Next Display and Restore."
+        },
+        {
+          "label": "Not covered",
+          "text": "windows in full screen or on other Spaces. To remember a whole arrangement per monitor setup, use Workspaces."
+        }
+      ],
+      "version": "1.0.0"
+    },
     "io.navbytes.stackbar.plugins.workspaces": {
       "changes": [
         {
@@ -760,6 +916,12 @@
       "changes": [
         {
           "notes": [
+            "**Fallbacks:** a search quicklink can be offered under the palette's results for anything you type (\"Use \u201c\u2026\u201d with Google\"). Google, DuckDuckGo, Kagi, Perplexity, Ask Claude and Wikipedia start as fallbacks; switch any quicklink in its form. Needs Stackbar 0.20.0."
+          ],
+          "version": "1.5.0"
+        },
+        {
+          "notes": [
             "Store screenshots now show it in use, with sample data, instead of its first-run screen."
           ],
           "version": "1.4.0"
@@ -798,7 +960,7 @@
           "text": "Search Quicklinks, Create Quicklink, Browse Quicklink Library, Import Quicklinks, Export Quicklinks (a file Raycast reads too), plus one command per quicklink."
         }
       ],
-      "version": "1.4.0"
+      "version": "1.5.0"
     },
     "io.navbytes.stackbar.snippets": {
       "changes": [
@@ -934,6 +1096,12 @@
         "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.5.0/light/demo/b07000be5086/panel.png",
         "seconds": 7.2,
         "surface": "panel"
+      },
+      "1.6.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.6.0/dark/demo/b07000be5086/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.6.0/light/demo/b07000be5086/panel.png",
+        "seconds": 7.2,
+        "surface": "panel"
       }
     },
     "io.navbytes.stackbar.plugins.pomodoro": {
@@ -993,6 +1161,16 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.5.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.5.0/light/panel.png"
         }
+      },
+      "1.6.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.6.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.6.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.6.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.6.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.app-switcher": {
@@ -1014,6 +1192,22 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.1.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.1.0/light/panel.png"
+        }
+      }
+    },
+    "io.navbytes.stackbar.plugins.applications": {
+      "1.0.0": {
+        "panel": {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.0/dark/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.0/light/panel.png"
+        }
+      }
+    },
+    "io.navbytes.stackbar.plugins.calculator": {
+      "1.0.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.0.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.0.0/light/panel.png"
         }
       }
     },
@@ -1046,6 +1240,22 @@
         "panel": {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.4.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.4.0/light/panel.png"
+        }
+      }
+    },
+    "io.navbytes.stackbar.plugins.emoji": {
+      "1.0.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.0.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.0.0/light/panel.png"
+        }
+      }
+    },
+    "io.navbytes.stackbar.plugins.file-search": {
+      "1.0.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.file-search/1.0.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.file-search/1.0.0/light/panel.png"
         }
       }
     },
@@ -1355,6 +1565,14 @@
         }
       }
     },
+    "io.navbytes.stackbar.plugins.window-layouts": {
+      "1.0.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.window-layouts/1.0.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.window-layouts/1.0.0/light/panel.png"
+        }
+      }
+    },
     "io.navbytes.stackbar.plugins.workspaces": {
       "1.0.0": {
         "menuBar": {
@@ -1489,6 +1707,12 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.4.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.4.0/light/panel.png"
         }
+      },
+      "1.5.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.5.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.5.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.snippets": {
@@ -1610,6 +1834,29 @@
           "surface": "window",
           "title": "What you copy, and from where"
         }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.6.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.6.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Everything you copied, one keystroke away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.6.0/dark/previews/pinned/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.6.0/light/previews/pinned/panel.png",
+          "name": "pinned",
+          "surface": "panel",
+          "title": "Pin what you paste every day"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.6.0/dark/previews/insights/window.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.6.0/light/previews/insights/window.png",
+          "name": "insights",
+          "surface": "window",
+          "title": "What you copy, and from where"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.app-switcher": {
@@ -1620,6 +1867,28 @@
           "name": "hero",
           "surface": "panel",
           "title": "Hold Right \u2318 and press a letter"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.applications": {
+      "1.0.0": [
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.0/dark/previews/hero/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every app a few letters away"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.calculator": {
+      "1.0.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.0.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Answers as you type"
         }
       ]
     },
@@ -1645,6 +1914,28 @@
           "name": "widget",
           "surface": "widget",
           "title": "Your stack's health on the desktop"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.emoji": {
+      "1.0.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.0.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every emoji, a few letters away"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.file-search": {
+      "1.0.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.file-search/1.0.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.file-search/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Any file, a few letters away"
         }
       ]
     },
@@ -1837,6 +2128,17 @@
         }
       ]
     },
+    "io.navbytes.stackbar.plugins.window-layouts": {
+      "1.0.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.window-layouts/1.0.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.window-layouts/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Snap the front window from the palette"
+        }
+      ]
+    },
     "io.navbytes.stackbar.plugins.workspaces": {
       "1.1.0": [
         {
@@ -1903,6 +2205,15 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.4.0/dark/previews/hero/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.4.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your searches, sites and folders by name"
+        }
+      ],
+      "1.5.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.5.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.5.0/light/previews/hero/panel.png",
           "name": "hero",
           "surface": "panel",
           "title": "Your searches, sites and folders by name"
