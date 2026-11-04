@@ -36,11 +36,53 @@ jobs:
             scripts/check.sh
           fi
 
+  # Whether this change needs the Mac (.github/scripts/changes.sh): a change
+  # to READMEs, docs or the publish scripts doesn't. Manual runs, and pushes
+  # we can't diff, run it.
+  changes:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      macos: ${{ steps.decide.outputs.macos }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            .github/scripts/changes.sh --all
+          else
+            git diff --name-only "$BASE...$HEAD" | tee /dev/stderr | .github/scripts/changes.sh
+          fi | tee -a "$GITHUB_OUTPUT"
+
   # The same on a Mac, plus a short soak of each plugin in the App Sandbox.
   macos:
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    needs: changes
+    if: needs.changes.outputs.macos == 'true'
     runs-on: macos-26
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: scripts/check.sh
+
+  # One check that is green when every job that ran passed and the rest were
+  # skipped on purpose. Make this the required status check, not the jobs
+  # above, since a skipped job never reports.
+  ok:
+    name: CI ok
+    if: always()
+    needs: [linux, changes, macos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          case " $RESULTS " in *" failure "*|*" cancelled "*) exit 1 ;; esac
