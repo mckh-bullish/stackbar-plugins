@@ -6,6 +6,9 @@ name: Publish
 on:
   push:
     branches: [main]
+    # Nothing here changes a bundle, a README or the index, so a push of only
+    # these skips the Mac. Plugin READMEs are not ignored (site.json reads them).
+    paths-ignore: ['*.md', LICENSE, .gitignore, Tests/**, .github/scripts/**, .github/workflows/ci.yml, .github/workflows/canary.yml, scripts/check.sh, scripts/lint.py]
   workflow_dispatch:
 
 permissions:
