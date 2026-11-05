@@ -30,6 +30,7 @@ An update that asks for something new waits for your approval.
 | --- | --- | --- |
 | [Applications](System/Applications) | System | Open any app or System Settings pane from the command palette by typing a few letters. |
 | [Stay Awake](System/StayAwake) | System | Keeps your Mac awake for a while, until a time, while an app runs or on a schedule. |
+| [System Commands](System/SystemCommands) | System | Lock, sleep, restart, empty the Trash or switch to dark mode from the palette. |
 | [Docker](Developer/Docker) | Developer | Your containers, with start, stop, restart and logs a click away. |
 | [Homebrew](Developer/Homebrew) | Developer | Outdated formulae and casks, with upgrades a click away. |
 | [Jira](Developer/Jira) | Developer | Your assigned Jira Cloud issues, search and new issues from the palette. |
@@ -39,7 +40,7 @@ An update that asks for something new waits for your approval.
 | [LiteLLM](Monitoring/LiteLLM) | Monitoring | Tokens, spend, budget and model mix from your LiteLLM proxy, with charts. |
 | [System Monitor](Monitoring/SystemMonitor) | Monitoring | CPU, memory and disk in the menu bar, with the processes using the most. |
 | [App Switcher](Productivity/AppSwitcher) | Productivity | Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide. |
-| [Calculator](Productivity/Calculator) | Productivity | Sums and unit conversions answered right in the command palette. |
+| [Calculator](Productivity/Calculator) | Productivity | Sums, units, currencies and time zones answered right in the command palette. |
 | [Clipboard History](Productivity/Clipboard) | Productivity | Everything you copy, searchable and one keystroke from pasting back. |
 | [Emoji](Productivity/Emoji) | Productivity | Search every emoji by name in a grid, and paste it where you were typing. |
 | [File Search](Productivity/FileSearch) | Productivity | Find files and folders by name from the command palette, most recently used first. |
