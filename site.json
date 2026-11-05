@@ -98,13 +98,19 @@
         },
         {
           "label": "Not covered",
-          "text": "jumping between Spaces, a window grid, and searching for apps by name (Spotlight does that). While an app has Secure Input on, such as in a password field, macOS blocks every keyboard listener. The panel tells you which app has it on."
+          "text": "jumping between Spaces and a window grid. To find an app by name, type it in the palette (the Applications plugin); to snap windows, use Windows. While an app has Secure Input on, such as in a password field, macOS blocks every keyboard listener. The panel tells you which app has it on."
         }
       ],
       "version": "1.2.0"
     },
     "io.navbytes.stackbar.plugins.applications": {
       "changes": [
+        {
+          "notes": [
+            "The panel points to App Switcher, for switching apps with Right \u2318 and a letter. It stays a separate plugin, because it listens to the keyboard."
+          ],
+          "version": "1.1.0"
+        },
         {
           "notes": [
             "Typing \"settings\" finds the System Settings app first. Every pane used to outrank it, because each one has \"settings\" as a keyword."
@@ -137,7 +143,7 @@
           "text": "/Applications (one folder deep), ~/Applications and the system's own apps, plus every pane System Settings lists."
         }
       ],
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     "io.navbytes.stackbar.plugins.calculator": {
       "changes": [
@@ -895,42 +901,16 @@
       ],
       "version": "1.5.0"
     },
-    "io.navbytes.stackbar.plugins.window-layouts": {
+    "io.navbytes.stackbar.plugins.workspaces": {
       "changes": [
         {
           "notes": [
-            "First release: snap the front window from the palette or a hotkey."
+            "Window Layouts is now part of Workspaces, and together they are called Windows. The panel has a row of snap buttons above your saved layouts, and every snap is still a command.",
+            "Window Layouts' Restore is now Undo Snap, because Restore here brings back a saved layout. Its hotkey doesn't carry over; set it again in Settings \u203a Commands.",
+            "The snap gap starts at None again. Set it in Settings if you had changed it."
           ],
-          "version": "1.0.0"
-        }
-      ],
-      "description": "Snaps the front window to a half, a quarter, a third, the middle or the whole\nscreen, or sends it to the next display. Every layout is a command, so you can\ntype \"left half\" in the palette or give any layout a hotkey in Settings \u203a\nCommands. Restore puts the window back where it was before its last snap.",
-      "facts": [
-        {
-          "label": "Needs",
-          "text": "`.windows`: the host moves windows through Accessibility, so Stackbar asks for Accessibility access the first time. Stackbar 0.20.0 or later."
+          "version": "2.0.0"
         },
-        {
-          "label": "Surfaces",
-          "text": "panel (a button for every layout), settings."
-        },
-        {
-          "label": "Settings",
-          "text": "the gap left around snapped windows."
-        },
-        {
-          "label": "Commands",
-          "text": "Left Half, Right Half, Top Half, Bottom Half, the four quarters, First / Center / Last Third, First / Last Two Thirds, Maximize, Almost Maximize, Center, Next Display and Restore."
-        },
-        {
-          "label": "Not covered",
-          "text": "windows in full screen or on other Spaces. To remember a whole arrangement per monitor setup, use Workspaces."
-        }
-      ],
-      "version": "1.0.0"
-    },
-    "io.navbytes.stackbar.plugins.workspaces": {
-      "changes": [
         {
           "notes": [
             "The menu bar icon is off by default: restore layouts from the palette or a hotkey. Settings can keep it on, and it comes back by itself when something needs you."
@@ -950,34 +930,38 @@
           "version": "1.0.0"
         }
       ],
-      "description": "Remembers where your windows go for each monitor setup and puts them back.\nArrange things the way you like at the desk, type \"Desk\" and press Return;\ndo the same on the laptop alone. When you plug in or unplug a display (or\nwake the Mac on a different set of displays), the starred layout for that\nsetup comes back by itself, and apps that weren't running are opened.",
+      "description": "Snap the front window, and save where all your windows go. Type \"left half\"\nin the palette or give any snap a hotkey; arrange things the way you like at\nthe desk, type \"Desk\" and press Return, and do the same on the laptop alone.\nWhen you plug in or unplug a display (or wake the Mac on a different set of\ndisplays), the starred layout for that setup comes back by itself, and apps\nthat weren't running are opened.\n\nWindows used to be two plugins, Workspaces and Window Layouts. If you had\nWindow Layouts, its hotkeys and aliases move here and it is turned off; you\ncan uninstall it from its page in Settings.",
       "facts": [
         {
           "label": "Needs",
-          "text": "`.windows`: the host lists and moves windows through Accessibility, so Stackbar asks for Accessibility access the first time. Stackbar 0.15.0 or later."
+          "text": "`.windows`: the host lists and moves windows through Accessibility, so Stackbar asks for Accessibility access the first time. Stackbar 0.25.0 or later."
         },
         {
           "label": "Surfaces",
-          "text": "menu bar, panel, settings."
+          "text": "menu bar (off by default), panel, settings."
+        },
+        {
+          "label": "Snapping",
+          "text": "halves, the four quarters, First / Center / Last Third, First / Last Two Thirds, Maximize, Almost Maximize, Center, Next Display and Undo Snap, which puts the window back where it was before its last snap."
         },
         {
           "label": "Settings",
-          "text": "bring back the starred layout when displays change, open apps that aren't running."
+          "text": "the gap left around snapped windows, bring back the starred layout when displays change, open apps that aren't running, and the menu bar icon."
         },
         {
           "label": "Commands",
-          "text": "Save Window Layout, Restore Window Layout, and one Restore command per layout, so each layout can have its own hotkey or alias."
+          "text": "one per snap, Save Window Layout, Restore Window Layout, and one Restore command per layout, so each layout can have its own hotkey or alias."
         },
         {
           "label": "Agent tools",
-          "text": "`layouts`, `save_layout` and `restore_layout`."
+          "text": "`snap`, `layouts`, `save_layout` and `restore_layout`."
         },
         {
           "label": "Not covered",
-          "text": "windows in full screen and on other Spaces, browser tabs, snapping and tiling (macOS does that)."
+          "text": "windows in full screen and on other Spaces, and browser tabs."
         }
       ],
-      "version": "1.2.0"
+      "version": "2.0.0"
     },
     "io.navbytes.stackbar.plugins.world-clock": {
       "changes": [
@@ -1426,6 +1410,12 @@
         "panel": {
           "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.1/dark/panel.png",
           "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.1/light/panel.png"
+        }
+      },
+      "1.1.0": {
+        "panel": {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.1.0/dark/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.1.0/light/panel.png"
         }
       }
     },
@@ -1957,6 +1947,16 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/1.2.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/1.2.0/light/panel.png"
         }
+      },
+      "2.0.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.0.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.0.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.0.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.0.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.world-clock": {
@@ -2316,6 +2316,15 @@
         {
           "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.1/dark/previews/hero/panel.png",
           "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.1/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every app a few letters away"
+        }
+      ],
+      "1.1.0": [
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.1.0/dark/previews/hero/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.1.0/light/previews/hero/panel.png",
           "name": "hero",
           "surface": "panel",
           "title": "Every app a few letters away"
@@ -2814,6 +2823,15 @@
           "name": "hero",
           "surface": "panel",
           "title": "Save your windows as a layout and get them back"
+        }
+      ],
+      "2.0.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.0.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Snap a window, or bring back every window for your desk"
         }
       ]
     },
