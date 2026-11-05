@@ -1160,6 +1160,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.snippets",
+      "protocol": 19,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "b35e766920547a620940eb16a34f3f87ce587f63826f5c90d01a8a7fb4b1841a",
+      "signature": "RQ/vXmEOWMFik4LrG7w7AmHj8yhReoZeehyOPZenXzOMjpjdMO1DW5/1Iag3Fki1OE5Jykey3mvCmMEhWaahBA==",
+      "size": 5251192,
+      "sourceDigest": "cb8927509ee4ec2ab20006fb07e010a6153f3f71219f49ce2d3e65b2e87e479e",
+      "stackbarKit": "edfd3346db3c68597dbffcea6a44367546f3c716489769c444832e923081b941",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-edfd3346db3c6859/Snippets-cb8927509ee4",
+      "version": "1.4.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.stay-awake",
       "protocol": 19,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
