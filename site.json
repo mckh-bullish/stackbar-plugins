@@ -137,16 +137,24 @@
       "changes": [
         {
           "notes": [
+            "Currency conversion: `100 usd in eur`, `$50 to gbp`.",
+            "Times across zones: `5pm london in tokyo`, `now in sf`.",
+            "Asks for network access to fetch exchange rates."
+          ],
+          "version": "1.1.0"
+        },
+        {
+          "notes": [
             "First release: the palette's calculator, now a plugin."
           ],
           "version": "1.0.0"
         }
       ],
-      "description": "Sums and unit conversions answered right in the command palette. Type\n`12*(3+4)`, `2^10`, `15% * 80`, `sqrt(2)`, `3h in min`, `72 f to c` or\n`5 km in mi`, and the answer comes first in the results. Return copies it and\n\u2318Return pastes it. Plain numbers and words get no answer, so it never crowds a\nnormal search. The panel keeps your last ten answers.",
+      "description": "Sums, unit and currency conversions and times across zones, answered right in\nthe command palette. Type `12*(3+4)`, `2^10`, `15% * 80`, `sqrt(2)`,\n`3h in min`, `72 f to c`, `5 km in mi`, `100 usd in eur`, `$50 to gbp`,\n`5pm london in tokyo` or `now in sf`, and the answer comes first in the\nresults. Return copies it and \u2318Return pastes it. Plain numbers and words get\nno answer, so it never crowds a normal search. The panel keeps your last ten\nanswers.",
       "facts": [
         {
           "label": "Needs",
-          "text": "nothing. Stackbar 0.20.0 or later."
+          "text": "network access to `api.frankfurter.dev` for exchange rates. Stackbar 0.20.0 or later."
         },
         {
           "label": "Surfaces",
@@ -158,10 +166,18 @@
         },
         {
           "label": "Units",
-          "text": "length, mass, time, data, volume and temperature. No currencies."
+          "text": "length, mass, time, data, volume and temperature."
+        },
+        {
+          "label": "Currencies",
+          "text": "the European Central Bank's reference rates (about 30 currencies, updated each working day) from Frankfurter, fetched at launch and every six hours. `$`, `\u20ac`, `\u00a3`, `\u00a5`, `\u20b9` and names like `euros` work as well as codes."
+        },
+        {
+          "label": "Time zones",
+          "text": "any city in a time zone's name (`tokyo`, `new york`), plus common ones like `sf`, `nyc`, `bangalore`, `uk` and abbreviations like `pst` and `ist`. Without a starting place, the time is yours."
         }
       ],
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     "io.navbytes.stackbar.plugins.docker": {
       "changes": [
@@ -635,6 +651,32 @@
         }
       ],
       "version": "1.4.0"
+    },
+    "io.navbytes.stackbar.plugins.system-commands": {
+      "changes": [
+        {
+          "notes": [
+            "First release."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Lock, sleep, restart, empty the Trash or switch to dark mode from the command\npalette, by name: type `lock`, `sleep`, `empty trash` or `dark mode` and press\nReturn. Restart, Shut Down, Log Out, Empty Trash and Quit Other Apps open a\nsecond row that says what happens, so nothing is lost to a stray Return.\nGive any of them an alias or a hotkey in Settings \u203a Commands.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "system actions (`.systemActions`). macOS asks once to let Stackbar control System Events (restart, shut down, log out, dark mode) and Finder (the Trash). Locking the screen uses Stackbar's Accessibility access. Stackbar 0.22.0 or later."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel, which lists every command."
+        },
+        {
+          "label": "Commands",
+          "text": "Lock Screen, Sleep, Sleep Displays, Start Screen Saver, Toggle Dark Mode, Hide Other Apps, Eject All Disks, Empty Trash, Quit Other Apps, Log Out, Restart, Shut Down."
+        }
+      ],
+      "version": "1.0.0"
     },
     "io.navbytes.stackbar.plugins.system-monitor": {
       "changes": [
@@ -1365,6 +1407,12 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.0.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.0.0/light/panel.png"
         }
+      },
+      "1.1.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.1.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.1.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.docker": {
@@ -1706,6 +1754,14 @@
         "panel": {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.ports/1.4.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.ports/1.4.0/light/panel.png"
+        }
+      }
+    },
+    "io.navbytes.stackbar.plugins.system-commands": {
+      "1.0.0": {
+        "panel": {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.system-commands/1.0.0/dark/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.system-commands/1.0.0/light/panel.png"
         }
       }
     },
@@ -2222,6 +2278,15 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.0.0/dark/previews/hero/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Answers as you type"
+        }
+      ],
+      "1.1.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.1.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.1.0/light/previews/hero/panel.png",
           "name": "hero",
           "surface": "panel",
           "title": "Answers as you type"
