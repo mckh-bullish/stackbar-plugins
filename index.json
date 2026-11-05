@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-05T06:10:46Z",
+  "generated" : "2026-11-05T11:19:31Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -294,6 +294,29 @@
       "symbol" : "equal.square.fill",
       "updated" : "2026-11-05",
       "version" : "1.1.0"
+    },
+    {
+      "accent" : "orange",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.calculator-1.2.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to api.frankfurter.dev"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Calculator",
+      "id" : "io.navbytes.stackbar.plugins.calculator",
+      "minimumStackbar" : "0.20.0",
+      "name" : "Calculator",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.calculator.png",
+      "sha256" : "6905e81d278235f284c571b78feb16b86924720b807c45719d74110ebea9b14a",
+      "summary" : "Sums, units, currencies and time zones answered right in the command palette.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "equal.square.fill",
+      "updated" : "2026-11-05",
+      "version" : "1.2.0"
     },
     {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.docker-1.0.0.stackbarplugin",
@@ -2648,5 +2671,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "7yCT6OK71tnK8U+h2Mm/ECpUfmQtRYefAhhdMQkTG/DZB7EzsC4+pA/1j0bY9H04CBI/46sSoHfFuLKfhrNyBA=="
+  "signature" : "7eABeT6fBAPz7bqTBx3thm14kZt+kcspvY2leS6oFbRiV+Bh11rKxyzaUkzw7XGUeNKsP6jn4rVe08Q34b5GCA=="
 }
