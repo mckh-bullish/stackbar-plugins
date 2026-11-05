@@ -107,6 +107,12 @@
       "changes": [
         {
           "notes": [
+            "Typing \"settings\" finds the System Settings app first. Every pane used to outrank it, because each one has \"settings\" as a keyword."
+          ],
+          "version": "1.0.1"
+        },
+        {
+          "notes": [
             "First release: the palette's app search, now a plugin."
           ],
           "version": "1.0.0"
@@ -131,7 +137,7 @@
           "text": "/Applications (one folder deep), ~/Applications and the system's own apps, plus every pane System Settings lists."
         }
       ],
-      "version": "1.0.0"
+      "version": "1.0.1"
     },
     "io.navbytes.stackbar.plugins.calculator": {
       "changes": [
@@ -1415,6 +1421,12 @@
           "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.0/dark/panel.png",
           "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.0/light/panel.png"
         }
+      },
+      "1.0.1": {
+        "panel": {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.1/dark/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.1/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.calculator": {
@@ -2295,6 +2307,15 @@
         {
           "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.0/dark/previews/hero/panel.png",
           "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every app a few letters away"
+        }
+      ],
+      "1.0.1": [
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.1/dark/previews/hero/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.0.1/light/previews/hero/panel.png",
           "name": "hero",
           "surface": "panel",
           "title": "Every app a few letters away"
