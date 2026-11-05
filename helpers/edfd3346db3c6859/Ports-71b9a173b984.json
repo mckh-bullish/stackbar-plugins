@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.ports",
+  "protocol" : 19,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "f802bb960e3648aaeaf65dfe963072fd29dc866e81374836820999b1770810e5",
+  "signature" : "3+V1DXpJmgQHMpmGbwXb6E8bQg2zyL9RyCxe20yqO6Hp3i4nZrt3QuTEIkCKnUeRu0KrPjjbKp7jqN5YhcvzDA==",
+  "size" : 5151240,
+  "sourceDigest" : "71b9a173b9844214c6ab727c9dc9ad058087da6fb497114cfac03c616546743b",
+  "stackbarKit" : "edfd3346db3c68597dbffcea6a44367546f3c716489769c444832e923081b941",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-edfd3346db3c6859/Ports-71b9a173b984",
+  "version" : "1.4.0"
+}

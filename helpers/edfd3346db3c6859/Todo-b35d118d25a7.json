@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.todo",
+  "protocol" : 19,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "3845f5afde0647b2971d5c5d8ff1d426325fbbf05a6f21ae9311bd183ee6f698",
+  "signature" : "MOWtld71W1Yg8QLuu+3Qi2IDPBib5yA9dfU6+O4cPalygPYsuWdB5HIEfy8s/DW8TbqNglTxW04DT8Sk8NvaDw==",
+  "size" : 5567768,
+  "sourceDigest" : "b35d118d25a7c81a750c0001a4f7d040ece10d27f03c20c7fce42acc3b0a553e",
+  "stackbarKit" : "edfd3346db3c68597dbffcea6a44367546f3c716489769c444832e923081b941",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-edfd3346db3c6859/Todo-b35d118d25a7",
+  "version" : "2.1.0"
+}
