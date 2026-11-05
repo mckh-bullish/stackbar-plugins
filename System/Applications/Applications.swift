@@ -9,7 +9,7 @@ final class Applications: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.applications",
         name: "Applications",
-        version: "1.0.0",
+        version: "1.0.1",
         summary: "Open any app or System Settings pane from the command palette by typing a few letters.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -82,7 +82,11 @@ final class Applications: StackbarPlugin {
         let typed = query.lowercased().trimmingCharacters(in: .whitespaces)
         guard !typed.isEmpty else { return [] }
         return apps.compactMap { app -> (InstalledApp, Int)? in
-            guard let best = ([app.name] + app.keywords).compactMap({ score(typed, in: $0) }).max() else { return nil }
+            // A keyword counts less than the name: every Settings pane has
+            // "settings", and "settings" has to find the System Settings app.
+            let byName = score(typed, in: app.name)
+            let byKeyword = app.keywords.compactMap { score(typed, in: $0) }.max().map { min($0, 600) }
+            guard let best = [byName, byKeyword].compactMap({ $0 }).max() else { return nil }
             // Apps first on a tie: a pane named like an app rarely wins.
             let used = min(300, Int(60 * log2(1 + Double(opens[app.id] ?? 0))))
             return (app, best + used + (app.kind == .app ? 5 : 0))
