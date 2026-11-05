@@ -10,7 +10,9 @@ answers.
 
 - **Needs:** network access to `api.frankfurter.dev` for exchange rates.
   Stackbar 0.20.0 or later.
-- **Surfaces:** panel.
+- **Settings:** turn currency conversion off, and Calculator makes no
+  network requests at all.
+- **Surfaces:** panel, settings.
 - **Commands:** Calculate.
 - **Units:** length, mass, time, data, volume and temperature.
 - **Currencies:** the European Central Bank's reference rates (about 30
@@ -20,6 +22,11 @@ answers.
 - **Time zones:** any city in a time zone's name (`tokyo`, `new york`), plus
   common ones like `sf`, `nyc`, `bangalore`, `uk` and abbreviations like
   `pst` and `ist`. Without a starting place, the time is yours.
+
+## What's new in 1.2.0
+
+- A setting to turn currency conversion off. Off, no exchange rates are
+  fetched and the plugin never goes online.
 
 ## What's new in 1.1.0
 

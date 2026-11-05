@@ -11,10 +11,11 @@ final class Calculator: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.calculator",
         name: "Calculator",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Sums, units, currencies and time zones answered right in the command palette.",
-        surfaces: [.panel],
-        // Exchange rates are fetched at launch and twice a day after.
+        surfaces: [.panel, .settings],
+        // Exchange rates are fetched at launch and every six hours after,
+        // unless currency conversion is turned off in Settings.
         triggers: [.launch, .every(.seconds(6 * 3600))],
         capabilities: [.network("api.frankfurter.dev")],
         minimumStackbar: "0.20.0",
@@ -49,7 +50,12 @@ final class Calculator: StackbarPlugin {
     /// key, about 30 currencies), kept so the palette never waits on them.
     @Stored("rates") var rates: Math.Rates? = nil
 
+    /// Off: no exchange rates are fetched, so the plugin makes no network
+    /// requests at all, and currency sums get no answer.
+    @Stored("currency") var currency = true
+
     func refresh() async throws {
+        guard currency else { return }
         if let rates, Date().timeIntervalSince(rates.fetched) < 6 * 3600 { return }
         struct Latest: Decodable { var base: String; var date: String; var rates: [String: Double] }
         let latest: Latest = try await Stackbar.getJSON("https://api.frankfurter.dev/v1/latest?base=EUR")
@@ -69,7 +75,7 @@ final class Calculator: StackbarPlugin {
     var commands: [Command] {
         Command("calculate", title: "Calculate", subtitle: "Sums, units, currencies and time zones", symbol: "equal.square", keywords: ["math", "sum", "convert", "units", "currency", "time zone"])
             .view { invocation in
-                if let answer = Math.answer(invocation.text, rates: self.rates) {
+                if let answer = Math.answer(invocation.text, rates: self.currency ? self.rates : nil) {
                     List {
                         // The title starts with what was typed, so the
                         // answer leads the palette's results.
@@ -100,6 +106,24 @@ final class Calculator: StackbarPlugin {
                         .action("Copy") { Stackbar.copy(entry.result) }
                 }
             }
+        }
+    }
+
+    // MARK: Settings
+
+    var settings: ViewContent {
+        Section("Currencies") {
+            Toggle("Convert currencies", isOn: currency) { on in
+                self.currency = on
+                if on {
+                    try await self.refresh()
+                } else {
+                    self.rates = nil
+                }
+            }
+            Text(currency
+                ? "Exchange rates come from api.frankfurter.dev (the European Central Bank's reference rates), fetched at launch and every six hours."
+                : "Off: Calculator makes no network requests. Sums, units and time zones still work.").role(.secondary)
         }
     }
 
