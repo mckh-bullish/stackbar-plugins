@@ -10,22 +10,24 @@ import Foundation
 /// `{snippet name="Signature"}` pulls in another snippet. "Search Snippets"
 /// (⌃⌥S) lists them with a preview. Raycast exports import as they are.
 ///
-/// Keywords are kept but not expanded as you type: that needs a system-wide
-/// keyboard monitor, which Stackbar doesn't have.
+/// A snippet's keyword, like `;sig`, expands as you type it in any app:
+/// Stackbar watches for the keywords this plugin registers, deletes the one
+/// typed and runs the snippet's command. The plugin never sees the typing.
 @main
 final class Snippets: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.snippets",
         name: "Snippets",
-        version: "1.3.0",
+        version: "1.4.0",
         summary: "Paste text by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
         // Pasting; the selection for {selection}; room for thousands of
-        // snippets at Raycast's 65,536-character limit.
-        capabilities: [.clipboard, .context, .storage(megabytes: 16)],
+        // snippets at Raycast's 65,536-character limit; keywords that
+        // expand as you type.
+        capabilities: [.clipboard, .context, .storage(megabytes: 16), .textExpansion],
         hotkey: "ctrl+option+s",
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.24.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
         accent: .indigo,
         symbol: "text.insert"
@@ -61,7 +63,7 @@ final class Snippets: StackbarPlugin {
         var name: String
         /// A template, at most 65,536 characters.
         var text: String
-        /// Kept for expansion later, and matched by search.
+        /// Expands to the snippet as you type it, and is matched by search.
         var keyword: String?
         var tags: [String] = []
 
@@ -69,11 +71,48 @@ final class Snippets: StackbarPlugin {
         var template: Template? { try? Template(text) }
     }
 
-    @Stored("snippets") var snippets: [Snippet] = []
+    @Stored("snippets") var snippets: [Snippet] = [] {
+        didSet { registerKeywords() }
+    }
     /// The tag the panel filters by; nil shows them all.
     @Stored("panelTag") var panelTag: String? = nil
     var draft = Draft()
     var notice: String?
+    /// The keywords last handed to Stackbar, so an edit that leaves them be
+    /// sends nothing.
+    var registered: [TextExpansion]?
+    /// Whether they expand, and if not, why (shown in Settings).
+    var expansion: ExpansionStatus?
+
+    func refresh() async throws {
+        registerKeywords()
+    }
+
+    /// Every snippet's keyword, to its command. Keywords Stackbar can't
+    /// expand (over 32 characters, say) stay searchable.
+    var expansions: [TextExpansion] {
+        var seen: Set<String> = []
+        let all = snippets.compactMap { snippet -> TextExpansion? in
+            guard let keyword = snippet.keyword, TextExpansion.isValidKeyword(keyword), seen.insert(keyword).inserted else { return nil }
+            return TextExpansion(keyword: keyword, command: snippet.commandID)
+        }
+        return Array(all.prefix(TextExpansion.maxPerPlugin))
+    }
+
+    /// Hands Stackbar the keywords when they changed.
+    func registerKeywords() {
+        let expansions = expansions
+        guard expansions != registered else { return }
+        registered = expansions
+        Task {
+            do {
+                self.expansion = try await Stackbar.setExpansions(expansions)
+            } catch {
+                // Tried again on the next change or launch.
+                self.registered = nil
+            }
+        }
+    }
 
     /// The create and edit form's errors, kept between its renders.
     struct Draft {
@@ -252,7 +291,7 @@ final class Snippets: StackbarPlugin {
         Form(submit: existing == nil ? "Create Snippet" : "Save", key: id?.uuidString ?? "new") {
             FormField.text("Name", name: "name", value: existing?.name ?? "", placeholder: "Signature", error: draft.nameError)
             FormField.multiline("Snippet", name: "text", value: existing?.text ?? "", placeholder: "Thanks,\n{argument name=\"name\" default=\"Nav\"}", error: draft.textError)
-            FormField.text("Keyword", name: "keyword", value: existing?.keyword ?? "", placeholder: ";sig (kept for later; not expanded as you type)", error: draft.keywordError)
+            FormField.text("Keyword", name: "keyword", value: existing?.keyword ?? "", placeholder: ";sig (expands as you type it)", error: draft.keywordError)
             FormField.text("Tags", name: "tags", value: existing?.tags.joined(separator: ", ") ?? "", placeholder: "work, email")
         } onSubmit: { values in
             self.save(values, editing: id)
@@ -309,7 +348,7 @@ final class Snippets: StackbarPlugin {
         if keyword.contains(where: { $0.isWhitespace || $0 == "\"" || $0 == "'" || $0 == "`" }) {
             return "A keyword has no spaces, quotes or backticks"
         }
-        return keyword.count > 64 ? "A keyword is at most 64 characters" : nil
+        return keyword.count > TextExpansion.maxKeywordLength ? "A keyword is at most \(TextExpansion.maxKeywordLength) characters" : nil
     }
 
     // MARK: Import and export
@@ -442,6 +481,20 @@ final class Snippets: StackbarPlugin {
         }
     }
 
+    /// Whether keywords expand, in words.
+    var expansionSummary: String {
+        let count = expansions.count
+        guard count > 0 else { return "No snippet has a keyword yet." }
+        let keywords = count == 1 ? "1 keyword" : "\(count) keywords"
+        guard let status = expansion else { return "\(keywords) registered." }
+        if status.turnedOff { return "\(keywords), but keyword expansion is switched off in Stackbar Settings." }
+        if status.needsAccessibility { return "\(keywords), waiting for Accessibility access in System Settings › Privacy & Security." }
+        if let app = status.secureInputApp { return "\(keywords), paused while \(app) has Secure Input on." }
+        var text = status.listening ? "\(keywords) expand as you type." : "\(keywords) registered."
+        if !status.taken.isEmpty { text += " Another plugin already uses " + status.taken.prefix(3).joined(separator: ", ") + "." }
+        return text
+    }
+
     /// One line short enough for a tile, so tiles in a row match.
     static func clip(_ text: String, _ limit: Int) -> String {
         text.count > limit ? String(text.prefix(limit - 1)) + "…" : text
@@ -468,7 +521,10 @@ final class Snippets: StackbarPlugin {
         }
         Section("Pasting") {
             Text("⌃⌥S opens Search Snippets; give one you use often its own hotkey in Settings › Commands. Pasting needs Accessibility access and puts your clipboard back after.").style(.caption)
-            Text("Keywords are searchable but not expanded as you type. For plain text, macOS can expand them in System Settings › Keyboard › Text Replacements.").style(.caption)
+        }
+        Section("Keywords") {
+            Text(expansionSummary).style(.caption)
+            Text("Type a snippet's keyword anywhere and it is replaced with the snippet. Turn this off, or skip apps, in Stackbar Settings › Privacy & Secrets.").style(.caption)
         }
     }
 }

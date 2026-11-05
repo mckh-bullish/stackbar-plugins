@@ -8,13 +8,22 @@ clipboard back. Snippets use Raycast's template syntax: `{clipboard}`,
 another snippet.
 
 - **Needs:** the clipboard (to paste), what you had selected for
-  `{selection}`, and 16 MB of storage for the snippets.
+  `{selection}`, 16 MB of storage for the snippets, and keyword expansion.
+  Stackbar 0.24.0 or later.
 - **Surfaces:** panel, settings. Hotkey ⌃⌥S opens Search Snippets.
-- **Settings:** your snippets, and importing a Raycast export.
+- **Settings:** your snippets, importing a Raycast export, and whether
+  keywords are expanding.
 - **Commands:** Search Snippets, Create Snippet, Import Snippets, Export
   Snippets (a file Raycast reads too), plus one command per snippet.
-- **Not yet:** keywords are kept but not expanded as you type, because that
-  needs a system-wide keyboard monitor.
+- **Keywords:** type a snippet's keyword, like `;sig`, in any app and it is
+  replaced with the snippet. A snippet that asks for an argument opens in the
+  palette first. Stackbar does the watching, so this plugin never sees what
+  you type; switch it off or skip apps in Settings › Privacy & Secrets.
+
+## What's new in 1.4.0
+
+- Keywords expand as you type them, in any app. Keywords are now at most 32
+  characters; longer ones you already have stay searchable.
 
 ## What's new in 1.3.0
 

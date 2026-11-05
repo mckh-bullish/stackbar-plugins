@@ -14,7 +14,7 @@ import PackageDescription
 /// and custom styling.
 /// Switch to `exact:` once tags are pushed, and raise it in its own pull
 /// request; a plugin may still set an older `minimumStackbar`.
-let stackbarRevision = "fdb50425ce1c7a45f2031ccb7ca956c7b66454c7" // 0.22.0: palette hotkey, welcome, HUD, system actions (#103)
+let stackbarRevision = "2a20aa7d90b6ce30a9e3b84e414622bd9bc114dc" // 0.24.0: keyword expansion (#110)
 
 /// Category folders. The folder name is the category the store shows.
 let categories = ["System", "Developer", "Network", "Monitoring", "Productivity"]
