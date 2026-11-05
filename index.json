@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-04T17:12:11Z",
+  "generated" : "2026-11-05T03:00:53Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -24,7 +24,7 @@
         "window",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.1.1"
     },
     {
@@ -47,7 +47,7 @@
         "window",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.0"
     },
     {
@@ -72,7 +72,7 @@
         "settings"
       ],
       "symbol" : "doc.on.clipboard.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.1"
     },
     {
@@ -97,7 +97,7 @@
         "settings"
       ],
       "symbol" : "doc.on.clipboard.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.5.0"
     },
     {
@@ -122,8 +122,33 @@
         "settings"
       ],
       "symbol" : "doc.on.clipboard.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.6.0"
+    },
+    {
+      "accent" : "blue",
+      "bundle" : "Productivity/io.navbytes.stackbar.clipboard-1.7.0.stackbarplugin",
+      "capabilities" : [
+        "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
+      "id" : "io.navbytes.stackbar.clipboard",
+      "minimumStackbar" : "0.21.0",
+      "name" : "Clipboard History",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.clipboard.png",
+      "sha256" : "7a557f899b4a974c6701f5223c154443821411a9e1b9fac9772f40fed18561db",
+      "summary" : "Everything you copy, searchable and one keystroke from pasting back.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "settings"
+      ],
+      "symbol" : "doc.on.clipboard.fill",
+      "updated" : "2026-11-05",
+      "version" : "1.7.0"
     },
     {
       "accent" : "indigo",
@@ -148,7 +173,7 @@
         "settings"
       ],
       "symbol" : "command",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -174,8 +199,34 @@
         "settings"
       ],
       "symbol" : "command",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.1.0"
+    },
+    {
+      "accent" : "indigo",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.app-switcher-1.2.0.stackbarplugin",
+      "capabilities" : [
+        "Sees which apps are installed and running, and switches to, opens or hides them",
+        "Listens for a key you hold (like Right ⌘) and the letter you press with it",
+        "Opens x-apple.systempreferences: links"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/AppSwitcher",
+      "id" : "io.navbytes.stackbar.plugins.app-switcher",
+      "minimumStackbar" : "0.21.0",
+      "name" : "App Switcher",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.app-switcher.png",
+      "sha256" : "7d3bb83fe8b48bcf01e49976cc8f7dc564d15b247df8ef241060b75219a1e3e5",
+      "summary" : "Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "settings"
+      ],
+      "symbol" : "command",
+      "updated" : "2026-11-05",
+      "version" : "1.2.0"
     },
     {
       "accent" : "blue",
@@ -197,7 +248,7 @@
         "panel"
       ],
       "symbol" : "square.grid.3x3.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -219,7 +270,7 @@
         "panel"
       ],
       "symbol" : "equal.square.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -241,7 +292,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -264,7 +315,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
     },
     {
@@ -289,7 +340,7 @@
         "settings"
       ],
       "symbol" : "shippingbox.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.1"
     },
     {
@@ -314,8 +365,34 @@
         "settings"
       ],
       "symbol" : "shippingbox.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.0"
+    },
+    {
+      "accent" : "cyan",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.docker-1.5.0.stackbarplugin",
+      "capabilities" : [
+        "Runs docker (not installed)"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
+      "id" : "io.navbytes.stackbar.plugins.docker",
+      "minimumStackbar" : "0.17.0",
+      "name" : "Docker",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.docker.png",
+      "sha256" : "f75ff279d1e1b7fd2d41ec6d2fd690b5e643d16f0e6b13b6163104a9e71c471e",
+      "summary" : "Your containers, with start, stop, restart and logs a click away.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "shippingbox.fill",
+      "updated" : "2026-11-05",
+      "version" : "1.5.0"
     },
     {
       "accent" : "amber",
@@ -336,8 +413,30 @@
         "panel"
       ],
       "symbol" : "face.smiling",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
+    },
+    {
+      "accent" : "amber",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.emoji-1.1.0.stackbarplugin",
+      "capabilities" : [
+        "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Emoji",
+      "id" : "io.navbytes.stackbar.plugins.emoji",
+      "minimumStackbar" : "0.21.0",
+      "name" : "Emoji",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.emoji.png",
+      "sha256" : "adc385e2b48dab88154813bda285f0693a999cbdc6fad38864fee02df4a95b2b",
+      "summary" : "Search every emoji by name in a grid, and paste it where you were typing.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "face.smiling",
+      "updated" : "2026-11-05",
+      "version" : "1.1.0"
     },
     {
       "accent" : "cyan",
@@ -359,7 +458,7 @@
         "panel"
       ],
       "symbol" : "doc.text.magnifyingglass",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -381,7 +480,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -403,7 +502,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -426,7 +525,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
     },
     {
@@ -451,7 +550,7 @@
         "settings"
       ],
       "symbol" : "mug.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.1"
     },
     {
@@ -476,8 +575,33 @@
         "settings"
       ],
       "symbol" : "mug.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.0"
+    },
+    {
+      "accent" : "amber",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.homebrew-1.5.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /opt/homebrew/bin/brew"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew",
+      "id" : "io.navbytes.stackbar.plugins.homebrew",
+      "minimumStackbar" : "0.21.0",
+      "name" : "Homebrew",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.homebrew.png",
+      "sha256" : "32410f5929424040d52c06bb1bbb1f31ed6963ac89844400c3f170b61cb1412b",
+      "summary" : "Outdated formulae and casks, with upgrades a click away.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "mug.fill",
+      "updated" : "2026-11-05",
+      "version" : "1.5.0"
     },
     {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.jira-1.0.0.stackbarplugin",
@@ -499,7 +623,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -522,7 +646,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.1"
     },
     {
@@ -547,7 +671,7 @@
         "settings"
       ],
       "symbol" : "ticket.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.2"
     },
     {
@@ -572,8 +696,34 @@
         "settings"
       ],
       "symbol" : "ticket.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
+    },
+    {
+      "accent" : "blue",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.jira-1.4.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to *.atlassian.net",
+        "Reads the secret JIRA_API_TOKEN"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
+      "id" : "io.navbytes.stackbar.plugins.jira",
+      "minimumStackbar" : "0.21.0",
+      "name" : "Jira",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.jira.png",
+      "sha256" : "8d8b8a42222a81d8df2be96b32de881f8e94aaab51bbff3c07cb1611cded841d",
+      "summary" : "Your assigned Jira Cloud issues, search and new issues from the palette.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "ticket.fill",
+      "updated" : "2026-11-05",
+      "version" : "1.4.0"
     },
     {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.linear-1.0.0.stackbarplugin",
@@ -595,7 +745,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -618,7 +768,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.0"
     },
     {
@@ -643,7 +793,7 @@
         "settings"
       ],
       "symbol" : "circle.lefthalf.filled",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.1"
     },
     {
@@ -668,8 +818,34 @@
         "settings"
       ],
       "symbol" : "circle.lefthalf.filled",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
+    },
+    {
+      "accent" : "indigo",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.linear-1.4.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to api.linear.app",
+        "Reads the secret LINEAR_API_KEY"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
+      "id" : "io.navbytes.stackbar.plugins.linear",
+      "minimumStackbar" : "0.21.0",
+      "name" : "Linear",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.linear.png",
+      "sha256" : "265c02615f0b2596cfdfab1c6ff4872b62537ea9697878321c7105dad01609c9",
+      "summary" : "Your assigned Linear issues, branch names, search and new issues from the palette.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "circle.lefthalf.filled",
+      "updated" : "2026-11-05",
+      "version" : "1.4.0"
     },
     {
       "bundle" : "Monitoring/io.navbytes.stackbar.plugins.litellm-1.0.0.stackbarplugin",
@@ -693,7 +869,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -718,7 +894,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.0"
     },
     {
@@ -745,7 +921,7 @@
         "settings"
       ],
       "symbol" : "sparkles",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.1"
     },
     {
@@ -772,8 +948,35 @@
         "settings"
       ],
       "symbol" : "sparkles",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
+    },
+    {
+      "accent" : "pink",
+      "bundle" : "Monitoring/io.navbytes.stackbar.plugins.litellm-1.4.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to the server you enter as LITELLM_PROXY_URL, and no other",
+        "Reads the secret LITELLM_API_KEY"
+      ],
+      "category" : "Monitoring",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/LiteLLM",
+      "id" : "io.navbytes.stackbar.plugins.litellm",
+      "minimumStackbar" : "0.17.0",
+      "name" : "LiteLLM",
+      "publisher" : "navbytes",
+      "screenshot" : "Monitoring/io.navbytes.stackbar.plugins.litellm.png",
+      "sha256" : "b929e8dec82c51ec1e88b20c70cc6a9988d0acd83f6258d1fd2b4ea631c8122f",
+      "summary" : "Tokens, spend, budget and model mix from your LiteLLM proxy, with charts.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "sparkles",
+      "updated" : "2026-11-05",
+      "version" : "1.4.0"
     },
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.music-1.0.0.stackbarplugin",
@@ -795,7 +998,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -819,7 +1022,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.0"
     },
     {
@@ -845,7 +1048,7 @@
         "settings"
       ],
       "symbol" : "music.note",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.1"
     },
     {
@@ -871,8 +1074,34 @@
         "settings"
       ],
       "symbol" : "music.note",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
+    },
+    {
+      "accent" : "pink",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.music-1.4.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /usr/bin/osascript (can run any program)",
+        "Connects to itunes.apple.com, *.mzstatic.com, i.scdn.co"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Music",
+      "id" : "io.navbytes.stackbar.plugins.music",
+      "minimumStackbar" : "0.21.0",
+      "name" : "Music",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.music.png",
+      "sha256" : "dcb12ad8a5ae97c050779d064b1f6c9efa085b9ce2f3fdc5ffe935a81b758911",
+      "summary" : "What's playing in Music or Spotify, with play, pause, skip and volume.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "music.note",
+      "updated" : "2026-11-05",
+      "version" : "1.4.0"
     },
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.pomodoro-1.0.0.stackbarplugin",
@@ -894,7 +1123,7 @@
         "settings",
         "widget"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -917,7 +1146,7 @@
         "settings",
         "widget"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
     },
     {
@@ -942,7 +1171,7 @@
         "widget"
       ],
       "symbol" : "timer",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.1"
     },
     {
@@ -967,8 +1196,33 @@
         "widget"
       ],
       "symbol" : "timer",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.0"
+    },
+    {
+      "accent" : "red",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.pomodoro-1.5.0.stackbarplugin",
+      "capabilities" : [
+
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Pomodoro",
+      "id" : "io.navbytes.stackbar.plugins.pomodoro",
+      "minimumStackbar" : "0.17.0",
+      "name" : "Pomodoro",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.pomodoro.png",
+      "sha256" : "74ec94d05384ca8d367f77ddc2395f247e53c4e963ddcb360381208596becf64",
+      "summary" : "A focus timer with presets, a progress ring, tags and today's sessions.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "settings",
+        "widget"
+      ],
+      "symbol" : "timer",
+      "updated" : "2026-11-05",
+      "version" : "1.5.0"
     },
     {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.ports-1.0.0.stackbarplugin",
@@ -988,7 +1242,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -1009,7 +1263,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.1"
     },
     {
@@ -1032,7 +1286,7 @@
         "settings"
       ],
       "symbol" : "point.3.connected.trianglepath.dotted",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.2"
     },
     {
@@ -1055,8 +1309,31 @@
         "settings"
       ],
       "symbol" : "point.3.connected.trianglepath.dotted",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
+    },
+    {
+      "accent" : "teal",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.ports-1.4.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /usr/sbin/lsof, /bin/kill"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports",
+      "id" : "io.navbytes.stackbar.plugins.ports",
+      "minimumStackbar" : "0.21.0",
+      "name" : "Ports",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.ports.png",
+      "sha256" : "d6ce7d1394e1adba1361e33841ff38b521424b4c60fd42aad72d5b1bcba319a9",
+      "summary" : "Which process is listening on which port, and a way to stop it.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "point.3.connected.trianglepath.dotted",
+      "updated" : "2026-11-05",
+      "version" : "1.4.0"
     },
     {
       "bundle" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor-1.0.0.stackbarplugin",
@@ -1078,7 +1355,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -1101,7 +1378,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.0"
     },
     {
@@ -1126,7 +1403,7 @@
         "settings"
       ],
       "symbol" : "gauge.with.dots.needle.67percent",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.1"
     },
     {
@@ -1151,8 +1428,33 @@
         "settings"
       ],
       "symbol" : "gauge.with.dots.needle.67percent",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
+    },
+    {
+      "accent" : "green",
+      "bundle" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor-1.4.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /usr/bin/top, /usr/bin/vm_stat, /bin/df, /bin/kill"
+      ],
+      "category" : "Monitoring",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
+      "id" : "io.navbytes.stackbar.plugins.system-monitor",
+      "minimumStackbar" : "0.17.0",
+      "name" : "System Monitor",
+      "publisher" : "navbytes",
+      "screenshot" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor.png",
+      "sha256" : "32f14d11cf369d77cef7ba4f47b272e8010ac07fc4e7fc279c3001c47b51ada1",
+      "summary" : "CPU, memory and disk in the menu bar, with the processes using the most.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "gauge.with.dots.needle.67percent",
+      "updated" : "2026-11-05",
+      "version" : "1.4.0"
     },
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.todo-1.0.0.stackbarplugin",
@@ -1174,7 +1476,7 @@
         "settings",
         "widget"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -1199,7 +1501,7 @@
         "widget"
       ],
       "symbol" : "checklist",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.1"
     },
     {
@@ -1224,7 +1526,7 @@
         "widget"
       ],
       "symbol" : "checklist",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.1.0"
     },
     {
@@ -1249,8 +1551,33 @@
         "widget"
       ],
       "symbol" : "checklist",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "2.0.0"
+    },
+    {
+      "accent" : "orange",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.todo-2.1.0.stackbarplugin",
+      "capabilities" : [
+        "Reads and changes your reminders"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Todo",
+      "id" : "io.navbytes.stackbar.plugins.todo",
+      "minimumStackbar" : "0.20.0",
+      "name" : "Todo",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.todo.png",
+      "sha256" : "af75e6037a4c2691fff82693e1834531f31bc81de5e31000c73bb660e5818179",
+      "summary" : "A calm to-do list that understands dates as you type them, kept in Apple Reminders so it's on all your devices.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "settings",
+        "widget"
+      ],
+      "symbol" : "checklist",
+      "updated" : "2026-11-05",
+      "version" : "2.1.0"
     },
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.translate-1.0.0.stackbarplugin",
@@ -1273,7 +1600,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -1297,7 +1624,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
     },
     {
@@ -1323,7 +1650,7 @@
         "settings"
       ],
       "symbol" : "character.bubble.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.1"
     },
     {
@@ -1349,8 +1676,34 @@
         "settings"
       ],
       "symbol" : "character.bubble.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.0"
+    },
+    {
+      "accent" : "teal",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.translate-1.5.0.stackbarplugin",
+      "capabilities" : [
+        "Reads the text you select and which app you're in",
+        "Reads everything you copy, and pastes into the app you're using",
+        "Connects to translate.googleapis.com, api-free.deepl.com, api.deepl.com",
+        "Reads the secret DEEPL_API_KEY"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate",
+      "id" : "io.navbytes.stackbar.plugins.translate",
+      "minimumStackbar" : "0.20.0",
+      "name" : "Translate",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.translate.png",
+      "sha256" : "6745d6975526217051f91d1caabd8d42e0c9eb0372a8753dafa32ecc4f968b15",
+      "summary" : "Translate the selected text in place, on your Mac or with Google or DeepL.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "character.bubble.fill",
+      "updated" : "2026-11-05",
+      "version" : "1.5.0"
     },
     {
       "accent" : "indigo",
@@ -1372,7 +1725,7 @@
         "settings"
       ],
       "symbol" : "rectangle.split.2x1",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -1396,7 +1749,7 @@
         "settings"
       ],
       "symbol" : "rectangle.3.group",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -1420,8 +1773,32 @@
         "settings"
       ],
       "symbol" : "rectangle.3.group",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.1.0"
+    },
+    {
+      "accent" : "graphite",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.workspaces-1.2.0.stackbarplugin",
+      "capabilities" : [
+        "Sees which windows you have open and where, moves them, and opens apps"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Workspaces",
+      "id" : "io.navbytes.stackbar.plugins.workspaces",
+      "minimumStackbar" : "0.21.0",
+      "name" : "Workspaces",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.workspaces.png",
+      "sha256" : "c9e9bc83ecab8660a74ef2ceec21b06178f8b7f9bd057e1844502a21da9078e1",
+      "summary" : "Saves where your windows are for each monitor setup, and puts them back when you dock, undock or wake.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "settings"
+      ],
+      "symbol" : "rectangle.3.group",
+      "updated" : "2026-11-05",
+      "version" : "1.2.0"
     },
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.world-clock-1.0.0.stackbarplugin",
@@ -1443,7 +1820,7 @@
         "settings",
         "widget"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.0"
     },
     {
@@ -1466,7 +1843,7 @@
         "settings",
         "widget"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
     },
     {
@@ -1491,7 +1868,7 @@
         "widget"
       ],
       "symbol" : "globe",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.1"
     },
     {
@@ -1516,8 +1893,33 @@
         "widget"
       ],
       "symbol" : "globe",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.0"
+    },
+    {
+      "accent" : "violet",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.world-clock-1.5.0.stackbarplugin",
+      "capabilities" : [
+
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WorldClock",
+      "id" : "io.navbytes.stackbar.plugins.world-clock",
+      "minimumStackbar" : "0.21.0",
+      "name" : "World Clock",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.world-clock.png",
+      "sha256" : "950a4129b82c89afe95e2e37e1c28f2d554a5a58f6a13ee324fb595cb9824375",
+      "summary" : "The time in the cities you work with, with offsets and working hours.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "settings",
+        "widget"
+      ],
+      "symbol" : "globe",
+      "updated" : "2026-11-05",
+      "version" : "1.5.0"
     },
     {
       "bundle" : "Developer/io.navbytes.stackbar.pr-cockpit-1.1.1.stackbarplugin",
@@ -1541,7 +1943,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.1.1"
     },
     {
@@ -1566,7 +1968,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.0"
     },
     {
@@ -1591,7 +1993,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.1"
     },
     {
@@ -1616,7 +2018,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.2"
     },
     {
@@ -1643,7 +2045,7 @@
         "settings"
       ],
       "symbol" : "arrow.triangle.pull",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.3"
     },
     {
@@ -1670,7 +2072,7 @@
         "settings"
       ],
       "symbol" : "arrow.triangle.pull",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.5.0"
     },
     {
@@ -1697,8 +2099,35 @@
         "settings"
       ],
       "symbol" : "arrow.triangle.pull",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.6.0"
+    },
+    {
+      "accent" : "violet",
+      "bundle" : "Developer/io.navbytes.stackbar.pr-cockpit-1.7.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to api.github.com",
+        "Reads the secret GITHUB_TOKEN"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
+      "id" : "io.navbytes.stackbar.pr-cockpit",
+      "minimumStackbar" : "0.21.0",
+      "name" : "PR Cockpit",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.pr-cockpit.png",
+      "sha256" : "f65f5703e48d9bb892e9309410898b77c32af4c34db3b7ac101be705673bf6f5",
+      "summary" : "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "arrow.triangle.pull",
+      "updated" : "2026-11-05",
+      "version" : "1.7.0"
     },
     {
       "bundle" : "Productivity/io.navbytes.stackbar.quicklinks-1.0.1.stackbarplugin",
@@ -1720,7 +2149,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.1"
     },
     {
@@ -1744,7 +2173,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
     },
     {
@@ -1770,7 +2199,7 @@
         "settings"
       ],
       "symbol" : "link",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.1"
     },
     {
@@ -1796,7 +2225,7 @@
         "settings"
       ],
       "symbol" : "link",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.0"
     },
     {
@@ -1822,7 +2251,7 @@
         "settings"
       ],
       "symbol" : "link",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.5.0"
     },
     {
@@ -1845,7 +2274,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.1"
     },
     {
@@ -1868,7 +2297,7 @@
         "panel",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.0"
     },
     {
@@ -1893,7 +2322,7 @@
         "settings"
       ],
       "symbol" : "text.insert",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.2.1"
     },
     {
@@ -1918,7 +2347,7 @@
         "settings"
       ],
       "symbol" : "text.insert",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
     },
     {
@@ -1941,7 +2370,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.1"
     },
     {
@@ -1964,7 +2393,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
     },
     {
@@ -1989,7 +2418,7 @@
         "settings"
       ],
       "symbol" : "cup.and.saucer.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.1"
     },
     {
@@ -2014,8 +2443,33 @@
         "settings"
       ],
       "symbol" : "cup.and.saucer.fill",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.0"
+    },
+    {
+      "accent" : "amber",
+      "bundle" : "System/io.navbytes.stackbar.stay-awake-1.5.0.stackbarplugin",
+      "capabilities" : [
+        "Keeps the Mac awake, and reads battery and running apps"
+      ],
+      "category" : "System",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake",
+      "id" : "io.navbytes.stackbar.stay-awake",
+      "minimumStackbar" : "0.21.0",
+      "name" : "Stay Awake",
+      "publisher" : "navbytes",
+      "screenshot" : "System/io.navbytes.stackbar.stay-awake.png",
+      "sha256" : "2518ca1b0a046cc5d6762f859def64c28db30c6ef8b70c98c8788955dfd933d8",
+      "summary" : "Keeps your Mac awake for a while, until a time, while an app runs or on a schedule.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "cup.and.saucer.fill",
+      "updated" : "2026-11-05",
+      "version" : "1.5.0"
     },
     {
       "bundle" : "Productivity/io.navbytes.stackbar.up-next-1.0.1.stackbarplugin",
@@ -2038,7 +2492,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.0.1"
     },
     {
@@ -2062,7 +2516,7 @@
         "widget",
         "settings"
       ],
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.0"
     },
     {
@@ -2088,7 +2542,7 @@
         "settings"
       ],
       "symbol" : "calendar",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.3.1"
     },
     {
@@ -2114,7 +2568,7 @@
         "settings"
       ],
       "symbol" : "calendar",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.0"
     },
     {
@@ -2140,7 +2594,7 @@
         "settings"
       ],
       "symbol" : "calendar",
-      "updated" : "2026-11-04",
+      "updated" : "2026-11-05",
       "version" : "1.4.1"
     }
   ],
@@ -2150,5 +2604,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "NhYQaoUTU9rSeF5fc4veD1o6mFUP+86rtWkRGxB+uzIYBq9XwBhozZh0shcXIi8rkC38APkM3u7jGdCNnCycDg=="
+  "signature" : "skAqIPN+OIYFUt3+bfuTF43WNHZs6YG951i/hJwPzW0t/ryYWDSTIiD2IWl0xL5dThP8gbfX1aUGQkcPFzbhDw=="
 }
