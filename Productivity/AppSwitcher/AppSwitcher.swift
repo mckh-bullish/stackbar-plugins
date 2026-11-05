@@ -13,12 +13,12 @@ final class AppSwitcher: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.app-switcher",
         name: "App Switcher",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .apps, .every(.seconds(20))],
         capabilities: [.apps, .keyLayer, .openURLs(schemes: ["x-apple.systempreferences"])],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/AppSwitcher",
         accent: .indigo,
         symbol: "command"
@@ -57,6 +57,9 @@ final class AppSwitcher: StackbarPlugin {
     @Stored("autoLetters") var autoLetters = true
     @Stored("openPinned") var openPinned = true
     @Stored("overlay") var overlay = true
+    /// Off by default: the switcher lives on a held key, so the icon only
+    /// shows up when the key stops working.
+    @Stored("menuBarIcon") var menuBarIcon = false
 
     var apps: [RunningApp] = []
     var status: KeyLayerStatus?
@@ -163,8 +166,16 @@ final class AppSwitcher: StackbarPlugin {
 
     // MARK: - Surfaces
 
+    /// Whether something the user must fix stops the key from working.
+    /// Secure Input is left out: it passes once a password field is left.
+    var needsAttention: Bool {
+        problem != nil || status?.needsAccessibility == true || status?.conflict != nil
+    }
+
     var menuBar: ViewContent {
-        Label("", symbol: status?.listening == false ? "command.circle" : "command").role(.secondary)
+        if menuBarIcon || needsAttention {
+            Label("", symbol: status?.listening == false ? "command.circle" : "command").role(needsAttention ? .warning : .secondary)
+        }
     }
 
     @ViewBuilder var statusBanner: ViewContent {
@@ -230,6 +241,10 @@ final class AppSwitcher: StackbarPlugin {
     }
 
     var settings: ViewContent {
+        Section("Menu bar") {
+            Toggle("Show the icon in the menu bar", isOn: menuBarIcon) { value in await self.set { self.menuBarIcon = value } }
+            Text("Without it, open App Switcher from the palette. The icon comes back by itself when the key stops working.").role(.secondary)
+        }
         Section("Keys") {
             Picker("Hold", options: KeyLayerTrigger.allCases.map(\.title), selection: triggerKey.title) { title in
                 await self.set { self.trigger = (KeyLayerTrigger.allCases.first { $0.title == title } ?? .rightCommand).rawValue }

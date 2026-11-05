@@ -19,6 +19,11 @@ first.
 
 Jira Server and Data Center aren't supported: only Atlassian's cloud sites.
 
+## What's new in 1.4.0
+
+- Type an issue key like ABC-123 in the palette and the issue comes up first, without opening Jira's command.
+- A desktop widget shows your open issues.
+
 ## What's new in 1.3.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

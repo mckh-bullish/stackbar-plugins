@@ -18,6 +18,10 @@ whatever holds it is asked to stop.
 Processes owned by another user, like system services, can't be stopped
 from here.
 
+## What's new in 1.4.0
+
+- Type a port number like 3000 or :8080 in the palette to see what is listening on it.
+
 ## What's new in 1.3.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

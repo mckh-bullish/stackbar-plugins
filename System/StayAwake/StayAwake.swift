@@ -10,12 +10,12 @@ final class StayAwake: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.stay-awake",
         name: "Stay Awake",
-        version: "1.4.0",
+        version: "1.5.0",
         summary: "Keeps your Mac awake for a while, until a time, while an app runs or on a schedule.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.power],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake",
         accent: .amber,
         symbol: "cup.and.saucer.fill"
@@ -618,6 +618,8 @@ final class StayAwake: StackbarPlugin {
                         Text("Awake").typography(.title)
                         if let range { TimerText(range).typography(Typography(size: 26, weight: .heavy, design: .rounded, monospacedDigit: true)) }
                         Text(reason ?? "").typography(.caption).opacity(0.85)
+                        // Stackbar 0.21.0 sends widget presses to the plugin.
+                        Button("Stop", symbol: "stop.fill", key: "widget-stop") { await self.stop() }
                     }
                     .frame(fillWidth: true, alignment: .leading)
                 }
@@ -629,6 +631,7 @@ final class StayAwake: StackbarPlugin {
                 VStack(spacing: Space.xxs) {
                     Text("Sleeps normally").typography(.title)
                     Text("Today \(Self.clock(awakeByDay[Self.day(Date())] ?? 0)) awake").role(.secondary).typography(.caption)
+                    Button("Keep Awake", symbol: "cup.and.saucer.fill", key: "widget-start") { await self.start(.indefinitely) }
                 }
                 .frame(fillWidth: true, alignment: .leading)
             }

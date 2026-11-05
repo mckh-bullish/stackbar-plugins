@@ -11,12 +11,12 @@ final class Ports: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.ports",
         name: "Ports",
-        version: "1.3.0",
+        version: "1.4.0",
         summary: "Which process is listening on which port, and a way to stop it.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .every(.seconds(30))],
         capabilities: [.run(commands: ["lsof", "kill"])],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports",
         accent: .teal,
         symbol: "point.3.connected.trianglepath.dotted"
@@ -51,6 +51,9 @@ final class Ports: StackbarPlugin {
 
     var listeners: [Listener] = []
     var loaded = false
+    /// When `lsof` last answered, so a port typed in the palette reuses a
+    /// fresh list instead of running it on every keystroke.
+    var loadedAt: Date?
     var problem: String?
     var notice: String?
     var noticeOK = true
@@ -90,6 +93,7 @@ final class Ports: StackbarPlugin {
                 return
             }
             listeners = Self.parse(result.text)
+            loadedAt = Date()
             problem = nil
         } catch {
             problem = "\(error)"
@@ -217,6 +221,16 @@ final class Ports: StackbarPlugin {
         }
         .argument("port", placeholder: "3000")
         .argument("signal", required: false, default: "TERM", options: ["TERM", "KILL"])
+        // Typing a port number (3000 or :3000) at the palette's root shows
+        // what holds it; other text never reaches the plugin.
+        Command("port", title: "Find Port", symbol: "network", keywords: ["port"])
+            .view(search: { _ in
+                if self.loadedAt.map({ Date().timeIntervalSince($0) > 10 }) ?? true { await self.load() }
+            }) { invocation in
+                List(Self.matching(self.listeners, invocation.text)) { listener in self.row(listener) }
+            }
+            .rootSearch(section: "Ports", matching: #":?\d{2,5}"#)
+            .stackbarOnly()
         Command("ports", title: "Listening Ports", symbol: "network", keywords: ["port", "lsof", "listen", "server"])
             .view(search: { _ in await self.load() }) { _ in
                 if let problem = self.problem {
@@ -225,6 +239,14 @@ final class Ports: StackbarPlugin {
                     List(self.shown, searchable: true) { listener in self.row(listener) }
                 }
             }
+    }
+
+    /// Listeners whose port starts with the typed digits, exact first.
+    static func matching(_ listeners: [Listener], _ text: String) -> [Listener] {
+        let digits = text.trimmingCharacters(in: CharacterSet(charactersIn: ": "))
+        guard !digits.isEmpty else { return [] }
+        return listeners.filter { String($0.port).hasPrefix(digits) }
+            .sorted { (String($0.port) == digits ? 0 : 1, $0.port) < (String($1.port) == digits ? 0 : 1, $1.port) }
     }
 
     var tools: [AgentTool] {

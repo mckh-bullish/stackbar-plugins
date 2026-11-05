@@ -13,12 +13,12 @@ final class Linear: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.linear",
         name: "Linear",
-        version: "1.3.0",
+        version: "1.4.0",
         summary: "Your assigned Linear issues, branch names, search and new issues from the palette.",
-        surfaces: [.menuBar, .panel, .settings],
+        surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("api.linear.app"), .secret(name: "LINEAR_API_KEY")],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
         accent: .indigo,
         symbol: "circle.lefthalf.filled"
@@ -30,6 +30,10 @@ final class Linear: StackbarPlugin {
         PreviewScene("hero", "Your Linear issues, by state and priority") { plugin in
             plugin.teams = [Team(id: "t1", key: "ENG", name: "Engineering"), Team(id: "t2", key: "DES", name: "Design")]
             plugin.defaultTeam = "t1"
+            plugin.assigned = samples
+            plugin.loaded = true
+        },
+        PreviewScene("widget", "What you're on, on your desktop", surface: .widget) { plugin in
             plugin.assigned = samples
             plugin.loaded = true
         },
@@ -78,6 +82,8 @@ final class Linear: StackbarPlugin {
 
     var assigned: [Issue] = []
     var found: [Issue] = []
+    /// The issue an identifier typed at the palette's root names.
+    var keyed: [String: Issue] = [:]
     @Stored("teams") var teams: [Team] = []
     @Stored("defaultTeam") var defaultTeam = ""
     @Stored("menuBarCount") var menuBarCount = "In progress"
@@ -138,6 +144,21 @@ final class Linear: StackbarPlugin {
         }
     }
 
+    /// Looks up one issue by identifier (ENG-231) for the palette's root:
+    /// from your assigned issues when it is there, else one request.
+    func lookUp(identifier text: String) async {
+        let identifier = text.trimmingCharacters(in: .whitespaces).uppercased()
+        guard keyed[identifier] == nil else { return }
+        if let mine = assigned.first(where: { $0.identifier == identifier }) {
+            keyed[identifier] = mine
+            return
+        }
+        struct Data: Decodable { let issue: Issue? }
+        if let issue = try? await query("query($id: String!) { issue(id: $id) { \(Self.fields) } }", variables: ["id": identifier], as: Data.self).issue {
+            keyed[identifier] = issue
+        }
+    }
+
     // MARK: Grouping
 
     /// started, unstarted, backlog, triage: the order Linear's own My Issues uses.
@@ -193,6 +214,16 @@ final class Linear: StackbarPlugin {
 
     let theme = Theme.indigo
     var urgent: Int { assigned.filter { $0.priority == 1 }.count }
+
+    /// In progress first, then the rest assigned; a click opens the issue.
+    var widget: ViewContent {
+        PanelHeader(inProgress.isEmpty ? "\(assigned.count) assigned" : "\(inProgress.count) in progress", subtitle: "Linear", symbol: "checklist", theme: theme)
+        if assigned.isEmpty {
+            EmptyState(problem == nil ? "Nothing assigned" : "Can't reach Linear", symbol: "checkmark.circle", theme: theme)
+        } else {
+            List(inProgress + assigned.filter { $0.state.type != "started" }) { issue in self.row(issue) }
+        }
+    }
 
     var menuBar: ViewContent {
         let count = menuBarCount == "All assigned" ? assigned.count : inProgress.count
@@ -285,6 +316,13 @@ final class Linear: StackbarPlugin {
                     List(self.found) { issue in self.row(issue) }
                 }
             }
+        // An identifier typed at the palette's root opens that issue.
+        Command("issue", title: "Linear Issue by ID", symbol: "checklist", keywords: ["linear"])
+            .view(search: { invocation in await self.lookUp(identifier: invocation.text) }) { invocation in
+                List(self.keyed[invocation.text.trimmingCharacters(in: .whitespaces).uppercased()].map { [$0] } ?? []) { issue in self.row(issue) }
+            }
+            .rootSearch(section: "Linear", matching: #"[A-Za-z][A-Za-z0-9]*-\d+"#)
+            .stackbarOnly()
         Command("create", title: "Create Linear Issue", symbol: "plus.circle", keywords: ["linear", "issue", "new", "ticket"])
             .stackbarOnly()
             .view { _ in self.form }

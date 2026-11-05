@@ -14,7 +14,7 @@ final class LiteLLM: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.litellm",
         name: "LiteLLM",
-        version: "1.3.0",
+        version: "1.4.0",
         summary: "Tokens, spend, budget and model mix from your LiteLLM proxy, with charts.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
@@ -425,6 +425,36 @@ final class LiteLLM: StackbarPlugin {
         Section("Notifications") {
             Toggle("Tell me at 90% and 100% of the budget", isOn: notifyBudget) { self.notifyBudget = $0 }
         }
+    }
+
+    // MARK: Commands
+
+    var commands: [Command] {
+        Command("spend", title: "LiteLLM Spend", subtitle: "Today, 7 and 30 days, and the budget", symbol: "gauge.with.dots.needle.50percent", keywords: ["litellm", "llm", "tokens", "spend", "cost", "budget"])
+            .view(search: { _ in try? await self.refresh() }) { _ in
+                if self.proxy == nil {
+                    ContentUnavailableView("Connect your LiteLLM proxy", symbol: "server.rack", message: "Set LITELLM_PROXY_URL and LITELLM_API_KEY in Stackbar's Settings.")
+                } else {
+                    List {
+                        self.spendRow("Today", 0...0)
+                        self.spendRow("7 days", 0...6)
+                        self.spendRow("30 days", 0...29)
+                        if let budget = self.budget, let max = budget.max {
+                            Row("Budget", subtitle: "\(Self.money(budget.spend, cents: true)) of \(Self.money(max))" + (budget.resetAt.map { ", resets \(Self.relative($0))" } ?? ""),
+                                symbol: "gauge.with.dots.needle.67percent", key: "spend-budget")
+                                .badge(self.budgetUsed.map { "\(Int($0))%" } ?? "", role: (self.budgetUsed ?? 0) >= 90 ? .critical : (self.budgetUsed ?? 0) >= 75 ? .warning : .secondary)
+                                .action("Copy Summary") { Stackbar.copy(self.summaryText) }
+                        }
+                    }
+                }
+            }
+    }
+
+    func spendRow(_ name: String, _ range: ClosedRange<Int>) -> Row {
+        let total = total(range)
+        return Row(name, subtitle: "\(Self.compact(total.tokens)) tokens", symbol: "chart.bar", key: "spend-" + name)
+            .badge(Self.money(total.spend, cents: true))
+            .action("Copy Summary") { Stackbar.copy(self.summaryText) }
     }
 
     var tools: [AgentTool] {

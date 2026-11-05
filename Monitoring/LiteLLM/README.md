@@ -30,6 +30,10 @@ red at 90%.
 
 Ported from vee-plugins' `litellm-cost`.
 
+## What's new in 1.4.0
+
+- A LiteLLM Spend command in the palette shows today, 7 and 30 days, and the budget.
+
 ## What's new in 1.3.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

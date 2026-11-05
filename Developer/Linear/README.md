@@ -15,6 +15,11 @@ by state, ordered by priority.
   issues.
 - **Agent tool:** `assigned` lists your open issues with their branch names.
 
+## What's new in 1.4.0
+
+- Type an issue ID like ENG-42 in the palette and the issue comes up first, without opening Linear's command.
+- A desktop widget shows your open issues.
+
 ## What's new in 1.3.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

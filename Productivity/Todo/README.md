@@ -66,6 +66,10 @@ too, and Siri can add to them. Big tasks break into small steps.
   from plain words.
 - **Requires:** Stackbar 0.18.0 or later.
 
+## What's new in 2.1.0
+
+- When nothing in the palette matches what you typed, Add Task offers to add it.
+
 ## What's new in 2.0.0
 
 - Tasks now live in Apple Reminders, so they're on your iPhone, iPad and Watch too. Your existing tasks move over the first time. Prefer them on this Mac only? Choose that in Settings.

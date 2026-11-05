@@ -46,6 +46,10 @@ requests, issues or Actions, copy a clone URL, or start a new issue.
 A widget keeps the review queue in view.
 <!-- preview: widget -->
 
+## What's new in 1.7.0
+
+- Type owner/repo or repo#123 in the palette to jump straight to the repository or pull request.
+
 ## What's new in 1.6.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

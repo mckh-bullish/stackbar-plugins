@@ -12,7 +12,7 @@ final class SystemMonitor: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.system-monitor",
         name: "System Monitor",
-        version: "1.3.0",
+        version: "1.4.0",
         summary: "CPU, memory and disk in the menu bar, with the processes using the most.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(10)), .wake],
@@ -380,6 +380,27 @@ final class SystemMonitor: StackbarPlugin {
         Section("Menu bar") {
             Picker("Show", options: ["CPU and memory", "CPU", "Memory"], selection: menuBarShows, style: .segmented) { self.menuBarShows = $0 }
         }
+    }
+
+    // MARK: Commands
+
+    var commands: [Command] {
+        Command("top", title: "Top Processes", subtitle: "What is using your CPU and memory", symbol: "gauge.with.dots.needle.67percent", keywords: ["cpu", "memory", "process", "activity", "kill", "quit", "slow"])
+            .argument("by", placeholder: "Sort by", required: false, default: "CPU", options: ["CPU", "Memory"])
+            .view(search: { invocation in
+                if let by = invocation["by"], by != self.sortBy { self.sortBy = by }
+                await self.measure()
+            }) { _ in
+                if let sample = self.sample {
+                    List(sample.processes, searchable: true) { process in
+                        Row(process.command, subtitle: "pid \(process.pid) · \(String(format: "%.1f%%", process.cpu)) CPU · \(Self.memory(process.memory))", symbol: "gearshape", key: "\(process.pid)")
+                            .action("Copy PID") { Stackbar.copy("\(process.pid)") }
+                            .action("Quit Process", shortcut: "cmd+.", role: .critical) { try await self.quit(process) }
+                    }
+                } else {
+                    ContentUnavailableView(self.problem == nil ? "Measuring…" : "Can't read the system", symbol: "gauge.with.dots.needle.33percent", message: self.problem)
+                }
+            }
     }
 
     var tools: [AgentTool] {

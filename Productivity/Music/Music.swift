@@ -13,7 +13,7 @@ final class Music: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.music",
         name: "Music",
-        version: "1.3.0",
+        version: "1.4.0",
         summary: "What's playing in Music or Spotify, with play, pause, skip and volume.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(5)), .wake],
@@ -22,7 +22,7 @@ final class Music: StackbarPlugin {
         // Album art: Spotify names its own image URL; for Music the cover
         // is looked up in the iTunes catalog by artist and album.
         capabilities: [.run(commands: ["osascript"]), .network("itunes.apple.com", "*.mzstatic.com", "i.scdn.co")],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Music",
         accent: .pink,
         symbol: "music.note"
@@ -350,6 +350,12 @@ final class Music: StackbarPlugin {
                     }
                 }
                 .frame(fillWidth: true, alignment: .leading)
+                // Stackbar 0.21.0 sends widget presses to the plugin.
+                HStack(spacing: Space.xs) {
+                    IconButton(track?.playing == true ? "pause.fill" : "play.fill", label: track?.playing == true ? "Pause" : "Play",
+                               prominence: .onMedia, size: 30, key: "widget-playpause") { try await self.tell("playpause") }
+                    IconButton("forward.fill", label: "Next", prominence: .onMedia, size: 30, key: "widget-next") { try await self.tell("next track") }
+                }
             }
             if let track, track.playing, track.duration > 0 {
                 ProgressBar(timing: timing(track)).foreground(.onMedia)

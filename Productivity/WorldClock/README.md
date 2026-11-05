@@ -36,6 +36,10 @@ Add `Tokyo` or `Asia/Tokyo`, and pick which city the menu bar shows.
 A widget keeps your cities on the desktop.
 <!-- preview: widget -->
 
+## What's new in 1.5.0
+
+- Type a city like Tokyo in the palette to see its time right away.
+
 ## What's new in 1.4.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

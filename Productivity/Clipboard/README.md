@@ -40,6 +40,11 @@ key or card number is masked, kept away from agent tools, and dropped after
 The window shows how much you copy, and from which apps.
 <!-- preview: insights -->
 
+## What's new in 1.7.0
+
+- The menu bar icon is off by default: ⌘⇧V and the palette open the history. It comes back while recording is paused, and Settings can keep it on.
+- Agents can no longer read your clipboard unless you allow it in Stackbar's Settings → Agents.
+
 ## What's new in 1.6.0
 
 - Matching copies show in the command palette's own results as you type, so

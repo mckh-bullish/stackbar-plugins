@@ -12,12 +12,12 @@ final class Jira: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.jira",
         name: "Jira",
-        version: "1.3.0",
+        version: "1.4.0",
         summary: "Your assigned Jira Cloud issues, search and new issues from the palette.",
-        surfaces: [.menuBar, .panel, .settings],
+        surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("*.atlassian.net"), .secret(name: "JIRA_API_TOKEN")],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
         accent: .blue,
         symbol: "ticket.fill"
@@ -37,6 +37,12 @@ final class Jira: StackbarPlugin {
                 sample("SHOP-401", "Fix VAT rounding on invoices", "Done", "done", "High", "Bug"),
                 sample("APP-77", "Dark mode for the order screen", "Done", "done", "Low", "Story"),
             ]
+            plugin.loaded = true
+        },
+        PreviewScene("widget", "What you're on, on your desktop", surface: .widget) { plugin in
+            plugin.site = "acme.atlassian.net"
+            plugin.email = "sam@example.com"
+            plugin.assigned = samples
             plugin.loaded = true
         },
     ]
@@ -90,6 +96,8 @@ final class Jira: StackbarPlugin {
     @Stored("defaultProject") var defaultProject = ""
     @Stored("jql") var jql = Jira.defaultJQL
     var assigned: [Issue] = []
+    /// The issue an issue key typed at the palette's root names.
+    var keyed: [String: Issue] = [:]
     var found: [Issue] = []
     /// Why the last search failed, shown instead of an empty list.
     var searchProblem: String?
@@ -190,6 +198,18 @@ final class Jira: StackbarPlugin {
         }
     }
 
+    /// Looks up one issue by key for the palette's root: from your assigned
+    /// issues when it is there, else one request. Unknown keys show nothing.
+    func lookUp(key text: String) async {
+        let key = text.trimmingCharacters(in: .whitespaces).uppercased()
+        guard keyed[key] == nil, !needsSetup else { return }
+        if let mine = assigned.first(where: { $0.key == key }) {
+            keyed[key] = mine
+            return
+        }
+        if let issue = try? await search(jql: "key = \"\(key)\"", limit: 1).first { keyed[key] = issue }
+    }
+
     // MARK: Rows
 
     func row(_ issue: Issue) -> Row {
@@ -232,6 +252,20 @@ final class Jira: StackbarPlugin {
             Label("", symbol: "square.stack.3d.up").role(.secondary)
         } else {
             Label("\(inProgress.count)", symbol: "square.stack.3d.up.fill")
+        }
+    }
+
+    /// In progress first, then the rest assigned; a click opens the issue.
+    var widget: ViewContent {
+        if needsSetup {
+            EmptyState("Connect Jira", symbol: "link", message: "Set up your Jira account in Stackbar.", theme: theme)
+        } else {
+            PanelHeader(inProgress.isEmpty ? "\(assigned.count) assigned" : "\(inProgress.count) in progress", subtitle: "Jira", symbol: "square.stack.3d.up.fill", theme: theme)
+            if assigned.isEmpty {
+                EmptyState(problem == nil ? "Nothing assigned" : "Can't reach Jira", symbol: "checkmark.circle", theme: theme)
+            } else {
+                List(inProgress + assigned.filter { $0.category != "indeterminate" }) { issue in self.row(issue) }
+            }
         }
     }
 
@@ -347,6 +381,13 @@ final class Jira: StackbarPlugin {
                     List(self.found) { issue in self.row(issue) }
                 }
             }
+        // An issue key typed at the palette's root opens that issue.
+        Command("issue", title: "Jira Issue by Key", symbol: "square.stack.3d.up", keywords: ["jira"])
+            .view(search: { invocation in await self.lookUp(key: invocation.text) }) { invocation in
+                List(self.keyed[invocation.text.trimmingCharacters(in: .whitespaces).uppercased()].map { [$0] } ?? []) { issue in self.row(issue) }
+            }
+            .rootSearch(section: "Jira", matching: #"[A-Za-z][A-Za-z0-9_]*-\d+"#)
+            .stackbarOnly()
         Command("create", title: "Create Jira Issue", symbol: "plus.circle", keywords: ["jira", "issue", "new", "ticket", "bug"])
             .stackbarOnly()
             .view { _ in self.form }

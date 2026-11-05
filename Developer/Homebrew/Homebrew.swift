@@ -14,12 +14,12 @@ final class Homebrew: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.homebrew",
         name: "Homebrew",
-        version: "1.4.0",
+        version: "1.5.0",
         summary: "Outdated formulae and casks, with upgrades a click away.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(60), .wake],
         capabilities: [.run(commands: ["brew"])],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew",
         accent: .amber,
         symbol: "mug.fill"
@@ -273,7 +273,17 @@ final class Homebrew: StackbarPlugin {
 
     var widget: ViewContent {
         HStack(alignment: .start, spacing: Space.l) {
-            Metric("\(shown.count)", unit: shown.count == 1 ? "update" : "updates", caption: checkedText, type: .metric)
+            VStack(spacing: Space.s) {
+                Metric("\(shown.count)", unit: shown.count == 1 ? "update" : "updates", caption: checkedText, type: .metric)
+                // Stackbar 0.21.0 sends widget presses to the plugin.
+                if upgradable.isEmpty {
+                    Button("Check", symbol: "arrow.clockwise", key: "widget-check") { await self.check() }
+                } else {
+                    Button("Upgrade All", symbol: "arrow.up.circle", key: "widget-upgrade") {
+                        try await self.upgrade(self.upgradable.map(\.name), label: "Upgrading everything")
+                    }
+                }
+            }
             VStack(spacing: Space.xxs) {
                 ForEach(shown.prefix(4)) { package in
                     Text(package.name).typography(.caption)

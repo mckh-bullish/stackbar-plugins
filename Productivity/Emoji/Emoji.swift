@@ -10,12 +10,12 @@ final class Emoji: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.emoji",
         name: "Emoji",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Search every emoji by name in a grid, and paste it where you were typing.",
         surfaces: [.panel],
         triggers: [.launch],
         capabilities: [.clipboard],
-        minimumStackbar: "0.20.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Emoji",
         accent: .amber,
         symbol: "face.smiling"
@@ -121,6 +121,17 @@ final class Emoji: StackbarPlugin {
                     }
                 }
             }
+        // ":heart" at the palette's root: the top matches, Return pastes.
+        Command("inline", title: "Emoji by Name", symbol: "face.smiling", keywords: ["emoji"])
+            .view { invocation in
+                List {
+                    ForEach(Array(Self.matches(String(invocation.text.dropFirst()), uses: self.uses).prefix(3))) { item in
+                        self.row(item, key: "root-" + item.emoji)
+                    }
+                }
+            }
+            .rootSearch(section: "Emoji", matching: #":[A-Za-z][A-Za-z ]*"#)
+            .stackbarOnly()
     }
 
     /// `prefix` keeps keys unique when an emoji shows twice (frequent and

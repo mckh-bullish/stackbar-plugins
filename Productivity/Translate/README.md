@@ -29,6 +29,10 @@ share its selection, it uses what you last copied.
   language, and DeepL's formality.
 - **Commands:** Translate Selection, Translate Selection in Google Translate.
 
+## What's new in 1.5.0
+
+- Translate what you typed: when nothing in the palette matches, Translate offers to translate the text.
+
 ## What's new in 1.4.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

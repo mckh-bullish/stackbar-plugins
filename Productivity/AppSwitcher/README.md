@@ -38,6 +38,10 @@ app even when it isn't running.
 Letters with no app pass straight through, so Right ⌘ C still copies. Hold
 Right ⌘ on its own to see the whole letter map.
 
+## What's new in 1.2.0
+
+- The menu bar icon is off by default, since the switcher lives on a held key. It comes back by itself when the key stops working, and Settings can keep it on.
+
 ## What's new in 1.1.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

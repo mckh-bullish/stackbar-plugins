@@ -20,6 +20,10 @@ Upgrade All at the bottom.
   Homebrew Packages.
 - **Agent tool:** `outdated` lists what can be upgraded.
 
+## What's new in 1.5.0
+
+- The desktop widget has a button: Upgrade All when there are updates, Check when there aren't. Needs Stackbar 0.21.0.
+
 ## What's new in 1.4.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

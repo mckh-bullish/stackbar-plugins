@@ -18,6 +18,10 @@ setup comes back by itself, and apps that weren't running are opened.
 - **Not covered:** windows in full screen and on other Spaces, browser tabs,
   snapping and tiling (macOS does that).
 
+## What's new in 1.2.0
+
+- The menu bar icon is off by default: restore layouts from the palette or a hotkey. Settings can keep it on, and it comes back by itself when something needs you.
+
 ## What's new in 1.1.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

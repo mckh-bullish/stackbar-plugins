@@ -13,6 +13,10 @@ instead. The panel keeps your frequent ones a click from the clipboard.
 - **Data:** Unicode's Emoji 15.1 list and English names, without skin-tone
   variants. Nothing leaves your Mac.
 
+## What's new in 1.1.0
+
+- Type a colon and a name, like :tada, in the palette to find an emoji without opening Emoji first.
+
 ## What's new in 1.0.0
 
 - First release: every emoji in a searchable grid in the palette.

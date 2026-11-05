@@ -36,6 +36,10 @@ the same thing it does in Activity Monitor.
 A widget shows your Mac's load without opening anything.
 <!-- preview: widget -->
 
+## What's new in 1.4.0
+
+- A Top Processes command in the palette shows what is using your CPU and memory, and can quit it.
+
 ## What's new in 1.3.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

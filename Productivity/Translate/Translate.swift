@@ -19,7 +19,7 @@ final class Translate: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.translate",
         name: "Translate",
-        version: "1.4.0",
+        version: "1.5.0",
         summary: "Translate the selected text in place, on your Mac or with Google or DeepL.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -28,7 +28,7 @@ final class Translate: StackbarPlugin {
         // can't translate the pair itself; DeepL's two API hosts (free and
         // paid keys).
         capabilities: [.context, .clipboard, .network("translate.googleapis.com", "api-free.deepl.com", "api.deepl.com"), .secret(name: "DEEPL_API_KEY")],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.20.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate",
         accent: .teal,
         symbol: "character.bubble.fill"
@@ -226,7 +226,23 @@ final class Translate: StackbarPlugin {
     // MARK: Commands
 
     var commands: [Command] {
-        Command("translate", title: "Translate Selection", subtitle: "The selected text, or what you copied", symbol: "character.bubble", keywords: ["translate", "deepl", "google", "language"])
+        translateCommand("translate", title: "Translate Selection", subtitle: "The selected text, or what you copied")
+        // Offered under the palette's results for any text: translates what
+        // was typed.
+        translateCommand("translate-typed", title: "Translate", subtitle: "What you typed")
+            .fallback()
+            .stackbarOnly()
+        Command("open-google", title: "Translate Selection in Google Translate", symbol: "globe", keywords: ["translate", "google"]) { invocation in
+            guard let text = try await self.input(invocation) else { return .failure("Select some text first, or copy it") }
+            return .open(url: Self.googleURL(text, to: Self.language(invocation["to"] ?? self.target)), app: nil)
+        }
+        .argument("to", placeholder: "Into", required: false, options: Self.languages.map(\.name))
+    }
+
+    /// The view that translates typed text, else the selection, else the
+    /// clipboard.
+    func translateCommand(_ id: String, title: String, subtitle: String) -> Command {
+        Command(id, title: title, subtitle: subtitle, symbol: "character.bubble", keywords: ["translate", "deepl", "google", "language"])
             .argument("to", placeholder: "Into", required: false, options: Self.languages.map(\.name))
             .view(search: { invocation in
                 self.problem = nil
@@ -243,11 +259,6 @@ final class Translate: StackbarPlugin {
             }) { invocation in
                 self.view(into: invocation["to"])
             }
-        Command("open-google", title: "Translate Selection in Google Translate", symbol: "globe", keywords: ["translate", "google"]) { invocation in
-            guard let text = try await self.input(invocation) else { return .failure("Select some text first, or copy it") }
-            return .open(url: Self.googleURL(text, to: Self.language(invocation["to"] ?? self.target)), app: nil)
-        }
-        .argument("to", placeholder: "Into", required: false, options: Self.languages.map(\.name))
     }
 
     @ViewBuilder func view(into name: String?) -> ViewContent {

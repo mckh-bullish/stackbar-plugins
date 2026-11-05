@@ -17,12 +17,12 @@ final class Todo: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.todo",
         name: "Todo",
-        version: "2.0.0",
+        version: "2.1.0",
         summary: "A calm to-do list that understands dates as you type them, kept in Apple Reminders so it's on all your devices.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(30)), .wake, .reminders],
         capabilities: [.reminders],
-        minimumStackbar: "0.18.0",
+        minimumStackbar: "0.20.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Todo",
         accent: .orange,
         symbol: "checklist"
@@ -295,6 +295,9 @@ final class Todo: StackbarPlugin {
             return result
         }
         .argument("task", placeholder: "Call mum tomorrow 6pm")
+        // Offered under the palette's results for any text: "call mum
+        // tomorrow 6pm" becomes a todo without finding the command first.
+        .fallback()
         Command("complete", title: "Mark a Todo Done", symbol: "checkmark.circle", keywords: ["todo", "task", "done", "complete", "tick"]) { invocation in
             self.now = Date()
             guard let task = self.find(invocation["task"] ?? "") else { return .failure("No open task called \(invocation["task"] ?? "that")") }

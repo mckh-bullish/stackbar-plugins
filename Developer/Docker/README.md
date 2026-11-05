@@ -21,6 +21,10 @@ Logs, Open (for a published port), Copy ID and Remove.
   container), Remove Stopped Docker Containers.
 - **Agent tool:** `containers` lists every container with its image and state.
 
+## What's new in 1.5.0
+
+- A container's logs open in their own window, so you can keep them beside your editor while the panel closes.
+
 ## What's new in 1.4.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

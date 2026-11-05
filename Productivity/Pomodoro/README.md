@@ -23,6 +23,11 @@ and focused minutes sit under the timer.
 - **Agent tool:** `status` returns the mode, the time left and today's focus.
 - **Requires:** Stackbar 0.14.0 or later.
 
+## What's new in 1.5.0
+
+- Click the timer in the menu bar to start or pause it (turn it off in Settings to open the panel instead).
+- The desktop widget has a Start/Pause button.
+
 ## What's new in 1.4.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

@@ -15,14 +15,14 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.6.0",
+        version: "1.7.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
         triggers: [.launch, .clipboard, .every(.seconds(60))],
         capabilities: [.clipboard],
         hotkey: "cmd+shift+v",
-        minimumStackbar: "0.20.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
         accent: .blue,
         symbol: "doc.on.clipboard.fill"
@@ -215,6 +215,9 @@ final class Clipboard: StackbarPlugin {
     @Stored("keepImages") var keepImages = true
     @Stored("ignoredApps") var ignoredApps = Clipboard.defaultIgnored
     @Stored("paused") var paused = false
+    /// Off by default: ⌘⇧V and the palette open the history, so the icon
+    /// only shows up while recording is paused or something went wrong.
+    @Stored("menuBarIcon") var menuBarIcon = false
     @Stored("plainByDefault") var plainByDefault = false
     /// Matching copies show in the palette's own results as you type.
     @Stored("inPalette") var inPalette = true
@@ -396,7 +399,9 @@ final class Clipboard: StackbarPlugin {
     // MARK: Surfaces
 
     var menuBar: ViewContent {
-        Label("", symbol: paused ? "pause.circle" : "list.clipboard").role(paused ? .warning : .primary)
+        if menuBarIcon || paused || lastError != nil {
+            Label("", symbol: paused ? "pause.circle" : "list.clipboard").role(paused || lastError != nil ? .warning : .primary)
+        }
     }
 
     let theme = Theme.blue
@@ -503,6 +508,10 @@ final class Clipboard: StackbarPlugin {
             Toggle("Paste into the app on click", isOn: pasteDirectly) { self.pasteDirectly = $0 }
             Toggle("Always paste as plain text", isOn: plainByDefault) { self.plainByDefault = $0 }
             Toggle("Show matching copies in the palette's results", isOn: inPalette) { self.inPalette = $0 }
+        }
+        Section("Menu bar") {
+            Toggle("Show the icon in the menu bar", isOn: menuBarIcon) { self.menuBarIcon = $0 }
+            Text("Without it, press ⌘⇧V or use the palette. The icon comes back by itself while recording is paused.").role(.secondary)
         }
         Section("History") {
             Picker("Order", options: Order.allCases.map(\.rawValue), selection: order.rawValue, style: .segmented) { self.order = Order(rawValue: $0) ?? .recent }
@@ -671,11 +680,13 @@ final class Clipboard: StackbarPlugin {
             let count = Int(arguments.number("count") ?? 10)
             return self.sorted.prefix(max(1, min(count, 50))).enumerated().map { "\($0.offset + 1). \($0.element.title)" }.joined(separator: "\n")
         }
+        .optIn()
         AgentTool("search_clips", description: "Clipboard items containing the text, newest first, in full", parameters: [ToolParameter("query", description: "Text to look for")]) { arguments in
             let query = arguments.string("query") ?? ""
             let found = self.sorted.filter { $0.secret == nil && ($0.text ?? "").localizedCaseInsensitiveContains(query) }.prefix(10)
             return found.isEmpty ? "Nothing in the history contains \"\(query)\"." : found.map { $0.text ?? $0.title }.joined(separator: "\n---\n")
         }
+        .optIn()
         AgentTool("copy_clip", description: "Put a history item back on the clipboard, by its position in recent_clips", parameters: [ToolParameter("position", .number, description: "1 is the newest")]) { arguments in
             let position = Int(arguments.number("position") ?? 0)
             let items = self.sorted
@@ -683,5 +694,6 @@ final class Clipboard: StackbarPlugin {
             await self.use(items[position - 1], paste: false)
             return "Copied \(items[position - 1].title)"
         }
+        .optIn()
     }
 }

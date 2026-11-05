@@ -12,11 +12,11 @@ final class WorldClock: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.world-clock",
         name: "World Clock",
-        version: "1.4.0",
+        version: "1.5.0",
         summary: "The time in the cities you work with, with offsets and working hours.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(30)), .wake],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WorldClock",
         accent: .violet,
         symbol: "globe"
@@ -234,6 +234,43 @@ final class WorldClock: StackbarPlugin {
                     }
                 }
             }
+        // "tokyo" or "time in tok" at the palette's root answers with the time.
+        Command("time-in", title: "Time In a City", subtitle: "World Clock", symbol: "globe", keywords: ["time", "zone", "city"])
+            .view(search: { _ in self.realNow = Date() }) { invocation in
+                List(Array(self.zones(named: invocation.text).prefix(3))) { zone in
+                    Row(self.city(zone.identifier), subtitle: self.time(self.realNow, in: zone) + " · " + self.subtitle(for: zone, at: self.realNow),
+                        symbol: Sky(hour: self.hour(in: zone, at: self.realNow)).symbol, key: zone.identifier)
+                        .action("Copy Time") { Stackbar.copy("\(self.time(self.realNow, in: zone)) in \(self.city(zone.identifier))") }
+                        .action(self.zones.contains(zone.identifier) ? "Show in Menu Bar" : "Add to World Clock") {
+                            if self.zones.contains(zone.identifier) { self.menuBarZone = zone.identifier } else { self.zones.append(zone.identifier) }
+                        }
+                }
+            }
+            .rootSearch(section: "World Clock", matching: #"(?i)[a-z][a-z .'-]+"#)
+            .stackbarOnly()
+    }
+
+    /// Zones a palette query names: a whole city name ("tokyo"), or a city's
+    /// start after "time in" or before "time" ("time in tok", "lond time").
+    /// Your own cities come first. Empty for anything else, so ordinary
+    /// typing shows nothing from World Clock.
+    func zones(named query: String) -> [TimeZone] {
+        var text = query.trimmingCharacters(in: .whitespaces).lowercased()
+        var prefix = false
+        if text.hasPrefix("time in ") {
+            text = String(text.dropFirst("time in ".count)).trimmingCharacters(in: .whitespaces)
+            prefix = true
+        } else if text.hasSuffix(" time") {
+            text = String(text.dropLast(" time".count)).trimmingCharacters(in: .whitespaces)
+            prefix = true
+        }
+        guard text.count >= 2 else { return [] }
+        let mine = Set(zones)
+        let found = TimeZone.knownTimeZoneIdentifiers.filter { identifier in
+            let name = city(identifier).lowercased()
+            return prefix ? name.hasPrefix(text) : name == text
+        }
+        return found.sorted { (mine.contains($0) ? 0 : 1, $0) < (mine.contains($1) ? 0 : 1, $1) }.compactMap(TimeZone.init(identifier:))
     }
 
     // MARK: -

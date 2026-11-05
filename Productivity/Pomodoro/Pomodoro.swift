@@ -12,7 +12,7 @@ final class Pomodoro: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.pomodoro",
         name: "Pomodoro",
-        version: "1.4.0",
+        version: "1.5.0",
         summary: "A focus timer with presets, a progress ring, tags and today's sessions.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(1)), .wake],
@@ -98,6 +98,9 @@ final class Pomodoro: StackbarPlugin {
     @Stored("sound") var sound = true
     @Stored("chime") var chime = SystemSound.glass.rawValue
     @Stored("days") var days: [String: Day] = [:]
+    /// A left click on the menu-bar timer starts or pauses it; a right click
+    /// opens the panel. Off: a left click opens the panel.
+    @Stored("clickToToggle") var clickToToggle = true
 
     var now = Date()
     var pending: Pending?
@@ -163,6 +166,9 @@ final class Pomodoro: StackbarPlugin {
                 Text(mode.rawValue.uppercased()).typography(.overline).foreground(theme.textPaint)
                 Text(currentTag).typography(.title)
                 Text("\(today.sessions) sessions · \(minutesText(today.minutes)) today").role(.secondary).typography(.caption)
+                // Stackbar 0.21.0 sends widget presses to the plugin.
+                let running = session?.started != nil
+                Button(running ? "Pause" : session == nil ? "Start" : "Resume", symbol: running ? "pause.fill" : "play.fill", key: "widget-toggle") { self.toggle() }
             }
             .frame(fillWidth: true, alignment: .leading)
         }
@@ -174,6 +180,10 @@ final class Pomodoro: StackbarPlugin {
             Slider("Focus minutes", value: Double(focusMinutes), in: 5...120, step: 5) { self.focusMinutes = Int($0) }
             Slider("Break minutes", value: Double(breakMinutes), in: 1...30, step: 1) { self.breakMinutes = Int($0) }
             Toggle("Start the next session on its own", isOn: autoStart) { self.autoStart = $0 }
+        }
+        Section("Menu bar") {
+            Toggle("Click the timer to start or pause it", isOn: clickToToggle) { self.clickToToggle = $0 }
+            Text("A right click always opens the panel.").style(.caption)
         }
         Section("Sound") {
             Toggle("Play a sound when a session ends", isOn: sound) { self.sound = $0 }
@@ -195,6 +205,12 @@ final class Pomodoro: StackbarPlugin {
             let today = self.today
             return "\(self.statusLine). Today: \(today.sessions) sessions, \(today.minutes) minutes focused."
         }
+    }
+
+    var menuBarClick: MenuBarAction? {
+        guard clickToToggle else { return nil }
+        let running = session?.started != nil
+        return MenuBarAction(running ? "Click to pause" : session == nil ? "Click to start focusing" : "Click to resume") { self.toggle() }
     }
 
     var commands: [Command] {

@@ -22,12 +22,12 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.6.0",
+        version: "1.7.0",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
         capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN")],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
         accent: .violet,
         symbol: "arrow.triangle.pull"
@@ -601,6 +601,24 @@ final class PRCockpit: StackbarPlugin {
         return shownRepos.filter { repo in words.allSatisfy { repo.full_name.lowercased().contains($0) } }
     }
 
+    /// Fetched pull requests named by `#123` or `repo#123` (owner optional).
+    func rootPulls(_ text: String) -> [PullRequest] {
+        let parts = text.trimmingCharacters(in: .whitespaces).lowercased().split(separator: "#", omittingEmptySubsequences: false)
+        guard parts.count == 2, let number = Int(parts[1]) else { return [] }
+        let repo = String(parts[0])
+        var seen = Set<String>()
+        return (toReview + mine).filter { pr in
+            pr.number == number && (repo.isEmpty || pr.repository.nameWithOwner.lowercased().hasSuffix(repo)) && seen.insert(pr.url).inserted
+        }
+    }
+
+    /// Saved repositories whose name contains `owner/re…`, recent first.
+    func rootRepos(_ text: String) -> [Repo] {
+        let typed = text.trimmingCharacters(in: .whitespaces).lowercased()
+        guard typed.contains("/"), !typed.contains("#") else { return [] }
+        return Array(orderedRepos.filter { $0.full_name.lowercased().contains(typed) }.prefix(3))
+    }
+
     var shownRepos: [Repo] { repos.filter { includeArchived || !$0.archived } }
 
     /// Recently opened first, then most recently pushed.
@@ -1021,6 +1039,18 @@ final class PRCockpit: StackbarPlugin {
             .argument("repo", placeholder: "Repository", required: false)
             .stackbarOnly()
             .view(search: { _ in await self.loadRepos() }) { invocation in self.issueForm(repo: invocation["repo"]) }
+        // "owner/repo" or "repo#123" typed at the palette's root: a saved
+        // repository, or one of the pull requests already fetched. Nothing
+        // is fetched per keystroke.
+        Command("jump", title: "Jump to a Repository or Pull Request", symbol: "arrow.triangle.pull", keywords: ["github"])
+            .view(search: { _ in }) { invocation in
+                List {
+                    ForEach(self.rootPulls(invocation.text)) { pr in self.row(pr, showAuthor: true) }
+                    ForEach(self.rootRepos(invocation.text)) { repo in self.repoRow(repo) }
+                }
+            }
+            .rootSearch(section: "GitHub", matching: #"[\w.-]+/[\w.-]*|[\w./-]*#\d+"#)
+            .stackbarOnly()
         Command("refresh", title: "Refresh Pull Requests", symbol: "arrow.clockwise", keywords: ["github"]) { _ in
             try await self.refresh()
             return .message(self.lastError ?? "\(self.shownReview.count) to review, \(self.shownMine.count) of yours open")

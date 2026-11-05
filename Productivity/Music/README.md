@@ -17,6 +17,10 @@ pause; right-click for the panel with the track, Previous, Next and volume.
   Current Track.
 - **Agent tool:** `now_playing` describes the current track.
 
+## What's new in 1.4.0
+
+- The desktop widget has Play/Pause and Next buttons. Needs Stackbar 0.21.0.
+
 ## What's new in 1.3.0
 
 - Store screenshots now show it in use, with sample data, instead of its first-run screen.

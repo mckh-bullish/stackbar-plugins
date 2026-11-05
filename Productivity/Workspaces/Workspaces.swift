@@ -12,12 +12,12 @@ final class Workspaces: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.workspaces",
         name: "Workspaces",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Saves where your windows are for each monitor setup, and puts them back when you dock, undock or wake.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .wake, .displays],
         capabilities: [.windows],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Workspaces",
         accent: .graphite,
         symbol: "rectangle.3.group"
@@ -52,6 +52,9 @@ final class Workspaces: StackbarPlugin {
     }
 
     @Stored("layouts") var layouts: [Layout] = []
+    /// Off by default: layouts are restored from the palette or a hotkey, so
+    /// the icon only shows up when something needs the user.
+    @Stored("menuBarIcon") var menuBarIcon = false
     /// The layout that comes back by itself, by setup id.
     @Stored("defaults") var defaults: [String: String] = [:]
     @Stored("autoRestore") var autoRestore = true
@@ -200,7 +203,9 @@ final class Workspaces: StackbarPlugin {
     // MARK: - Surfaces
 
     var menuBar: ViewContent {
-        Label("", symbol: "rectangle.3.group").role(.secondary)
+        if menuBarIcon || problem != nil {
+            Label("", symbol: problem == nil ? "rectangle.3.group" : "exclamationmark.triangle").role(problem == nil ? .secondary : .warning)
+        }
     }
 
     var panel: ViewContent {
@@ -271,6 +276,10 @@ final class Workspaces: StackbarPlugin {
     }
 
     var settings: ViewContent {
+        Section("Menu bar") {
+            Toggle("Show the icon in the menu bar", isOn: menuBarIcon) { self.menuBarIcon = $0 }
+            Text("Without it, open Workspaces from the palette. The icon comes back by itself when something needs you.").role(.secondary)
+        }
         Section("Restoring") {
             Toggle("Bring back the starred layout when displays change", isOn: autoRestore) { self.autoRestore = $0 }
             Toggle("Open apps that aren't running", isOn: openApps) { self.openApps = $0 }

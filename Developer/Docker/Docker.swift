@@ -14,9 +14,9 @@ final class Docker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.docker",
         name: "Docker",
-        version: "1.4.0",
+        version: "1.5.0",
         summary: "Your containers, with start, stop, restart and logs a click away.",
-        surfaces: [.menuBar, .panel, .widget, .settings],
+        surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.run(commands: ["docker"])],
         minimumStackbar: "0.17.0",
@@ -112,6 +112,8 @@ final class Docker: StackbarPlugin {
     /// What is running now, like "Restarting api…".
     var busyText: String?
     var logs: [String: String] = [:]
+    /// The container whose logs the window shows.
+    var watched: String?
     var lastSlowCheck = Date.distantPast
 
     @Stored("showStopped") var showStopped = true
@@ -130,6 +132,8 @@ final class Docker: StackbarPlugin {
         // Every 15 s while something runs; once a minute otherwise.
         if running.isEmpty, loaded, problem == nil, Date().timeIntervalSince(lastSlowCheck) < 55 { return }
         await load()
+        // The window's log tail follows along.
+        if let watched, containers.contains(where: { $0.id == watched }) { await loadLogs(watched) }
     }
 
     func load() async {
@@ -304,6 +308,48 @@ final class Docker: StackbarPlugin {
     var summary: String {
         let count = "\(containers.count) container\(containers.count == 1 ? "" : "s")"
         return projects > 0 ? "\(count) · \(projects) project\(projects == 1 ? "" : "s")" : count
+    }
+
+    /// The containers on the left; the one picked shows its last 200 log
+    /// lines on the right, refreshed with the list while it runs.
+    var window: ViewContent {
+        HStack(alignment: .start, spacing: Space.m) {
+            VStack(spacing: Space.s) {
+                PanelHeader("Containers", subtitle: summary, symbol: "shippingbox.fill", theme: theme)
+                if let problem, containers.isEmpty {
+                    EmptyState("Docker isn't available", symbol: "shippingbox", message: problem, theme: .warning)
+                } else if containers.isEmpty {
+                    EmptyState("No containers", symbol: "shippingbox", theme: theme)
+                } else {
+                    List(containers, searchable: true) { container in
+                        self.row(container)
+                            .action("Show Logs", shortcut: "cmd+l") { await self.watch(container.id) }
+                    }
+                }
+            }
+            .frame(width: 320)
+            Divider()
+            VStack(spacing: Space.s) {
+                if let id = watched, let container = containers.first(where: { $0.id == id }) {
+                    HStack(spacing: Space.s) {
+                        Text("\(container.name) · last 200 lines").style(.headline)
+                        Spacer()
+                        Button("Refresh", symbol: "arrow.clockwise") { await self.loadLogs(id) }
+                        Button("Copy", symbol: "doc.on.doc") { Stackbar.copy(self.logs[id] ?? "") }
+                    }
+                    Text(String((logs[id] ?? "Loading…").suffix(40_000))).style(.monospaced)
+                } else {
+                    EmptyState("Pick a container", symbol: "text.alignleft", message: "Choose Show Logs on a container (⌘L) to follow its output here.", theme: theme)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(fillWidth: true)
+        }
+    }
+
+    func watch(_ id: String) async {
+        watched = id
+        await loadLogs(id)
     }
 
     var widget: ViewContent {
