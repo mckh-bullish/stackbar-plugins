@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.litellm",
+  "protocol" : 17,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "83a5a54b8481afc1c63c7799d7862bd30f562a1a9ea3035319f0e3121435110f",
+  "signature" : "JR4JNdoo4DRRW4zjbX/LE+rzZO3ck8TfSZ8phFzN/aq4HjpLvDqHi5blJUVnrw24Zqfz0/fJG/bkCmnQoz88Dw==",
+  "size" : 5307848,
+  "sourceDigest" : "1a946b34e6a32addeb4b62c49973d27bfb124c11d01130b43837e748850649a6",
+  "stackbarKit" : "b13bd08d6d03cb497a7fe8bcec3cbd6bc699c9d94c065231869c76aa1def01e7",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-b13bd08d6d03cb49/LiteLLM-1a946b34e6a3",
+  "version" : "1.4.0"
+}
