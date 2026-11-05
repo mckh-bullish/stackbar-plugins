@@ -9,7 +9,7 @@ final class Applications: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.applications",
         name: "Applications",
-        version: "1.0.1",
+        version: "1.1.0",
         summary: "Open any app or System Settings pane from the command palette by typing a few letters.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -164,5 +164,13 @@ final class Applications: StackbarPlugin {
                 ForEach(top) { app in self.row(app) }
             }
         }
+        HStack(spacing: Space.xs) {
+            Text("Switch apps without the palette: hold Right ⌘ and press a letter.").role(.secondary).typography(.caption)
+            Link("App Switcher", url: "stackbar://store/\(Self.appSwitcherID)")
+        }
     }
+
+    /// App Switcher stays its own plugin: it listens to the keyboard, which
+    /// every Mac with Applications shouldn't have to approve.
+    static let appSwitcherID = "io.navbytes.stackbar.plugins.app-switcher"
 }

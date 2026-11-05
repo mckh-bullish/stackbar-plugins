@@ -1,41 +1,46 @@
 import StackbarKit
 import Foundation
 
-/// Remembers where your windows go for each monitor setup and puts them
-/// back. Save the arrangement you like at the desk and the one you like on
-/// the laptop alone; plug in or unplug a display and the setup's default
-/// layout comes back by itself, apps that weren't running included. Every
-/// layout is a command, so it can have a hotkey. Needs `.windows`, and
+/// Window management in one place. Snap the front window to a half, a
+/// quarter, a third, the middle or the whole screen, or send it to the next
+/// display; and save where every window goes for each monitor setup, so
+/// plugging in or unplugging a display brings that setup's layout back by
+/// itself, apps that weren't running included. Every snap and every saved
+/// layout is a command, so each can have a hotkey.
+///
+/// It was two plugins, Workspaces and Window Layouts. It keeps Workspaces'
+/// id (saved layouts stay where they are) and Window Layouts' command ids
+/// (`replaces` moves their hotkeys over). Needs `.windows`, and
 /// Accessibility access for Stackbar.
 @main
-final class Workspaces: StackbarPlugin {
+final class Windows: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.workspaces",
-        name: "Workspaces",
-        version: "1.2.0",
-        summary: "Saves where your windows are for each monitor setup, and puts them back when you dock, undock or wake.",
+        name: "Windows",
+        version: "2.0.0",
+        summary: "Snap the front window to halves, thirds or quarters, and save where your windows go for each monitor setup.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .wake, .displays],
         capabilities: [.windows],
-        minimumStackbar: "0.21.0",
-        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Workspaces",
-        accent: .graphite,
-        symbol: "rectangle.3.group"
+        minimumStackbar: "0.25.0",
+        homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Windows",
+        accent: .indigo,
+        symbol: "macwindow.on.rectangle",
+        replaces: ["io.navbytes.stackbar.plugins.window-layouts"]
     )
 
     // MARK: Previews
 
     /// Outside the app the windows are simulated: a laptop with an external display.
-    static let previews: [PreviewScene<Workspaces>] = [
-        PreviewScene("hero", "Save your windows as a layout and get them back") { plugin in
+    static let previews: [PreviewScene<Windows>] = [
+        PreviewScene("hero", "Snap a window, or bring back every window for your desk") { plugin in
             try await plugin.refresh()
             for name in ["Coding", "Writing", "Meetings"] { _ = await plugin.save(name) }
-            plugin.notice = nil
+            plugin.notice = "Safari: Left Half"
         },
     ]
 
-    /// Calm and neutral: windows are the user's content, not ours.
-    let theme = Theme.graphite
+    let theme = Theme.indigo
 
     /// One saved arrangement, tied to the setup it was saved on.
     struct Layout: Codable, Identifiable, Equatable {
@@ -60,6 +65,10 @@ final class Workspaces: StackbarPlugin {
     @Stored("autoRestore") var autoRestore = true
     @Stored("openApps") var openApps = true
     @Stored("lastSetup") var lastSetup = ""
+    /// Space left between a snapped window and the screen's edges, in points.
+    @Stored("gap") var gap = 0.0
+    /// Where each window was before its last snap, by app and title.
+    var previous: [String: WindowRect] = [:]
 
     var snapshot: WindowSnapshot?
     var problem: String?
@@ -200,6 +209,132 @@ final class Workspaces: StackbarPlugin {
         return unique.first ?? ""
     }
 
+    // MARK: - Snapping
+
+    /// A place on the screen for the front window, as fractions of the
+    /// display's visible area.
+    struct Snap: Identifiable {
+        var id: String
+        var title: String
+        var symbol: String
+        var group: String
+        var keywords: [String] = []
+        /// x, y, width, height in 0...1 of the visible frame; nil for the
+        /// snaps worked out from the window itself.
+        var unit: (x: Double, y: Double, width: Double, height: Double)?
+    }
+
+    /// The ids are Window Layouts' own, so its hotkeys carry over. Its
+    /// "restore" became "undo-snap": "restore" here restores a saved layout.
+    static let snaps: [Snap] = [
+        Snap(id: "left-half", title: "Left Half", symbol: "rectangle.lefthalf.filled", group: "Halves", keywords: ["snap", "split"], unit: (0, 0, 0.5, 1)),
+        Snap(id: "right-half", title: "Right Half", symbol: "rectangle.righthalf.filled", group: "Halves", keywords: ["snap", "split"], unit: (0.5, 0, 0.5, 1)),
+        Snap(id: "top-half", title: "Top Half", symbol: "rectangle.tophalf.filled", group: "Halves", keywords: ["snap", "split"], unit: (0, 0, 1, 0.5)),
+        Snap(id: "bottom-half", title: "Bottom Half", symbol: "rectangle.bottomhalf.filled", group: "Halves", keywords: ["snap", "split"], unit: (0, 0.5, 1, 0.5)),
+        Snap(id: "top-left", title: "Top Left Quarter", symbol: "rectangle.inset.topleft.filled", group: "Quarters", keywords: ["corner", "snap"], unit: (0, 0, 0.5, 0.5)),
+        Snap(id: "top-right", title: "Top Right Quarter", symbol: "rectangle.inset.topright.filled", group: "Quarters", keywords: ["corner", "snap"], unit: (0.5, 0, 0.5, 0.5)),
+        Snap(id: "bottom-left", title: "Bottom Left Quarter", symbol: "rectangle.inset.bottomleft.filled", group: "Quarters", keywords: ["corner", "snap"], unit: (0, 0.5, 0.5, 0.5)),
+        Snap(id: "bottom-right", title: "Bottom Right Quarter", symbol: "rectangle.inset.bottomright.filled", group: "Quarters", keywords: ["corner", "snap"], unit: (0.5, 0.5, 0.5, 0.5)),
+        Snap(id: "first-third", title: "First Third", symbol: "rectangle.leadingthird.inset.filled", group: "Thirds", keywords: ["left", "snap"], unit: (0, 0, 1.0 / 3, 1)),
+        Snap(id: "center-third", title: "Center Third", symbol: "rectangle.center.inset.filled", group: "Thirds", keywords: ["middle", "snap"], unit: (1.0 / 3, 0, 1.0 / 3, 1)),
+        Snap(id: "last-third", title: "Last Third", symbol: "rectangle.trailingthird.inset.filled", group: "Thirds", keywords: ["right", "snap"], unit: (2.0 / 3, 0, 1.0 / 3, 1)),
+        Snap(id: "first-two-thirds", title: "First Two Thirds", symbol: "rectangle.leadinghalf.inset.filled", group: "Thirds", keywords: ["left", "snap"], unit: (0, 0, 2.0 / 3, 1)),
+        Snap(id: "last-two-thirds", title: "Last Two Thirds", symbol: "rectangle.trailinghalf.inset.filled", group: "Thirds", keywords: ["right", "snap"], unit: (1.0 / 3, 0, 2.0 / 3, 1)),
+        Snap(id: "maximize", title: "Maximize", symbol: "rectangle.fill", group: "Screen", keywords: ["fill", "full", "zoom"], unit: (0, 0, 1, 1)),
+        Snap(id: "almost-maximize", title: "Almost Maximize", symbol: "rectangle.inset.filled", group: "Screen", keywords: ["fill", "large"], unit: (0.05, 0.05, 0.9, 0.9)),
+        Snap(id: "center", title: "Center", symbol: "rectangle.center.inset.filled", group: "Screen", keywords: ["middle"]),
+        Snap(id: "next-display", title: "Next Display", symbol: "rectangle.portrait.and.arrow.forward", group: "Screen", keywords: ["monitor", "screen", "move"]),
+        Snap(id: "undo-snap", title: "Undo Snap", symbol: "arrow.uturn.backward", group: "Screen", keywords: ["restore", "undo", "back"]),
+    ]
+
+    /// The frame `snap` gives a window at `frame` on `visible`, the display's
+    /// area without the menu bar and Dock, `gap` in from its edges.
+    static func frame(_ snap: Snap, window frame: WindowRect, visible: WindowRect, gap: Double = 0) -> WindowRect? {
+        let area = WindowRect(x: visible.x + gap, y: visible.y + gap, width: max(visible.width - 2 * gap, 100), height: max(visible.height - 2 * gap, 100))
+        if let unit = snap.unit {
+            // Gaps between neighbours: half on each side of an inner edge.
+            let half = gap / 2
+            let left = unit.x > 0 ? half : 0
+            let top = unit.y > 0 ? half : 0
+            let right = unit.x + unit.width < 0.999 ? half : 0
+            let bottom = unit.y + unit.height < 0.999 ? half : 0
+            return WindowRect(
+                x: (area.x + area.width * unit.x + left).rounded(),
+                y: (area.y + area.height * unit.y + top).rounded(),
+                width: (area.width * unit.width - left - right).rounded(),
+                height: (area.height * unit.height - top - bottom).rounded()
+            )
+        }
+        if snap.id == "center" {
+            let width = min(frame.width, area.width)
+            let height = min(frame.height, area.height)
+            return WindowRect(x: (area.midX - width / 2).rounded(), y: (area.midY - height / 2).rounded(), width: width, height: height)
+        }
+        return nil
+    }
+
+    /// The same place, relative to its display, on `next`.
+    static func moved(_ frame: WindowRect, from current: WindowRect, to next: WindowRect) -> WindowRect {
+        let width = min(frame.width, next.width)
+        let height = min(frame.height, next.height)
+        let fx = current.width > width ? (frame.x - current.x) / (current.width - width) : 0
+        let fy = current.height > height ? (frame.y - current.y) / (current.height - height) : 0
+        let clamp = { (value: Double) in min(max(value, 0), 1) }
+        return WindowRect(
+            x: (next.x + clamp(fx) * (next.width - width)).rounded(),
+            y: (next.y + clamp(fy) * (next.height - height)).rounded(),
+            width: width,
+            height: height
+        )
+    }
+
+    /// Stackbar's own windows (the palette, a plugin window) are skipped.
+    static let hostID = "io.navbytes.stackbar"
+
+    /// Moves the front window as `snap` says.
+    func apply(_ snap: Snap) async -> CommandResult {
+        let current: WindowSnapshot
+        do {
+            current = try await Stackbar.windows()
+        } catch {
+            problem = "Can't see your windows: \(error). Stackbar needs Accessibility access (System Settings › Privacy & Security)."
+            return .failure(problem ?? "")
+        }
+        guard let window = current.windows.first(where: { !$0.isMinimized && !$0.appID.hasPrefix(Self.hostID) }) else {
+            return .message("No window to move")
+        }
+        guard let display = current.display(for: window.frame) else { return .message("No display found") }
+        let key = window.appID + "|" + window.title
+        let target: WindowRect
+        switch snap.id {
+        case "undo-snap":
+            guard let saved = previous[key] else { return .message("Nothing to undo for \(window.appName)") }
+            target = saved
+        case "next-display":
+            guard current.displays.count > 1, let index = current.displays.firstIndex(where: { $0.id == display.id }) else {
+                return .message("Only one display")
+            }
+            let next = current.displays[(index + 1) % current.displays.count]
+            target = Self.moved(window.frame, from: display.visibleFrame, to: next.visibleFrame)
+        default:
+            guard let frame = Self.frame(snap, window: window.frame, visible: display.visibleFrame, gap: gap) else { return .done }
+            target = frame
+        }
+        // The app's windows front first: this one's place among them.
+        let ordinal = current.windows.filter { $0.appID == window.appID }.firstIndex(of: window) ?? 0
+        let placement = WindowPlacement(appID: window.appID, appName: window.appName, title: window.title, ordinal: ordinal, frame: target)
+        do {
+            let result = try await Stackbar.arrangeWindows([placement])
+            if !result.failed.isEmpty { return .failure("\(window.appName) didn't let its window move") }
+        } catch {
+            return .failure("Couldn't move the window: \(error)")
+        }
+        if snap.id != "undo-snap" { previous[key] = window.frame }
+        problem = nil
+        notice = "\(window.appName): \(snap.title)"
+        return .done
+    }
+
     // MARK: - Surfaces
 
     var menuBar: ViewContent {
@@ -210,7 +345,7 @@ final class Workspaces: StackbarPlugin {
 
     var panel: ViewContent {
         let windows = snapshot?.windows.count ?? 0
-        PanelHeader(currentSetupName, subtitle: snapshot == nil ? "Workspaces" : "\(Self.count(windows, "window")) open · \(Self.count(here.count, "layout")) for this setup", symbol: "rectangle.3.group", theme: theme) {
+        PanelHeader(currentSetupName, subtitle: snapshot == nil ? "Windows" : "\(Self.count(windows, "window")) open · \(Self.count(here.count, "layout")) for this setup", symbol: "macwindow.on.rectangle", theme: theme) {
             IconButton("arrow.clockwise", label: "Look again", theme: theme, key: "reload") { await self.look() }
         }
         if let problem {
@@ -221,6 +356,13 @@ final class Workspaces: StackbarPlugin {
         if let notice {
             Banner(notice, symbol: "checkmark.circle.fill", theme: theme) {
                 IconButton("xmark", label: "Dismiss", theme: theme, key: "dismiss") { self.notice = nil }
+            }
+        }
+        Card("Snap the front window", spacing: Space.xs, padding: Space.s) {
+            Grid(columns: 9, spacing: Space.xs) {
+                ForEach(Self.snaps) { snap in
+                    IconButton(snap.symbol, label: snap.title, theme: theme, key: "snap-\(snap.id)") { _ = await self.apply(snap) }
+                }
             }
         }
         TextField("Save the windows as… (Desk, Laptop, Focus)", text: "", key: "save") { text in await self.save(text) }
@@ -275,10 +417,18 @@ final class Workspaces: StackbarPlugin {
         .hover(scale: nil, highlight: .hoverWash, lift: false)
     }
 
+    static let gaps: [(title: String, points: Double)] = [("None", 0), ("Small", 4), ("Medium", 8), ("Large", 16)]
+
     var settings: ViewContent {
         Section("Menu bar") {
             Toggle("Show the icon in the menu bar", isOn: menuBarIcon) { self.menuBarIcon = $0 }
-            Text("Without it, open Workspaces from the palette. The icon comes back by itself when something needs you.").role(.secondary)
+            Text("Without it, open Windows from the palette. The icon comes back by itself when something needs you.").role(.secondary)
+        }
+        Section("Snapping") {
+            Picker("Gap around windows", options: Self.gaps.map(\.title), selection: Self.gaps.first { $0.points == gap }?.title ?? "None", style: .segmented) { title in
+                self.gap = Self.gaps.first { $0.title == title }?.points ?? 0
+            }
+            Text("Every snap is a command: type \u{201C}left half\u{201D} in the palette, or give it a hotkey in Settings › Commands.").role(.secondary)
         }
         Section("Restoring") {
             Toggle("Bring back the starred layout when displays change", isOn: autoRestore) { self.autoRestore = $0 }
@@ -300,6 +450,11 @@ final class Workspaces: StackbarPlugin {
     }
 
     var commands: [Command] {
+        for snap in Self.snaps {
+            Command(snap.id, title: snap.title, subtitle: "Windows", symbol: snap.symbol, keywords: snap.keywords + ["window", "snap"].filter { !snap.keywords.contains($0) }) { _ in
+                await self.apply(snap)
+            }
+        }
         for layout in layouts {
             Command(layout.commandID, title: "Restore \(layout.name)", subtitle: "\(Self.count(layout.windowCount, "window")) · \(layout.setupName)", symbol: "rectangle.3.group", keywords: ["workspace", "layout", "windows", "restore", layout.name]) { _ in
                 await self.restore(layout)
@@ -326,6 +481,13 @@ final class Workspaces: StackbarPlugin {
             return (self.here + self.elsewhere).map { layout in
                 "- \(layout.name): \(Self.count(layout.windowCount, "window")) on \(layout.setupName)\(layout.setupID == self.setupID ? " (current setup)" : "")\(self.isDefault(layout) ? ", starred" : "")"
             }.joined(separator: "\n")
+        }
+        AgentTool("snap", description: "Moves the front window: " + Self.snaps.map(\.title).joined(separator: ", "), parameters: [ToolParameter("to", description: "Where to, like Left Half or Next Display")]) { arguments in
+            let wanted = (arguments.string("to") ?? "").trimmingCharacters(in: .whitespaces)
+            guard let snap = Self.snaps.first(where: { $0.title.caseInsensitiveCompare(wanted) == .orderedSame || $0.id == wanted.lowercased() }) else {
+                return "No snap called \(wanted). Try one of: " + Self.snaps.map(\.title).joined(separator: ", ")
+            }
+            return Self.text(await self.apply(snap))
         }
         AgentTool("save_layout", description: "Saves where every window is now as a named layout for the current monitor setup; an existing name is updated", parameters: [ToolParameter("name", description: "The layout's name, like Desk")]) { arguments in
             Self.text(await self.save(arguments.string("name") ?? ""))

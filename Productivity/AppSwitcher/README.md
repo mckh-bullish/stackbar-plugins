@@ -19,8 +19,9 @@ letter. A pinned letter opens the app even when it isn't running. Hold Right
   opening pinned apps.
 - **Commands:** Pin a Letter to an App, Clear App Switcher Pins.
 - **Agent tools:** `letters`.
-- **Not covered:** jumping between Spaces, a window grid, and searching for
-  apps by name (Spotlight does that). While an app has Secure Input on, such
+- **Not covered:** jumping between Spaces and a window grid. To find an app
+  by name, type it in the palette (the Applications plugin); to snap windows,
+  use Windows. While an app has Secure Input on, such
   as in a password field, macOS blocks every keyboard listener. The panel
   tells you which app has it on.
 

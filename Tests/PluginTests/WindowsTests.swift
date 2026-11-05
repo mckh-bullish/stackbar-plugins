@@ -3,7 +3,7 @@ import XCTest
 import StackbarHostCore
 import StackbarProtocol
 
-final class WorkspacesTests: XCTestCase {
+final class WindowsTests: XCTestCase {
     /// The sample desk with every window piled into one corner.
     private func scrambled(_ snapshot: WindowSnapshot) -> WindowSnapshot {
         var snapshot = snapshot
@@ -22,7 +22,7 @@ final class WorkspacesTests: XCTestCase {
 
     func testSaveAndRestoreFromACommand() async throws {
         let host = Host(self)
-        let supervisor = try await host.start("Workspaces")
+        let supervisor = try await host.start("Windows")
         let desk = host.system.currentWindows
 
         guard case .message(let saved) = await supervisor.runCommand("save", arguments: ["name": "Desk"], source: .palette) else { return XCTFail("save saves") }
@@ -46,7 +46,7 @@ final class WorkspacesTests: XCTestCase {
         let host = Host(self)
         let desk = host.system.currentWindows
         let laptop = laptopAlone(desk)
-        let supervisor = try await host.start("Workspaces")
+        let supervisor = try await host.start("Windows")
         _ = await supervisor.runCommand("save", arguments: ["name": "Desk"], source: .palette)
 
         // Undock: a new setup with nothing saved; nothing moves.
@@ -76,7 +76,7 @@ final class WorkspacesTests: XCTestCase {
 
     func testMissingAppsAreOpenedAndReported() async throws {
         let host = Host(self)
-        let supervisor = try await host.start("Workspaces")
+        let supervisor = try await host.start("Windows")
         let desk = host.system.currentWindows
         _ = await supervisor.callTool("save_layout", arguments: ["name": .text("Desk")])
         var quit = desk
@@ -88,6 +88,31 @@ final class WorkspacesTests: XCTestCase {
         host.system.launchable["com.apple.dt.Xcode"] = [xcode]
         let text = await supervisor.callTool("restore_layout", arguments: ["name": .text("Desk")]).text
         XCTAssertEqual(text, "Restored “Desk”: moved 1 window; opened Xcode; 1 window not open (Slack)")
+        await supervisor.stop()
+    }
+
+    func testSnapsTheFrontWindowAndUndoes() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Windows")
+        let before = host.system.currentWindows
+        let front = before.windows.first { !$0.isMinimized }!
+        let display = before.display(for: front.frame)!
+
+        let commands = await supervisor.commands.map(\.id)
+        XCTAssertTrue(commands.contains("left-half"), "Window Layouts' command ids carry over: \(commands)")
+        XCTAssertTrue(commands.contains("restore"), "and Workspaces' restore is still the saved-layout one")
+        XCTAssertTrue(commands.contains("undo-snap"))
+
+        guard case .message = await supervisor.runCommand("left-half", arguments: [:], source: .hotkey) else { return XCTFail("left half snaps") }
+        let snapped = host.system.currentWindows.windows.first { $0.appID == front.appID && $0.title == front.title }!
+        XCTAssertEqual(snapped.frame.x, display.visibleFrame.x)
+        XCTAssertEqual(snapped.frame.width, (display.visibleFrame.width / 2).rounded())
+
+        guard case .message = await supervisor.runCommand("undo-snap", arguments: [:], source: .hotkey) else { return XCTFail("undo puts it back") }
+        XCTAssertEqual(host.system.currentWindows.windows.first { $0.appID == front.appID && $0.title == front.title }?.frame, front.frame)
+
+        let text = await supervisor.callTool("snap", arguments: ["to": .text("Nowhere")]).text
+        XCTAssertTrue(text.hasPrefix("No snap called Nowhere"), text)
         await supervisor.stop()
     }
 }
