@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-05T11:19:31Z",
+  "generated" : "2026-11-05T12:40:41Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -2418,6 +2418,32 @@
       "version" : "1.3.0"
     },
     {
+      "accent" : "indigo",
+      "bundle" : "Productivity/io.navbytes.stackbar.snippets-1.4.0.stackbarplugin",
+      "capabilities" : [
+        "Reads everything you copy, and pastes into the app you're using",
+        "Reads the text you select and which app you're in",
+        "Stores up to 16 MB",
+        "Replaces keywords it sets up as you type them, in any app (it never sees what you type)"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
+      "id" : "io.navbytes.stackbar.snippets",
+      "minimumStackbar" : "0.24.0",
+      "name" : "Snippets",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.snippets.png",
+      "sha256" : "17e89198e4ca7b3e6ac2d0f0cfa12ef7e056776258a104c4dfc2360dda0c2c1b",
+      "summary" : "Paste text by name, with placeholders filled in.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "text.insert",
+      "updated" : "2026-11-05",
+      "version" : "1.4.0"
+    },
+    {
       "bundle" : "System/io.navbytes.stackbar.stay-awake-1.0.1.stackbarplugin",
       "capabilities" : [
         "Keeps the Mac awake, and reads battery and running apps"
@@ -2671,5 +2697,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "7eABeT6fBAPz7bqTBx3thm14kZt+kcspvY2leS6oFbRiV+Bh11rKxyzaUkzw7XGUeNKsP6jn4rVe08Q34b5GCA=="
+  "signature" : "jN1SQHNp2SxGNEuW+mq5znuPoYuN41ZVa9dcKfU0/PQHqSr+OwBc8rBtAfVX4ZyQ7H7TjgVhzOoOU6iJVfFKCg=="
 }
