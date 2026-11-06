@@ -123,6 +123,12 @@
       "changes": [
         {
           "notes": [
+            "Matches the way the rest of the palette does, with Stackbar's own matcher, so apps and commands rank on one scale. Stackbar now also learns which app you pick for what you type."
+          ],
+          "version": "1.2.0"
+        },
+        {
+          "notes": [
             "The panel points to App Switcher, for switching apps with Right \u2318 and a letter. It stays a separate plugin, because it listens to the keyboard."
           ],
           "version": "1.1.0"
@@ -159,7 +165,7 @@
           "text": "/Applications (one folder deep), ~/Applications and the system's own apps, plus every pane System Settings lists."
         }
       ],
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     "io.navbytes.stackbar.plugins.browser-tabs": {
       "changes": [
@@ -1883,6 +1889,12 @@
           "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.1.0/dark/panel.png",
           "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.1.0/light/panel.png"
         }
+      },
+      "1.2.0": {
+        "panel": {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.2.0/dark/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.2.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.browser-tabs": {
@@ -3035,6 +3047,15 @@
         {
           "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.1.0/dark/previews/hero/panel.png",
           "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.1.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every app a few letters away"
+        }
+      ],
+      "1.2.0": [
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.2.0/dark/previews/hero/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.2.0/light/previews/hero/panel.png",
           "name": "hero",
           "surface": "panel",
           "title": "Every app a few letters away"

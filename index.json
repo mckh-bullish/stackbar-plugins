@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-06T07:41:08Z",
+  "generated" : "2026-11-06T08:04:51Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -346,6 +346,29 @@
       "symbol" : "square.grid.3x3.fill",
       "updated" : "2026-11-06",
       "version" : "1.1.0"
+    },
+    {
+      "accent" : "blue",
+      "bundle" : "System/io.navbytes.stackbar.plugins.applications-1.2.0.stackbarplugin",
+      "capabilities" : [
+        "Sees which apps are installed and running, and switches to, opens or hides them",
+        "Opens x-apple.systempreferences: links"
+      ],
+      "category" : "System",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/Applications",
+      "id" : "io.navbytes.stackbar.plugins.applications",
+      "minimumStackbar" : "0.20.0",
+      "name" : "Applications",
+      "publisher" : "navbytes",
+      "screenshot" : "System/io.navbytes.stackbar.plugins.applications.png",
+      "sha256" : "81c27c3541e48c917164a1b9a9d8c2679fee62015566ee3fcd1b977671bc20ce",
+      "summary" : "Open any app or System Settings pane from the command palette by typing a few letters.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "square.grid.3x3.fill",
+      "updated" : "2026-11-06",
+      "version" : "1.2.0"
     },
     {
       "accent" : "cyan",
@@ -3367,5 +3390,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "yN/Kc/ZjN6ASgJEzy+JFCbT/ej3xu/Ns2KgC3qlPOmE+Z4riMSt1bDcfU34h4GU8AkOj71IX6FKqqacZdRN6DQ=="
+  "signature" : "/tgsnv9P4n95oEIsD6Zb4TzxULF1Wd6NugoCGYhWd80Et/yBhSlj0xaZcxofT9BdnKeHcHWMR3eePFacNdR6DA=="
 }
