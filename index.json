@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-06T01:15:30Z",
+  "generated" : "2026-11-06T02:36:55Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -486,6 +486,32 @@
       "version" : "1.5.0"
     },
     {
+      "accent" : "cyan",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.docker-1.6.0.stackbarplugin",
+      "capabilities" : [
+        "Runs docker (not installed)"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
+      "id" : "io.navbytes.stackbar.plugins.docker",
+      "minimumStackbar" : "0.17.0",
+      "name" : "Docker",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.docker.png",
+      "sha256" : "3c65fdd72f6c4374b55a8d872958a2fde7e3c7de7741d8b43b1bfd740265f4be",
+      "summary" : "Your containers with live CPU and memory, Compose projects, and start, stop, restart and logs a click away.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "shippingbox.fill",
+      "updated" : "2026-11-06",
+      "version" : "1.6.0"
+    },
+    {
       "accent" : "amber",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.emoji-1.0.0.stackbarplugin",
       "capabilities" : [
@@ -817,6 +843,33 @@
       "version" : "1.4.0"
     },
     {
+      "accent" : "blue",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.jira-1.5.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to *.atlassian.net",
+        "Reads the secret JIRA_API_TOKEN",
+        "Connects to the server you enter as JIRA_SERVER_URL, and no other"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
+      "id" : "io.navbytes.stackbar.plugins.jira",
+      "minimumStackbar" : "0.21.0",
+      "name" : "Jira",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.jira.png",
+      "sha256" : "72174d25f53000bb03d81647e7f324fc3460975f754606c07a8eb6597f8b442b",
+      "summary" : "Your assigned Jira issues: change status, assign, comment and watch, with alerts and new issues from the palette.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "ticket.fill",
+      "updated" : "2026-11-06",
+      "version" : "1.5.0"
+    },
+    {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.linear-1.0.0.stackbarplugin",
       "capabilities" : [
         "Connects to api.linear.app",
@@ -937,6 +990,32 @@
       "symbol" : "circle.lefthalf.filled",
       "updated" : "2026-11-06",
       "version" : "1.4.0"
+    },
+    {
+      "accent" : "indigo",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.linear-1.5.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to api.linear.app",
+        "Reads the secret LINEAR_API_KEY"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
+      "id" : "io.navbytes.stackbar.plugins.linear",
+      "minimumStackbar" : "0.21.0",
+      "name" : "Linear",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.linear.png",
+      "sha256" : "4808a8d1776077672481be4877326adb0abe63460fdc65723ba76a4556c81137",
+      "summary" : "Your assigned Linear issues and inbox: change status and priority, start work, comment, and new issues from the palette.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "circle.lefthalf.filled",
+      "updated" : "2026-11-06",
+      "version" : "1.5.0"
     },
     {
       "bundle" : "Monitoring/io.navbytes.stackbar.plugins.litellm-1.0.0.stackbarplugin",
@@ -1338,6 +1417,31 @@
       "version" : "1.5.0"
     },
     {
+      "accent" : "red",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.pomodoro-1.6.0.stackbarplugin",
+      "capabilities" : [
+
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Pomodoro",
+      "id" : "io.navbytes.stackbar.plugins.pomodoro",
+      "minimumStackbar" : "0.17.0",
+      "name" : "Pomodoro",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.pomodoro.png",
+      "sha256" : "d8c8c5d286c6e0bb475035447e1a39105b1c0e2aabbb8b8b1fd74ddd8027df29",
+      "summary" : "A focus timer with presets, a progress ring, tags, long breaks and a week of focus in a chart.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "settings",
+        "widget"
+      ],
+      "symbol" : "timer",
+      "updated" : "2026-11-06",
+      "version" : "1.6.0"
+    },
+    {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.ports-1.0.0.stackbarplugin",
       "capabilities" : [
         "Runs /usr/sbin/lsof, /bin/kill"
@@ -1590,6 +1694,31 @@
       "symbol" : "gauge.with.dots.needle.67percent",
       "updated" : "2026-11-06",
       "version" : "1.4.0"
+    },
+    {
+      "accent" : "green",
+      "bundle" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor-1.5.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /bin/ps, /usr/sbin/sysctl, /usr/bin/vm_stat, /usr/sbin/netstat, /bin/df, /bin/kill"
+      ],
+      "category" : "Monitoring",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
+      "id" : "io.navbytes.stackbar.plugins.system-monitor",
+      "minimumStackbar" : "0.17.0",
+      "name" : "System Monitor",
+      "publisher" : "navbytes",
+      "screenshot" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor.png",
+      "sha256" : "2828ae9377e448177904c775cf3bfff75e9e42ae3720a218481a04a917064a44",
+      "summary" : "CPU, memory, disk and network speed in the menu bar, the processes using the most, and alerts when one stays high.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "gauge.with.dots.needle.67percent",
+      "updated" : "2026-11-06",
+      "version" : "1.5.0"
     },
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.todo-1.0.0.stackbarplugin",
@@ -2314,6 +2443,34 @@
       "version" : "1.7.0"
     },
     {
+      "accent" : "violet",
+      "bundle" : "Developer/io.navbytes.stackbar.pr-cockpit-1.8.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to api.github.com",
+        "Reads the secret GITHUB_TOKEN",
+        "Connects to the server you enter as GITHUB_ENTERPRISE_URL, and no other"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
+      "id" : "io.navbytes.stackbar.pr-cockpit",
+      "minimumStackbar" : "0.21.0",
+      "name" : "PR Cockpit",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.pr-cockpit.png",
+      "sha256" : "b6cd53533c124c728e29918249d37224971b556f86a64db4be7b0b553c13c82b",
+      "summary" : "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "arrow.triangle.pull",
+      "updated" : "2026-11-06",
+      "version" : "1.8.0"
+    },
+    {
       "bundle" : "Productivity/io.navbytes.stackbar.quicklinks-1.0.1.stackbarplugin",
       "capabilities" : [
         "Opens any link, file or folder, in any app",
@@ -2561,6 +2718,32 @@
       "version" : "1.4.0"
     },
     {
+      "accent" : "indigo",
+      "bundle" : "Productivity/io.navbytes.stackbar.snippets-1.5.0.stackbarplugin",
+      "capabilities" : [
+        "Reads everything you copy, and pastes into the app you're using",
+        "Reads the text you select and which app you're in",
+        "Stores up to 16 MB",
+        "Replaces keywords it sets up as you type them, in any app (it never sees what you type)"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
+      "id" : "io.navbytes.stackbar.snippets",
+      "minimumStackbar" : "0.24.0",
+      "name" : "Snippets",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.snippets.png",
+      "sha256" : "923bb2dd4da0b7d33227fa49989fea3230a31b7fb300b7c874b5ef34182fd244",
+      "summary" : "Paste text by name, with placeholders filled in.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "text.insert",
+      "updated" : "2026-11-06",
+      "version" : "1.5.0"
+    },
+    {
       "bundle" : "System/io.navbytes.stackbar.stay-awake-1.0.1.stackbarplugin",
       "capabilities" : [
         "Keeps the Mac awake, and reads battery and running apps"
@@ -2806,6 +2989,32 @@
       "symbol" : "calendar",
       "updated" : "2026-11-06",
       "version" : "1.4.1"
+    },
+    {
+      "accent" : "red",
+      "bundle" : "Productivity/io.navbytes.stackbar.up-next-1.5.0.stackbarplugin",
+      "capabilities" : [
+        "Reads your calendar events"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
+      "id" : "io.navbytes.stackbar.up-next",
+      "minimumStackbar" : "0.17.0",
+      "name" : "Up Next",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.up-next.png",
+      "sha256" : "06aa2a749974d035b218662f5d466bb20d5e1c03fe312482daa6f33316b3abb0",
+      "summary" : "Your next meeting in the menu bar, with a countdown and one-click join.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "calendar",
+      "updated" : "2026-11-06",
+      "version" : "1.5.0"
     }
   ],
   "revoked" : [
@@ -2814,5 +3023,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "aQomomliZ5mra+dFwYj/fTZMipHAOHso6lHRmbfts2DgOwfXjuiSCfm7Gdak/cJg+pUaidn4sgfW8dQyuUPaAA=="
+  "signature" : "Ht9DuiL/mxbqCAYIuQ1A+le4EZyn1UPYpJmJrKjn/TLhmvOahXN+ldP3d06KYKX4fhFoOoulMYSJnIcMhKXgCg=="
 }

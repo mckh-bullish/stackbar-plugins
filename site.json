@@ -205,6 +205,14 @@
       "changes": [
         {
           "notes": [
+            "CPU and memory for every running container, and the totals at the top of the panel.",
+            "Start, restart or stop a whole Compose project from its section, or from the new Docker Compose Projects command.",
+            "Stop All Docker Containers, from the palette or a hotkey."
+          ],
+          "version": "1.6.0"
+        },
+        {
+          "notes": [
             "A container's logs open in their own window, so you can keep them beside your editor while the panel closes."
           ],
           "version": "1.5.0"
@@ -222,7 +230,7 @@
           "version": "1.3.1"
         }
       ],
-      "description": "Your containers in the menu bar. The number is how many are running; the\npanel lists them grouped by Compose project, with Start, Stop, Restart,\nLogs, Open (for a published port), Copy ID and Remove.",
+      "description": "Your containers in the menu bar. The number is how many are running; the\npanel lists them grouped by Compose project, each with its CPU and memory,\nStart, Stop, Restart, Logs, Open (for a published port), Copy ID and Remove,\nand each project with Start all, Restart and Stop.",
       "facts": [
         {
           "label": "Needs",
@@ -234,7 +242,11 @@
         },
         {
           "label": "How it checks",
-          "text": "`docker ps --all` every 15 seconds while something runs, every minute otherwise."
+          "text": "`docker ps --all` every 15 seconds while something runs, every minute otherwise, and one `docker stats --no-stream` snapshot while anything runs."
+        },
+        {
+          "label": "Compose",
+          "text": "a project's buttons run `docker compose -p <project> start|stop|restart`, which finds the project from its containers, so no compose file is needed."
         },
         {
           "label": "When something goes wrong",
@@ -246,14 +258,14 @@
         },
         {
           "label": "Commands",
-          "text": "Docker Containers, Docker Logs (the last 200 lines of one container), Remove Stopped Docker Containers."
+          "text": "Docker Containers, Docker Compose Projects, Stop All Docker Containers, Docker Logs (the last 200 lines of one container), Remove Stopped Docker Containers."
         },
         {
           "label": "Agent tool",
-          "text": "`containers` lists every container with its image and state."
+          "text": "`containers` lists every container with its image, state, CPU and memory."
         }
       ],
-      "version": "1.5.0"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.plugins.emoji": {
       "changes": [
@@ -371,6 +383,15 @@
       "changes": [
         {
           "notes": [
+            "Change an issue's status, comment on it, assign it to yourself or watch it, from its row.",
+            "A notification when an issue is assigned to you, louder for Highest and Blocker.",
+            "Jira Data Center: pick it in Settings and enter your server and a personal access token.",
+            "Updating asks once more for approval, because the plugin can now reach a Data Center server you enter."
+          ],
+          "version": "1.5.0"
+        },
+        {
+          "notes": [
             "Type an issue key like ABC-123 in the palette and the issue comes up first, without opening Jira's command.",
             "A desktop widget shows your open issues."
           ],
@@ -389,11 +410,11 @@
           "version": "1.2.2"
         }
       ],
-      "description": "Your Jira Cloud issues in the menu bar and the palette. The number is how\nmany assigned issues are in progress; the panel lists them, in progress\nfirst.\n\n\nJira Server and Data Center aren't supported: only Atlassian's cloud sites.",
+      "description": "Your Jira issues in the menu bar and the palette, on Jira Cloud or Jira Data\nCenter. The number is how\nmany assigned issues are in progress; the panel lists them, in progress\nfirst.",
       "facts": [
         {
           "label": "Needs",
-          "text": "`*.atlassian.net` and the secret `JIRA_API_TOKEN`, an API token from id.atlassian.com (Security > API tokens). Your site and email are set in Settings."
+          "text": "`*.atlassian.net` and the secret `JIRA_API_TOKEN`, an API token from id.atlassian.com (Security > API tokens). Your site and email are set in Settings. On Data Center, `JIRA_SERVER_URL` is your server's address and `JIRA_API_TOKEN` a personal access token; the plugin reaches that server and no other."
         },
         {
           "label": "Surfaces",
@@ -401,25 +422,38 @@
         },
         {
           "label": "On each issue",
-          "text": "Open, Copy Link, Copy Key, Copy Branch Name (`ABC-123-short-summary`, which Jira's development panel links)."
+          "text": "Open, Change Status (the issue's own workflow), Comment, Assign to Me (on issues that aren't yours yet), Watch, Copy Link, Copy Key, Copy Branch Name (`ABC-123-short-summary`, which Jira's development panel links)."
+        },
+        {
+          "label": "Notifications",
+          "text": "when an issue is newly assigned to you; Highest and Blocker issues say so in the title. Turn it off in Settings."
         },
         {
           "label": "Commands",
-          "text": "My Jira Issues, Search Jira (text, or a key like `ABC-123`), Create Jira Issue (project, type, summary, description)."
+          "text": "My Jira Issues, Search Jira (text, or a key like `ABC-123`), Change Jira Issue Status, Comment on Jira Issue, Create Jira Issue (project, type, summary, description)."
         },
         {
           "label": "Settings",
-          "text": "site, email, the JQL behind the menu bar and panel (open issues assigned to you by default), and the default project for new issues."
+          "text": "Cloud or Data Center, site, email, the JQL behind the menu bar and panel (open issues assigned to you by default), notifications, and the default project for new issues."
         },
         {
           "label": "Agent tool",
           "text": "`assigned` lists your open issues."
         }
       ],
-      "version": "1.4.0"
+      "version": "1.5.0"
     },
     "io.navbytes.stackbar.plugins.linear": {
       "changes": [
+        {
+          "notes": [
+            "Your Linear inbox in the panel and the palette, with a notification when something new arrives and a bell in the menu bar while it's unread.",
+            "Start Work on any issue: In Progress, assigned to you, branch name copied.",
+            "Change status, set priority and comment from an issue's row.",
+            "Search finds an ID like ENG-123 or a pasted issue link, and says why when it can't search."
+          ],
+          "version": "1.5.0"
+        },
         {
           "notes": [
             "Type an issue ID like ENG-42 in the palette and the issue comes up first, without opening Linear's command.",
@@ -440,7 +474,7 @@
           "version": "1.2.1"
         }
       ],
-      "description": "Your Linear issues in the menu bar and the palette. The number is how many\nassigned issues are in progress; the panel groups everything assigned to you\nby state, ordered by priority.",
+      "description": "Your Linear issues and inbox in the menu bar and the palette. The number is\nhow many assigned issues are in progress, or a bell with the unread count\nwhile your inbox has something new; the panel shows new inbox entries, then\ngroups everything assigned to you by state, ordered by priority.",
       "facts": [
         {
           "label": "Needs",
@@ -452,22 +486,26 @@
         },
         {
           "label": "On each issue",
-          "text": "Open, Copy Branch Name (Linear's own, so the branch links back to the issue), Copy Link, Copy ID."
+          "text": "Open, Start Work (moves it to In Progress, assigns it to you and copies the branch name), Change Status, Set Priority, Comment, Copy Branch Name (Linear's own, so the branch links back to the issue), Copy Link, Copy ID."
+        },
+        {
+          "label": "Inbox",
+          "text": "assignments, mentions and comments, with a notification for each new one. Open marks it read."
         },
         {
           "label": "Commands",
-          "text": "My Linear Issues, Search Linear Issues (by title), Create Linear Issue (team, title, description, priority, assign to me)."
+          "text": "My Linear Issues, Search Linear Issues (by title, or paste an ID like `ENG-123` or an issue link), Linear Inbox, Change Linear Issue Status, Set Linear Issue Priority, Comment on Linear Issue, Create Linear Issue (team, title, description, priority, assign to me)."
         },
         {
           "label": "Settings",
-          "text": "what the menu-bar number counts, and the default team for new issues."
+          "text": "what the menu-bar number counts, inbox notifications, and the default team for new issues."
         },
         {
           "label": "Agent tool",
           "text": "`assigned` lists your open issues with their branch names."
         }
       ],
-      "version": "1.4.0"
+      "version": "1.5.0"
     },
     "io.navbytes.stackbar.plugins.litellm": {
       "changes": [
@@ -599,6 +637,13 @@
       "changes": [
         {
           "notes": [
+            "A long break every four sessions (or two to six, or off), with dots under the timer for where you are in the round.",
+            "The last seven days of focus in a chart under the timer."
+          ],
+          "version": "1.6.0"
+        },
+        {
+          "notes": [
             "Click the timer in the menu bar to start or pause it (turn it off in Settings to open the panel instead).",
             "The desktop widget has a Start/Pause button."
           ],
@@ -617,7 +662,7 @@
           "version": "1.3.1"
         }
       ],
-      "description": "A focus timer in the Stackbar look: red for focus, teal for breaks. Pick Focus or Break, a preset (25, 50 or\n90 minutes of focus; 5, 10 or 15 of break), and press play. The countdown and\nthe ring around it move on their own, the menu bar shows the time\nleft (dimmed behind a pause sign while paused), and a chime and a\nnotification mark the end. Today's finished sessions\nand focused minutes sit under the timer.",
+      "description": "A focus timer in the Stackbar look: red for focus, teal for breaks. Pick Focus or Break, a preset (25, 50 or\n90 minutes of focus; 5, 10 or 15 of break), and press play. The countdown and\nthe ring around it move on their own, the menu bar shows the time\nleft (dimmed behind a pause sign while paused), and a chime and a\nnotification mark the end. Today's finished sessions\nand focused minutes sit under the timer, with the last seven days in a chart.",
       "facts": [
         {
           "label": "Needs",
@@ -632,6 +677,10 @@
           "text": "the tag chip cycles through your tags; skip ends the session without counting it; Auto starts the next session on its own; the note turns the sound on or off; reset clears the timer."
         },
         {
+          "label": "Long breaks",
+          "text": "after four focus sessions (you can pick two to six, or off) the break is a long one, 15 minutes by default. Dots under the timer show how far you are into the round."
+        },
+        {
           "label": "No lost sessions",
           "text": "once a session is a minute in, a mode, preset, skip or reset tap asks first, with a banner to confirm or keep going."
         },
@@ -641,18 +690,18 @@
         },
         {
           "label": "Settings",
-          "text": "custom focus and break lengths, auto-start, the sound, and your tags."
+          "text": "custom focus, break and long-break lengths, how many sessions before a long break, auto-start, the sound, and your tags."
         },
         {
           "label": "Agent tool",
-          "text": "`status` returns the mode, the time left and today's focus."
+          "text": "`status` returns the mode, the time left, today's focus and the last seven days."
         },
         {
           "label": "Requires",
           "text": "Stackbar 0.14.0 or later."
         }
       ],
-      "version": "1.5.0"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.plugins.ports": {
       "changes": [
@@ -734,6 +783,15 @@
       "changes": [
         {
           "notes": [
+            "Download and upload speeds in the panel, the widget and (if you pick it) the menu bar.",
+            "A notification when CPU or memory stays high for a minute, naming the process behind it, and when the disk is nearly full.",
+            "Lighter: it reads `ps` instead of running `top` for two seconds every ten.",
+            "Updating asks once more for approval, because it now runs `ps`, `sysctl` and `netstat` instead of `top`."
+          ],
+          "version": "1.5.0"
+        },
+        {
+          "notes": [
             "A Top Processes command in the palette shows what is using your CPU and memory, and can quit it."
           ],
           "version": "1.4.0"
@@ -751,11 +809,11 @@
           "version": "1.2.1"
         }
       ],
-      "description": "CPU and memory in the menu bar, with the processes using the most a click\naway.",
+      "description": "CPU, memory and network in the menu bar, with the processes using the most a\nclick away and a notification when something stays high.",
       "facts": [
         {
           "label": "Needs",
-          "text": "to run `top`, `vm_stat`, `df` and `kill` (all come with macOS). No network, files or secrets."
+          "text": "to run `ps`, `sysctl`, `vm_stat`, `netstat`, `df` and `kill` (all come with macOS). No network, files or secrets."
         },
         {
           "label": "Surfaces",
@@ -763,22 +821,26 @@
         },
         {
           "label": "How it measures",
-          "text": "every 10 seconds, `top` takes two one-second samples (the second is the accurate one), `vm_stat` gives memory the way Activity Monitor counts it (app memory, wired and compressed, not the file cache), and `df` the disk."
+          "text": "every 10 seconds, `ps` gives every process's CPU and memory (total CPU is their sum over the cores), `sysctl` the load, `vm_stat` memory the way Activity Monitor counts it (app memory, wired and compressed, not the file cache), `netstat` the bytes through Wi-Fi and Ethernet, and `df` the disk. Each answers at once, so nothing waits a second between two samples the way `top` does."
         },
         {
           "label": "In the panel",
-          "text": "a CPU chart for the last five minutes, load averages, memory and disk bars, and the top eight processes, each with Copy PID and Quit Process."
+          "text": "a CPU chart for the last five minutes, load averages, memory and disk, download and upload speeds with their recent history, and the top eight processes, each with Copy PID and Quit Process."
+        },
+        {
+          "label": "Alerts",
+          "text": "a notification when CPU stays above your line (85% by default) or memory above 90% for a minute, naming the busiest process, and when the disk is 95% full. Once per spell, then quiet for 30 minutes."
         },
         {
           "label": "Settings",
-          "text": "what the menu bar shows (CPU and memory, CPU, or memory) and whether processes are sorted by CPU or memory."
+          "text": "what the menu bar shows (CPU and memory, CPU, memory, or download speed), alerts and the CPU line, and whether processes are sorted by CPU or memory."
         },
         {
           "label": "Agent tool",
-          "text": "`usage` returns CPU, memory, disk and the busiest processes."
+          "text": "`usage` returns CPU, memory, disk, network and the busiest processes."
         }
       ],
-      "version": "1.4.0"
+      "version": "1.5.0"
     },
     "io.navbytes.stackbar.plugins.todo": {
       "changes": [
@@ -1077,6 +1139,13 @@
       "changes": [
         {
           "notes": [
+            "GitHub Enterprise Server: turn it on in Settings and enter your server's address. Pull requests, issues, the inbox and search all come from it.",
+            "Updating asks once more for approval, because the plugin can now reach an Enterprise server you enter."
+          ],
+          "version": "1.8.0"
+        },
+        {
+          "notes": [
             "Type owner/repo or repo#123 in the palette to jump straight to the repository or pull request."
           ],
           "version": "1.7.0"
@@ -1099,7 +1168,7 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "network access to `api.github.com` only, and a `GITHUB_TOKEN` secret kept in the Keychain. A fine-grained token with read access to pull requests, issues and metadata covers everything except creating issues, which needs write access to issues."
+          "text": "network access to `api.github.com` only, and a `GITHUB_TOKEN` secret kept in the Keychain. A fine-grained token with read access to pull requests, issues and metadata covers everything except creating issues, which needs write access to issues. On GitHub Enterprise Server, turn it on in Settings and enter the server as `GITHUB_ENTERPRISE_URL`; the plugin then reaches that server and no other."
         },
         {
           "label": "Surfaces",
@@ -1118,7 +1187,7 @@
           "text": "`review_queue`, `my_pull_requests` and `my_issues`."
         }
       ],
-      "version": "1.7.0"
+      "version": "1.8.0"
     },
     "io.navbytes.stackbar.quicklinks": {
       "changes": [
@@ -1174,6 +1243,12 @@
       "changes": [
         {
           "notes": [
+            "Import from TextExpander, Espanso and Apple's Text Replacements, with their placeholders and keywords."
+          ],
+          "version": "1.5.0"
+        },
+        {
+          "notes": [
             "Keywords expand as you type them, in any app. Keywords are now at most 32 characters; longer ones you already have stay searchable."
           ],
           "version": "1.4.0"
@@ -1191,7 +1266,7 @@
           "version": "1.2.1"
         }
       ],
-      "description": "Text you paste by name, with placeholders filled in. Each snippet becomes a\ncommand of its own that pastes into the app you were in, then puts your\nclipboard back. Snippets use Raycast's template syntax: `{clipboard}`,\n`{selection}`, `{date format=\"d MMM\"}`, `{argument name=\"who\"}` asks first,\n`{cursor}` leaves the caret there, and `{snippet name=\"Signature\"}` pulls in\nanother snippet.",
+      "description": "Text you paste by name, with placeholders filled in. Each snippet becomes a\ncommand of its own that pastes into the app you were in, then puts your\nclipboard back. Snippets use Raycast's template syntax: `{clipboard}`,\n`{selection}`, `{date format=\"d MMM\"}`, `{argument name=\"who\"}` asks first,\n`{cursor}` leaves the caret there, and `{snippet name=\"Signature\"}` pulls in\nanother snippet.\n\n\n## Bring your snippets with you\n\nImport Snippets reads:\n\n\nDuplicates are skipped, and keywords already taken are left off.",
       "facts": [
         {
           "label": "Needs",
@@ -1203,7 +1278,7 @@
         },
         {
           "label": "Settings",
-          "text": "your snippets, importing a Raycast export, and whether keywords are expanding."
+          "text": "your snippets, importing from Raycast, TextExpander, Espanso or Apple's Text Replacements, and whether keywords are expanding."
         },
         {
           "label": "Commands",
@@ -1212,9 +1287,25 @@
         {
           "label": "Keywords",
           "text": "type a snippet's keyword, like `;sig`, in any app and it is replaced with the snippet. A snippet that asks for an argument opens in the palette first. Stackbar does the watching, so this plugin never sees what you type; switch it off or skip apps in Settings \u203a Privacy & Secrets."
+        },
+        {
+          "label": "Raycast",
+          "text": "its JSON export, as it is."
+        },
+        {
+          "label": "TextExpander",
+          "text": "a `.textexpander` group file or its CSV export. `%clipboard`, `%|` (cursor), fill-ins (`%filltext:name=who%`) and date codes like `%Y-%m-%d` become placeholders; abbreviations become keywords."
+        },
+        {
+          "label": "Espanso",
+          "text": "a match file (`base.yml`). `trigger` or `triggers` become keywords, `$|$` the cursor and `{{clipboard}}` the clipboard."
+        },
+        {
+          "label": "Text Replacements",
+          "text": "select them in System Settings > Keyboard > Text Replacements and drag them to the Desktop, then import the plist."
         }
       ],
-      "version": "1.4.0"
+      "version": "1.5.0"
     },
     "io.navbytes.stackbar.stay-awake": {
       "changes": [
@@ -1266,6 +1357,15 @@
       "changes": [
         {
           "notes": [
+            "Step through the week: chips under the meeting pick any of the next seven days.",
+            "\"Free until 14:30\" in the header while you're between meetings.",
+            "Meetings that clash with another are flagged, and the row says which.",
+            "A second, quieter nudge as a meeting starts, with a Join button."
+          ],
+          "version": "1.5.0"
+        },
+        {
+          "notes": [
             "Its store screenshots no longer show a meeting under both Today and Tomorrow."
           ],
           "version": "1.4.1"
@@ -1306,7 +1406,7 @@
           "text": "`next_meeting`, `agenda` and `join_next`."
         }
       ],
-      "version": "1.4.1"
+      "version": "1.5.0"
     }
   },
   "demos": {
@@ -1342,6 +1442,12 @@
         "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.5.0/light/demo/136e9e2e0dae/panel.png",
         "seconds": 4.0,
         "surface": "panel"
+      },
+      "1.6.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/dark/demo/136e9e2e0dae/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/light/demo/136e9e2e0dae/panel.png",
+        "seconds": 4.0,
+        "surface": "panel"
       }
     },
     "io.navbytes.stackbar.plugins.world-clock": {
@@ -1368,6 +1474,12 @@
       "1.7.0": {
         "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.7.0/dark/demo/526649a16612/panel.png",
         "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.7.0/light/demo/526649a16612/panel.png",
+        "seconds": 5.0,
+        "surface": "panel"
+      },
+      "1.8.0": {
+        "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.0/dark/demo/526649a16612/panel.png",
+        "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.0/light/demo/526649a16612/panel.png",
         "seconds": 5.0,
         "surface": "panel"
       }
@@ -1539,6 +1651,16 @@
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.5.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.5.0/light/panel.png"
         }
+      },
+      "1.6.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.emoji": {
@@ -1645,6 +1767,16 @@
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.4.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.4.0/light/panel.png"
         }
+      },
+      "1.5.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.5.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.5.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.5.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.5.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.linear": {
@@ -1686,6 +1818,16 @@
         "panel": {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.4.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.4.0/light/panel.png"
+        }
+      },
+      "1.5.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.5.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.5.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.5.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.5.0/light/panel.png"
         }
       }
     },
@@ -1821,6 +1963,16 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.5.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.5.0/light/panel.png"
         }
+      },
+      "1.6.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.ports": {
@@ -1896,6 +2048,16 @@
         "panel": {
           "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.4.0/dark/panel.png",
           "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.4.0/light/panel.png"
+        }
+      },
+      "1.5.0": {
+        "menuBar": {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/dark/menuBar.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/dark/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/light/panel.png"
         }
       }
     },
@@ -2147,6 +2309,16 @@
           "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.7.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.7.0/light/panel.png"
         }
+      },
+      "1.8.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.quicklinks": {
@@ -2198,6 +2370,12 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.snippets/1.4.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.snippets/1.4.0/light/panel.png"
+        }
+      },
+      "1.5.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.snippets/1.5.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.snippets/1.5.0/light/panel.png"
         }
       }
     },
@@ -2282,6 +2460,16 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/light/panel.png"
+        }
+      },
+      "1.5.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/light/panel.png"
         }
       }
     }
@@ -2482,6 +2670,29 @@
           "surface": "widget",
           "title": "Your stack's health on the desktop"
         }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every container, grouped by Compose project"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/dark/previews/trouble/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/light/previews/trouble/panel.png",
+          "name": "trouble",
+          "surface": "panel",
+          "title": "Catch the container that keeps crashing"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your stack's health on the desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.emoji": {
@@ -2574,6 +2785,22 @@
           "surface": "widget",
           "title": "What you're on, on your desktop"
         }
+      ],
+      "1.5.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.5.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.5.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your issues, grouped by where they stand"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.5.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.5.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "What you're on, on your desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.linear": {
@@ -2597,6 +2824,22 @@
         {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.4.0/dark/previews/widget/widget.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.4.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "What you're on, on your desktop"
+        }
+      ],
+      "1.5.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.5.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.5.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your Linear issues, by state and priority"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.5.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.5.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "What you're on, on your desktop"
@@ -2731,6 +2974,29 @@
           "surface": "widget",
           "title": "Your focus timer on the desktop"
         }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Twenty-five focused minutes, counting down"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/dark/previews/break/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/light/previews/break/panel.png",
+          "name": "break",
+          "surface": "panel",
+          "title": "A real break between sessions"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/dark/previews/widget/widget.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your focus timer on the desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.ports": {
@@ -2795,6 +3061,29 @@
         {
           "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.4.0/dark/previews/widget/widget.png",
           "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.4.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your Mac's load on the desktop"
+        }
+      ],
+      "1.5.0": [
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/dark/previews/hero/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "CPU, memory and disk at a glance"
+        },
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/dark/previews/memory/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/light/previews/memory/panel.png",
+          "name": "memory",
+          "surface": "panel",
+          "title": "Find what is eating your memory"
+        },
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/dark/previews/widget/widget.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "Your Mac's load on the desktop"
@@ -3005,6 +3294,29 @@
           "surface": "widget",
           "title": "Your review queue on the desktop"
         }
+      ],
+      "1.8.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every pull request waiting on you"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.0/dark/previews/mine/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.0/light/previews/mine/panel.png",
+          "name": "mine",
+          "surface": "panel",
+          "title": "Your own PRs: checks, reviews and conflicts"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your review queue on the desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.quicklinks": {
@@ -3041,6 +3353,15 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.snippets/1.4.0/dark/previews/hero/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.snippets/1.4.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Text you type often, a keystroke away"
+        }
+      ],
+      "1.5.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.snippets/1.5.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.snippets/1.5.0/light/previews/hero/panel.png",
           "name": "hero",
           "surface": "panel",
           "title": "Text you type often, a keystroke away"
@@ -3137,6 +3458,29 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/dark/previews/widget/widget.png",
           "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.4.1/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "What's next, on your desktop"
+        }
+      ],
+      "1.5.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your next meeting, one click from joining"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/dark/previews/week/window.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/light/previews/week/window.png",
+          "name": "week",
+          "surface": "window",
+          "title": "The day and the week's meeting load"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/dark/previews/widget/widget.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "What's next, on your desktop"
