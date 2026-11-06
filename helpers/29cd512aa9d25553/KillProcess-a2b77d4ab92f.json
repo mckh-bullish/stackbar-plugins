@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.kill-process",
+  "protocol" : 20,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "d44bbacc859b8cd4cb4d9feeeabc315e0a5a503381b228722d0e9366cac18f40",
+  "signature" : "THINsE2QOHKyIdS2y8nft8kGxfVG4EXpp8W9O+i21INgoxkMP8H9NeaxdyPy6GYX2M1nzeyTj1yHSHNEsuU8DA==",
+  "size" : 5223424,
+  "sourceDigest" : "a2b77d4ab92fcac9fab93ceb27057ee0a0f38a9254d709b7ca1d7f2fc7cf20df",
+  "stackbarKit" : "29cd512aa9d25553fc040e4ee10c8b6d5475ef1db1ebb90e79aca845c8d9068e",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-29cd512aa9d25553/KillProcess-a2b77d4ab92f",
+  "version" : "1.0.0"
+}
