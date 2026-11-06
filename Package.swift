@@ -14,7 +14,7 @@ import PackageDescription
 /// and custom styling.
 /// Switch to `exact:` once tags are pushed, and raise it in its own pull
 /// request; a plugin may still set an older `minimumStackbar`.
-let stackbarRevision = "50208b1b3c071f9d2d33176bedc440b805f78559" // 0.26.0: protocol 21 (#120, #121)
+let stackbarRevision = "a10887b343a68b3a32dbfc7f7f6e8aa03558aef2" // after 0.26.0: palette ranker, TextMatch.match (#125)
 
 /// Category folders. The folder name is the category the store shows.
 let categories = ["System", "Developer", "Network", "Monitoring", "Productivity"]

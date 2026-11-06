@@ -12,6 +12,12 @@ The ones you open most rank higher. Search Applications lists them all.
 - **Looks in:** /Applications (one folder deep), ~/Applications and the
   system's own apps, plus every pane System Settings lists.
 
+## What's new in 1.2.0
+
+- Matches the way the rest of the palette does, with Stackbar's own matcher,
+  so apps and commands rank on one scale. Stackbar now also learns which app
+  you pick for what you type.
+
 ## What's new in 1.1.0
 
 - The panel points to App Switcher, for switching apps with Right ⌘ and a

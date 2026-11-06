@@ -9,7 +9,7 @@ final class Applications: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.applications",
         name: "Applications",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Open any app or System Settings pane from the command palette by typing a few letters.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -56,26 +56,13 @@ final class Applications: StackbarPlugin {
 
     // MARK: Matching
 
-    /// How well `typed` matches `name`, or nil: the start of the name beats
-    /// the start of a word, which beats letters in order ("vsc" → Visual
-    /// Studio Code).
+    /// How well `typed` matches `name`, or nil, with Stackbar's own matcher
+    /// (the palette ranks every result with it): the whole name, then its
+    /// start, a word's start, its initials ("vsc" → Visual Studio Code),
+    /// anywhere in it, then every letter in order. A tier is worth 100, the
+    /// quality within it up to 60.
     static func score(_ typed: String, in name: String) -> Int? {
-        let name = name.lowercased()
-        guard !typed.isEmpty else { return nil }
-        if name == typed { return 1200 }
-        if name.hasPrefix(typed) { return 1000 - min(name.count, 100) }
-        let words = name.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
-        if words.contains(where: { $0.hasPrefix(typed) }) { return 800 - min(name.count, 100) }
-        let initials = String(words.compactMap(\.first))
-        if initials.hasPrefix(typed) { return 700 }
-        if name.contains(typed) { return 500 - min(name.count, 100) }
-        // Every letter, in order.
-        var rest = Substring(typed)
-        for character in name where character == rest.first {
-            rest.removeFirst()
-            if rest.isEmpty { return 200 - min(name.count, 100) }
-        }
-        return nil
+        TextMatch.match(typed, in: name).map { 100 * ($0.tier.rawValue + 1) + $0.quality }
     }
 
     static func matches(_ query: String, in apps: [InstalledApp], opens: [String: Int] = [:], limit: Int = 12) -> [InstalledApp] {
@@ -85,10 +72,10 @@ final class Applications: StackbarPlugin {
             // A keyword counts less than the name: every Settings pane has
             // "settings", and "settings" has to find the System Settings app.
             let byName = score(typed, in: app.name)
-            let byKeyword = app.keywords.compactMap { score(typed, in: $0) }.max().map { min($0, 600) }
+            let byKeyword = app.keywords.compactMap { score(typed, in: $0) }.max().map { min($0, 299) }
             guard let best = [byName, byKeyword].compactMap({ $0 }).max() else { return nil }
             // Apps first on a tie: a pane named like an app rarely wins.
-            let used = min(300, Int(60 * log2(1 + Double(opens[app.id] ?? 0))))
+            let used = min(150, Int(30 * log2(1 + Double(opens[app.id] ?? 0))))
             return (app, best + used + (app.kind == .app ? 5 : 0))
         }
         .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0.name < $1.0.name }
