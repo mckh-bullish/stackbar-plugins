@@ -29,7 +29,7 @@ let plugins: [(category: String, name: String)] = categories.flatMap { category 
 }
 
 /// The plugins Tests/PluginTests runs.
-let testedPlugins = ["AppSwitcher", "Clipboard", "PRCockpit", "Pomodoro", "Quicklinks", "Snippets", "StayAwake", "Todo", "UpNext", "Windows"]
+let testedPlugins = ["AppSwitcher", "Clipboard", "MenuSearch", "PRCockpit", "Pomodoro", "Quicklinks", "Snippets", "StayAwake", "Todo", "UpNext", "WindowSwitcher", "Windows"]
 
 let stackbar: Package.Dependency = ProcessInfo.processInfo.environment["STACKBAR_PATH"].map { .package(name: "stackbar", path: $0) }
     ?? .package(url: "https://github.com/navbytes/stackbar", revision: stackbarRevision)
