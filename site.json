@@ -4,6 +4,12 @@
       "changes": [
         {
           "notes": [
+            "\u2318\u21e7V opens your history in the command palette, with the preview beside it and every action, Pause and Ignore Next Copy included, under \u2318K. The popup stays on the menu bar icon."
+          ],
+          "version": "1.9.0"
+        },
+        {
+          "notes": [
             "Every copy now has a preview, short ones too, so the palette's list keeps its detail pane and stops jumping as you move through it."
           ],
           "version": "1.8.1"
@@ -40,7 +46,7 @@
           "version": "1.4.1"
         }
       ],
-      "description": "Everything you copy, searchable, pinnable and one keystroke from being pasted\nback. \u2318\u21e7V opens it from anywhere: type to filter, \u2191\u2193 and Return (or \u23181 to \u23189)\nto paste into the app you were in, \u2325Return to paste as plain text, \u2318P to pin\nand \u2325\u232b to delete. Formatted text keeps its formatting, and images are kept by\nthe host and pasted back. The text in a copied image (a screenshot, a\nphoto of a receipt) is read on your Mac, so typing finds the image, and \u2318\u21e7T\ncopies that text.",
+      "description": "Everything you copy, searchable, pinnable and one keystroke from being pasted\nback. \u2318\u21e7V opens it in the palette from anywhere, with a preview of the\nselected copy beside the list: type to filter, \u2191\u2193 and Return (or \u23181 to \u23189)\nto paste into the app you were in, \u2325Return to paste as plain text, \u2318P to pin\nand \u2325\u232b to delete. Formatted text keeps its formatting, and images are kept by\nthe host and pasted back. The text in a copied image (a screenshot, a\nphoto of a receipt) is read on your Mac, so typing finds the image, and \u2318\u21e7T\ncopies that text. \u2318K holds every action, Pause Recording and Ignore Next\nCopy included. The popup with the last copy and the Pause buttons is still on\nthe menu bar icon, if you turn the icon on.",
       "facts": [
         {
           "label": "Needs",
@@ -64,10 +70,10 @@
         },
         {
           "label": "Requires",
-          "text": "Stackbar 0.26.0 or later."
+          "text": "Stackbar 0.27.0 or later."
         }
       ],
-      "version": "1.8.1"
+      "version": "1.9.0"
     },
     "io.navbytes.stackbar.plugins.app-switcher": {
       "changes": [
@@ -1702,6 +1708,12 @@
         "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/light/demo/b07000be5086/panel.png",
         "seconds": 7.2,
         "surface": "panel"
+      },
+      "1.9.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.9.0/dark/demo/b07000be5086/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.9.0/light/demo/b07000be5086/panel.png",
+        "seconds": 7.2,
+        "surface": "panel"
       }
     },
     "io.navbytes.stackbar.plugins.pomodoro": {
@@ -1836,6 +1848,16 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/light/panel.png"
+        }
+      },
+      "1.9.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.9.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.9.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.9.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.9.0/light/panel.png"
         }
       }
     },
@@ -2998,6 +3020,29 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/dark/previews/insights/window.png",
           "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/light/previews/insights/window.png",
+          "name": "insights",
+          "surface": "window",
+          "title": "What you copy, and from where"
+        }
+      ],
+      "1.9.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.9.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.9.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Everything you copied, one keystroke away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.9.0/dark/previews/pinned/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.9.0/light/previews/pinned/panel.png",
+          "name": "pinned",
+          "surface": "panel",
+          "title": "Pin what you paste every day"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.9.0/dark/previews/insights/window.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.9.0/light/previews/insights/window.png",
           "name": "insights",
           "surface": "window",
           "title": "What you copy, and from where"
