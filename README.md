@@ -47,6 +47,8 @@ An update that asks for something new waits for your approval.
 | [Browser Tabs](Productivity/BrowserTabs) | Productivity | Switch to any open tab in Safari, Chrome, Arc, Brave or Edge, and search your bookmarks. |
 | [Calculator](Productivity/Calculator) | Productivity | Sums, units, currencies and time zones answered right in the command palette. |
 | [Clipboard History](Productivity/Clipboard) | Productivity | Everything you copy, searchable and one keystroke from pasting back. |
+| [Color Picker](Productivity/ColorPicker) | Productivity | Pick a color from anywhere on screen and copy it as hex, RGB or HSL. |
+| [Dictionary](Productivity/Dictionary) | Productivity | Look words up in the Mac's own Dictionary, offline, from the palette. |
 | [Emoji](Productivity/Emoji) | Productivity | Search every emoji by name in a grid, and paste it where you were typing. |
 | [File Search](Productivity/FileSearch) | Productivity | Find files and folders by name from the command palette, most recently used first. |
 | [Music](Productivity/Music) | Productivity | What's playing in Music or Spotify, with play, pause, skip and volume. |
