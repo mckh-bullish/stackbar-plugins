@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.clipboard",
+  "protocol" : 20,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "c71d8806b0dc1409aaf60da161d50881a56371baeb3cca93710618a49470f04f",
+  "signature" : "1d4DmE33ky/+AQ8l0qpldJDAIQ0SY3wosNLRcXQAQTBqHSu4zbbKf8lz41WyaS3W/IwkLcZrPDIKAe5LNyMxAw==",
+  "size" : 5419464,
+  "sourceDigest" : "7fc1cbb7986bc793803807b1b72cf7b5a4fd4a2f807da6146ee5b275b3f39a3c",
+  "stackbarKit" : "c6cb6172c6e4651991dff2238f43f00ae319344f93d8abdc83870e35887083b4",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-c6cb6172c6e46519/Clipboard-7fc1cbb7986b",
+  "version" : "1.7.0"
+}
