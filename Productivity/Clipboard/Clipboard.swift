@@ -15,14 +15,17 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.8.1",
+        version: "1.9.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
         triggers: [.launch, .clipboard, .every(.seconds(60))],
         capabilities: [.clipboard],
+        // ⌘⇧V opens the history in the palette, with its preview and ⌘K;
+        // the panel stays on the menu bar icon.
         hotkey: "cmd+shift+v",
-        minimumStackbar: "0.26.0",
+        hotkeyCommand: "search",
+        minimumStackbar: "0.27.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
         accent: .blue,
         symbol: "doc.on.clipboard.fill"
@@ -610,7 +613,8 @@ final class Clipboard: StackbarPlugin {
         row(entry, paste: pasteDirectly)
     }
 
-    func row(_ entry: Entry, paste pasteDirectly: Bool) -> Row {
+    /// `inPalette` adds what the panel's header buttons do to ⌘K.
+    func row(_ entry: Entry, paste pasteDirectly: Bool, inPalette: Bool = false) -> Row {
         let source = [entry.appName, Self.relative(entry.lastCopied), entry.count > 1 ? "×\(entry.count)" : nil, entry.kind == .text && entry.secret == nil ? "\(entry.text?.count ?? 0) chars" : nil]
             .compactMap { $0 }.joined(separator: " · ")
         var row = Row(entry.title, subtitle: source, symbol: entry.pinned ? "pin.fill" : entry.symbol, key: entry.id).appIcon(entry.appID)
@@ -629,6 +633,10 @@ final class Clipboard: StackbarPlugin {
         }
         if entry.kind == .url, let url = entry.text {
             row = row.action("Open link") { Stackbar.open(url.trimmingCharacters(in: .whitespacesAndNewlines)) }
+        }
+        if inPalette {
+            row = row.action(paused ? "Resume Recording" : "Pause Recording") { self.paused.toggle() }
+                .action(ignoreNext ? "Keep Next Copy" : "Ignore Next Copy") { self.ignoreNext.toggle() }
         }
         return row.action("Delete", shortcut: "option+delete", role: .critical) { self.delete(entry.id) }
     }
@@ -685,11 +693,11 @@ final class Clipboard: StackbarPlugin {
                         let pinned = all.filter(\.pinned)
                         if !pinned.isEmpty {
                             Section("Pinned") {
-                                ForEach(pinned) { entry in self.row(entry, paste: true) }
+                                ForEach(pinned) { entry in self.row(entry, paste: true, inPalette: true) }
                             }
                         }
-                        Section(pinned.isEmpty ? nil : "History") {
-                            ForEach(all.filter { !$0.pinned }) { entry in self.row(entry, paste: true) }
+                        Section(self.paused ? "History · paused, new copies aren't kept" : pinned.isEmpty ? nil : "History") {
+                            ForEach(all.filter { !$0.pinned }) { entry in self.row(entry, paste: true, inPalette: true) }
                         }
                     }
                 }

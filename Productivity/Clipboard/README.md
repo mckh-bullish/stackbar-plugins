@@ -1,12 +1,15 @@
 # Clipboard History
 
 Everything you copy, searchable, pinnable and one keystroke from being pasted
-back. ⌘⇧V opens it from anywhere: type to filter, ↑↓ and Return (or ⌘1 to ⌘9)
+back. ⌘⇧V opens it in the palette from anywhere, with a preview of the
+selected copy beside the list: type to filter, ↑↓ and Return (or ⌘1 to ⌘9)
 to paste into the app you were in, ⌥Return to paste as plain text, ⌘P to pin
 and ⌥⌫ to delete. Formatted text keeps its formatting, and images are kept by
 the host and pasted back. The text in a copied image (a screenshot, a
 photo of a receipt) is read on your Mac, so typing finds the image, and ⌘⇧T
-copies that text.
+copies that text. ⌘K holds every action, Pause Recording and Ignore Next
+Copy included. The popup with the last copy and the Pause buttons is still on
+the menu bar icon, if you turn the icon on.
 
 - **Needs:** the clipboard. Passwords are skipped: the host never hands out
   items an app marks as concealed or transient, and copies from password
@@ -22,13 +25,13 @@ copies that text.
 - **Commands:** Search Clipboard History, Paste Last Copy as Plain Text,
   Pause Clipboard History, Ignore Next Copy.
 - **Agent tools:** `recent_clips`, `search_clips` and `copy_clip`.
-- **Requires:** Stackbar 0.26.0 or later.
+- **Requires:** Stackbar 0.27.0 or later.
 
 ## Highlights
 
 ### One keystroke from anything you copied
-⌘⇧V opens your history from anywhere. Type to filter, then Return pastes it
-into the app you were in. ⌥Return pastes it as plain text.
+⌘⇧V opens your history in the palette from anywhere, and again closes it.
+Type to filter, then Return pastes it into the app you were in. ⌥Return pastes it as plain text.
 
 ### Pin what you paste every day
 Pinned items stay at the top and are never pushed out by new copies.
@@ -42,6 +45,10 @@ key or card number is masked, kept away from agent tools, and dropped after
 ### See what you copy
 The window shows how much you copy, and from which apps.
 <!-- preview: insights -->
+
+## What's new in 1.9.0
+
+- ⌘⇧V opens your history in the command palette, with the preview beside it and every action, Pause and Ignore Next Copy included, under ⌘K. The popup stays on the menu bar icon.
 
 ## What's new in 1.8.1
 

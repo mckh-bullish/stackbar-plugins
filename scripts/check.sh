@@ -6,6 +6,8 @@
 #   4. every plugin renders every surface it declares, and every preview,
 #      with stackbarctl, and its demo loop in demos.json records and moves
 # On macOS it also soaks each plugin for a minute (pass SOAK_MINUTES to change).
+# With SOAK_CHANGED_SINCE=<git ref> (pull requests) it soaks only the plugins
+# whose folder changed since that ref; main still soaks every plugin.
 #
 #   scripts/check.sh [--base <git ref>]   --base also requires version bumps
 set -eu
@@ -56,6 +58,10 @@ for source in */*/*.swift Community/*/*/*.swift; do
     # Its demo loop in demos.json, if it has one, records and moves.
     STACKBARCTL="$CTL" python3 scripts/check_demo.py "$source" "$(echo "$manifest" | head -1 | sed -n 's/.*(\(.*\))$/\1/p')"
     if [ "$(uname)" = Darwin ]; then
+        if [ -n "${SOAK_CHANGED_SINCE:-}" ] && git diff --quiet "$SOAK_CHANGED_SINCE...HEAD" -- "$(dirname "$source")"; then
+            echo "   soak skipped: unchanged since $SOAK_CHANGED_SINCE"
+            continue
+        fi
         "$CTL" soak "$source" --minutes "${SOAK_MINUTES:-1}" --press
     fi
 done
