@@ -145,6 +145,36 @@
       ],
       "version": "1.1.0"
     },
+    "io.navbytes.stackbar.plugins.browser-tabs": {
+      "changes": [
+        {
+          "notes": [
+            "First release."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Your open browser tabs and your bookmarks in the palette. Search Browser\nTabs lists every tab in Safari, Chrome, Arc, Brave and Edge while they run;\ntype part of a title or address and Return switches to it (\u2318W closes it,\n\u2318\u21e7C copies the link). Search Bookmarks finds the bookmarks Chrome, Brave,\nEdge and Vivaldi keep, and opens one in its browser.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "running `osascript` to read and switch tabs (macOS asks once to let Stackbar control each browser), `cat` to read each Chromium browser's `Bookmarks` file in its profile folder, and the list of running apps, so a browser that isn't open is never started. Stackbar 0.22.0 or later."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel (the open tabs)."
+        },
+        {
+          "label": "Commands",
+          "text": "Search Browser Tabs, Search Bookmarks."
+        },
+        {
+          "label": "Leaves out",
+          "text": "Safari's bookmarks, which macOS keeps behind Full Disk Access, and browser profiles other than the default one."
+        }
+      ],
+      "version": "1.0.0"
+    },
     "io.navbytes.stackbar.plugins.calculator": {
       "changes": [
         {
@@ -442,6 +472,36 @@
         }
       ],
       "version": "1.5.0"
+    },
+    "io.navbytes.stackbar.plugins.kill-process": {
+      "changes": [
+        {
+          "notes": [
+            "First release."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Find a stuck process by name and end it from the palette. Choose Kill\nProcess and type part of the name (or a pid): each row shows its CPU and\nmemory, Return asks it to quit, and \u2318\u21e7Return force quits it. When several\nprocesses share a name, one action quits them all. The panel lists the\nheaviest processes, by CPU or memory.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "running `ps` and `kill`. Stackbar 0.22.0 or later."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel (the heaviest processes now)."
+        },
+        {
+          "label": "Commands",
+          "text": "Kill Process."
+        },
+        {
+          "label": "Leaves alone",
+          "text": "other users' processes, and loginwindow, WindowServer, launchd and Stackbar itself, which would log you out or freeze the screen."
+        }
+      ],
+      "version": "1.0.0"
     },
     "io.navbytes.stackbar.plugins.linear": {
       "changes": [
@@ -753,6 +813,74 @@
       ],
       "version": "1.4.0"
     },
+    "io.navbytes.stackbar.plugins.recent-projects": {
+      "changes": [
+        {
+          "notes": [
+            "First release."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "The folders and workspaces you opened lately in VS Code, Cursor, Windsurf\nand VSCodium, in the palette. Type a few letters of a project's name or path\nand Return opens it in the editor you last used it in; \u2318K opens it in\nanother editor you have or copies its path. The projects you open from here\nrank higher, and they show up in the palette's own results too.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "running `sqlite3` (part of macOS) in read-only mode on each editor's `state.vscdb`, the editors' storage folders under Application Support, and opening `vscode:`, `cursor:`, `windsurf:` and `vscodium:` links. Stackbar 0.22.0 or later."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel (the latest projects)."
+        },
+        {
+          "label": "Commands",
+          "text": "Search Recent Projects, which also feeds the palette's results."
+        },
+        {
+          "label": "Leaves out",
+          "text": "single files and remote (SSH, container) projects."
+        }
+      ],
+      "version": "1.0.0"
+    },
+    "io.navbytes.stackbar.plugins.script-commands": {
+      "changes": [
+        {
+          "notes": [
+            "First release."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Your own scripts as palette commands, in the format Raycast's Script\nCommands use, so the scripts you already have work as they are. Put them in\na folder named **Script Commands** in your home folder. Each script with a\n`@raycast.title` line becomes a command within a minute (or right away with\nReload Script Commands).\n\n```bash\n#!/bin/bash\n# @raycast.schemaVersion 1\n# @raycast.title Say Hello\n# @raycast.mode compact\n# @raycast.packageName Demo\n# @raycast.argument1 { \"type\": \"text\", \"placeholder\": \"Name\", \"optional\": true }\necho \"Hello ${1:-world}\"\n```",
+      "facts": [
+        {
+          "label": "Modes",
+          "text": "`silent` shows the last line it prints on screen, `compact` (and `inline`) shows it in the palette, `fullOutput` opens a view with all of it."
+        },
+        {
+          "label": "Also read",
+          "text": "`packageName`, `description`, `icon` (an emoji), `argument1` to `argument3`, and `needsConfirmation`, which asks before the script runs."
+        },
+        {
+          "label": "Interpreters",
+          "text": "the first line names it: bash, zsh, sh, python3, node, ruby, perl, php, swift or osascript."
+        },
+        {
+          "label": "Needs",
+          "text": "the ~/Script Commands folder, running grep (to read the `@raycast.` lines) and those interpreters. Stackbar 0.22.0 or later."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel (your scripts)."
+        },
+        {
+          "label": "Commands",
+          "text": "one for each script, and Reload Script Commands."
+        }
+      ],
+      "version": "1.0.0"
+    },
     "io.navbytes.stackbar.plugins.system-commands": {
       "changes": [
         {
@@ -841,6 +969,40 @@
         }
       ],
       "version": "1.5.0"
+    },
+    "io.navbytes.stackbar.plugins.timers": {
+      "changes": [
+        {
+          "notes": [
+            "First release."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Countdown timers from the palette. Choose Start Timer and type a length and\na name (\"10m tea\", \"tea 1h30\", \"90s\", \"5m30s eggs\") or a clock time\n(\"17:45 call\", \"5pm\"). Several run at once; the soonest counts down in the\nmenu bar, and each ends with a sound, a notification and a message on\nscreen. The panel shows every timer with +1m, +5m and Cancel, and starts the\nlengths you use most with one click.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "nothing beyond Stackbar 0.22.0 or later."
+        },
+        {
+          "label": "Surfaces",
+          "text": "menu bar (the soonest timer), panel, settings."
+        },
+        {
+          "label": "Commands",
+          "text": "Start Timer, Show Timers, Stop All Timers."
+        },
+        {
+          "label": "Settings",
+          "text": "the sound when a timer ends, and whether the menu bar shows the countdown."
+        },
+        {
+          "label": "Note",
+          "text": "`1:30` is a clock time; write `1h30` for an hour and a half."
+        }
+      ],
+      "version": "1.0.0"
     },
     "io.navbytes.stackbar.plugins.todo": {
       "changes": [
@@ -1591,6 +1753,14 @@
         }
       }
     },
+    "io.navbytes.stackbar.plugins.browser-tabs": {
+      "1.0.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.0.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.0.0/light/panel.png"
+        }
+      }
+    },
     "io.navbytes.stackbar.plugins.calculator": {
       "1.0.0": {
         "panel": {
@@ -1776,6 +1946,14 @@
         "panel": {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.5.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.5.0/light/panel.png"
+        }
+      }
+    },
+    "io.navbytes.stackbar.plugins.kill-process": {
+      "1.0.0": {
+        "panel": {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.0.0/dark/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.0.0/light/panel.png"
         }
       }
     },
@@ -2001,6 +2179,22 @@
         }
       }
     },
+    "io.navbytes.stackbar.plugins.recent-projects": {
+      "1.0.0": {
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.0.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.0.0/light/panel.png"
+        }
+      }
+    },
+    "io.navbytes.stackbar.plugins.script-commands": {
+      "1.0.0": {
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.0.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.0.0/light/panel.png"
+        }
+      }
+    },
     "io.navbytes.stackbar.plugins.system-commands": {
       "1.0.0": {
         "panel": {
@@ -2058,6 +2252,18 @@
         "panel": {
           "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/dark/panel.png",
           "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/light/panel.png"
+        }
+      }
+    },
+    "io.navbytes.stackbar.plugins.timers": {
+      "1.0.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.0.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.0.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.0.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.0.0/light/panel.png"
         }
       }
     },
@@ -2595,6 +2801,17 @@
         }
       ]
     },
+    "io.navbytes.stackbar.plugins.browser-tabs": {
+      "1.0.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.0.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every tab, a few letters away"
+        }
+      ]
+    },
     "io.navbytes.stackbar.plugins.calculator": {
       "1.0.0": [
         {
@@ -2800,6 +3017,17 @@
           "name": "widget",
           "surface": "widget",
           "title": "What you're on, on your desktop"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.kill-process": {
+      "1.0.0": [
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.0.0/dark/previews/hero/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "The heaviest processes, one key from gone"
         }
       ]
     },
@@ -3019,6 +3247,28 @@
         }
       ]
     },
+    "io.navbytes.stackbar.plugins.recent-projects": {
+      "1.0.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.0.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your projects, a few letters away"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.script-commands": {
+      "1.0.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.0.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your scripts, as commands"
+        }
+      ]
+    },
     "io.navbytes.stackbar.plugins.system-monitor": {
       "1.3.0": [
         {
@@ -3087,6 +3337,17 @@
           "name": "widget",
           "surface": "widget",
           "title": "Your Mac's load on the desktop"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.timers": {
+      "1.0.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.0.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Several timers, the soonest in the menu bar"
         }
       ]
     },

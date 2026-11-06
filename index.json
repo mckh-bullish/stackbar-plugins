@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-06T02:36:55Z",
+  "generated" : "2026-11-06T02:55:29Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -296,6 +296,30 @@
       "symbol" : "square.grid.3x3.fill",
       "updated" : "2026-11-06",
       "version" : "1.1.0"
+    },
+    {
+      "accent" : "cyan",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.browser-tabs-1.0.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /usr/bin/osascript (can run any program), /bin/cat",
+        "Sees which apps are installed and running, and switches to, opens or hides them",
+        "Reads and writes ~/Library/Application Support/Google/Chrome/Default, ~/Library/Application Support/BraveSoftware/Brave-Browser/Default, ~/Library/Application Support/Microsoft Edge/Default, ~/Library/Application Support/Vivaldi/Default"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/BrowserTabs",
+      "id" : "io.navbytes.stackbar.plugins.browser-tabs",
+      "minimumStackbar" : "0.22.0",
+      "name" : "Browser Tabs",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.browser-tabs.png",
+      "sha256" : "beae53740c75e0a69fdbde32e8c5521ec6092e3e3664babc2dd7277a4e141d54",
+      "summary" : "Switch to any open tab in Safari, Chrome, Arc, Brave or Edge, and search your bookmarks.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "rectangle.stack.fill",
+      "updated" : "2026-11-06",
+      "version" : "1.0.0"
     },
     {
       "accent" : "orange",
@@ -868,6 +892,28 @@
       "symbol" : "ticket.fill",
       "updated" : "2026-11-06",
       "version" : "1.5.0"
+    },
+    {
+      "accent" : "red",
+      "bundle" : "System/io.navbytes.stackbar.plugins.kill-process-1.0.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /bin/ps, /bin/kill"
+      ],
+      "category" : "System",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/KillProcess",
+      "id" : "io.navbytes.stackbar.plugins.kill-process",
+      "minimumStackbar" : "0.22.0",
+      "name" : "Kill Process",
+      "publisher" : "navbytes",
+      "screenshot" : "System/io.navbytes.stackbar.plugins.kill-process.png",
+      "sha256" : "24bade09b4a93646f710ab3e6e8338553660df1820363e7935c86bf0c3d42874",
+      "summary" : "Find a process by name, see its CPU and memory, and quit or force quit it.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "xmark.octagon.fill",
+      "updated" : "2026-11-06",
+      "version" : "1.0.0"
     },
     {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.linear-1.0.0.stackbarplugin",
@@ -1553,6 +1599,53 @@
       "version" : "1.4.0"
     },
     {
+      "accent" : "blue",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.recent-projects-1.0.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /usr/bin/sqlite3",
+        "Reads and writes ~/Library/Application Support/Code/User/globalStorage, ~/Library/Application Support/Cursor/User/globalStorage, ~/Library/Application Support/Windsurf/User/globalStorage, ~/Library/Application Support/VSCodium/User/globalStorage",
+        "Opens vscode:, cursor:, windsurf:, vscodium: links"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/RecentProjects",
+      "id" : "io.navbytes.stackbar.plugins.recent-projects",
+      "minimumStackbar" : "0.22.0",
+      "name" : "Recent Projects",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.recent-projects.png",
+      "sha256" : "e9bc1ba546c3cb589952324e0a0fe00328c133a531f335ab39d2606716335a17",
+      "summary" : "Open the projects you used lately in VS Code, Cursor, Windsurf or VSCodium from the palette.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "folder.badge.gearshape",
+      "updated" : "2026-11-06",
+      "version" : "1.0.0"
+    },
+    {
+      "accent" : "graphite",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.script-commands-1.0.0.stackbarplugin",
+      "capabilities" : [
+        "Reads and writes ~/Script Commands",
+        "Runs /usr/bin/grep, /bin/bash (can run any program), /bin/zsh (can run any program), /bin/sh (can run any program), /opt/homebrew/bin/python3 (can run any program), /opt/homebrew/bin/node (can run any program), /opt/homebrew/bin/ruby (can run any program), /opt/homebrew/bin/perl (can run any program), php (not installed), /usr/bin/swift (can run any program), /usr/bin/osascript (can run any program)"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/ScriptCommands",
+      "id" : "io.navbytes.stackbar.plugins.script-commands",
+      "minimumStackbar" : "0.22.0",
+      "name" : "Script Commands",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.script-commands.png",
+      "sha256" : "8177a23518d38af007bc3fb13dae8a9064d33aa010b693b085e3304a287496b9",
+      "summary" : "Run your own scripts from the palette, in Raycast's Script Commands format.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "terminal.fill",
+      "updated" : "2026-11-06",
+      "version" : "1.0.0"
+    },
+    {
       "accent" : "graphite",
       "bundle" : "System/io.navbytes.stackbar.plugins.system-commands-1.0.0.stackbarplugin",
       "capabilities" : [
@@ -1719,6 +1812,30 @@
       "symbol" : "gauge.with.dots.needle.67percent",
       "updated" : "2026-11-06",
       "version" : "1.5.0"
+    },
+    {
+      "accent" : "orange",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.timers-1.0.0.stackbarplugin",
+      "capabilities" : [
+
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Timers",
+      "id" : "io.navbytes.stackbar.plugins.timers",
+      "minimumStackbar" : "0.22.0",
+      "name" : "Timers",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.timers.png",
+      "sha256" : "2d3629197ee971da4b5dbba1c4f1bcee535a054fc74279c64f938f04974e8a14",
+      "summary" : "Countdown timers from the palette, several at once, the soonest in the menu bar.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "settings"
+      ],
+      "symbol" : "timer",
+      "updated" : "2026-11-06",
+      "version" : "1.0.0"
     },
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.todo-1.0.0.stackbarplugin",
@@ -3023,5 +3140,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "Ht9DuiL/mxbqCAYIuQ1A+le4EZyn1UPYpJmJrKjn/TLhmvOahXN+ldP3d06KYKX4fhFoOoulMYSJnIcMhKXgCg=="
+  "signature" : "ALhUz59OUKBfnIKsRIECCqoaTL5LJbdLQ5wM6EDLFevwdvDGiidrf6j03wigD0XtOZc1HX9BSOezNh12FQiqCA=="
 }
