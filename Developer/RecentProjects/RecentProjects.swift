@@ -3,7 +3,8 @@ import Foundation
 
 /// The folders and workspaces you opened lately in VS Code, Cursor,
 /// Windsurf and VSCodium, in the palette: type a few letters of the project
-/// and Return opens it in the editor you last used it in.
+/// and Return opens it in the editor you last used it in, or in the default
+/// editor picked in Settings (Zed, Xcode, Sublime Text, a JetBrains IDE…).
 ///
 /// Each editor keeps its recent list in a small database in Application
 /// Support; Stackbar reads it with `sqlite3` in read-only mode, so the
@@ -25,17 +26,55 @@ final class RecentProjects: StackbarPlugin {
         Editor(name: "VSCodium", bundleID: "com.vscodium", folder: "~/Library/Application Support/VSCodium/User/globalStorage", scheme: "vscodium"),
     ]
 
+    /// An app a project can open in. The VS Code family opens through its
+    /// own link (`vscode://file/…`), which reuses a window already showing
+    /// the folder; the rest are handed the folder like Finder's Open With.
+    struct App: Equatable, Sendable {
+        var name: String
+        var bundleID: String
+        var scheme: String?
+        /// Whether it opens `.code-workspace` files: the VS Code family only.
+        var opensWorkspaces: Bool { scheme != nil }
+    }
+
+    /// The editors Settings offers as the default, when installed.
+    static let apps: [App] = editors.map { App(name: $0.name, bundleID: $0.bundleID, scheme: $0.scheme) } + [
+        App(name: "VS Code Insiders", bundleID: "com.microsoft.VSCodeInsiders", scheme: "vscode-insiders"),
+        App(name: "Zed", bundleID: "dev.zed.Zed"),
+        App(name: "Zed Preview", bundleID: "dev.zed.Zed-Preview"),
+        App(name: "Xcode", bundleID: "com.apple.dt.Xcode"),
+        App(name: "Sublime Text", bundleID: "com.sublimetext.4"),
+        App(name: "Nova", bundleID: "com.panic.Nova"),
+        App(name: "BBEdit", bundleID: "com.barebones.bbedit"),
+        App(name: "TextMate", bundleID: "com.macromates.TextMate"),
+        App(name: "IntelliJ IDEA", bundleID: "com.jetbrains.intellij"),
+        App(name: "IntelliJ IDEA CE", bundleID: "com.jetbrains.intellij.ce"),
+        App(name: "WebStorm", bundleID: "com.jetbrains.WebStorm"),
+        App(name: "PyCharm", bundleID: "com.jetbrains.pycharm"),
+        App(name: "PyCharm CE", bundleID: "com.jetbrains.pycharm.ce"),
+        App(name: "GoLand", bundleID: "com.jetbrains.goland"),
+        App(name: "RustRover", bundleID: "com.jetbrains.rustrover"),
+        App(name: "Android Studio", bundleID: "com.google.android.studio"),
+    ]
+
+    /// The default editor setting's first choice: each project opens where
+    /// it came from.
+    static let lastUsed = "Where it was last opened"
+
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.recent-projects",
         name: "Recent Projects",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Open the projects you used lately in VS Code, Cursor, Windsurf or VSCodium from the palette.",
-        surfaces: [.panel],
+        surfaces: [.panel, .settings],
         triggers: [.launch],
         capabilities: [
             .run(commands: ["sqlite3"]),
             .files(paths: editors.map(\.folder)),
-            .openURLs(schemes: editors.map(\.scheme)),
+            // "*": folders open in any default editor, not only by link.
+            .openURLs(schemes: ["*"]),
+            // Which editors are installed, for the default editor setting.
+            .apps,
         ],
         minimumStackbar: "0.22.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/RecentProjects",
@@ -81,6 +120,11 @@ final class RecentProjects: StackbarPlugin {
     var results: [Project] = []
     @Stored("opens") var opens: [String: Int] = [:]
     @Stored("perEditor") var perEditor = 30
+    /// The default editor's bundle id; empty opens each project where it
+    /// was last opened.
+    @Stored("defaultEditor") var defaultEditor = ""
+    /// The bundle ids of the `apps` installed on this Mac.
+    var installed: Set<String> = []
 
     // MARK: Reading
 
@@ -102,6 +146,10 @@ final class RecentProjects: StackbarPlugin {
         var paths = Set<String>()
         projects = all.filter { paths.insert($0.path).inserted }
         found = seen
+        if let list = try? await Stackbar.installedApps() {
+            let ids = Set(list.map(\.id))
+            installed = Set(Self.apps.map(\.bundleID).filter(ids.contains))
+        }
         loadedAt = Date()
     }
 
@@ -158,24 +206,76 @@ final class RecentProjects: StackbarPlugin {
 
     // MARK: Opening
 
-    func open(_ project: Project, in editorName: String? = nil) {
-        guard let editor = Self.editors.first(where: { $0.name == (editorName ?? project.editor) }) else { return }
+    static func app(named name: String) -> App? { apps.first { $0.name == name } }
+
+    /// The editor Return opens a project in: the default one when it can
+    /// open it, else the one whose list it came from.
+    func primary(for project: Project) -> App? {
+        if let chosen = Self.apps.first(where: { $0.bundleID == defaultEditor }),
+           project.kind == .folder || chosen.opensWorkspaces {
+            return chosen
+        }
+        return Self.app(named: project.editor)
+    }
+
+    /// The other editors ⌘K offers: the ones with a recent list, and the
+    /// default editor.
+    func others(for project: Project) -> [App] {
+        let primary = primary(for: project)
+        var names = found
+        if let chosen = Self.apps.first(where: { $0.bundleID == defaultEditor }), !names.contains(chosen.name) { names.append(chosen.name) }
+        return names.compactMap(Self.app(named:)).filter { app in
+            app != primary && (project.kind == .folder || app.opensWorkspaces)
+        }
+    }
+
+    func open(_ project: Project, in app: App) async {
         opens[project.path, default: 0] += 1
-        let encoded = project.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? project.path
-        Stackbar.open("\(editor.scheme)://file\(encoded)")
+        if let scheme = app.scheme {
+            let encoded = project.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? project.path
+            Stackbar.open("\(scheme)://file\(encoded)")
+            return
+        }
+        do {
+            try await Stackbar.open(project.path, with: app.bundleID)
+        } catch {
+            Stackbar.hud("Couldn't open \(project.name) in \(app.name)", isError: true)
+        }
     }
 
     func row(_ project: Project) -> Row {
-        let editor = Self.editors.first { $0.name == project.editor }
+        let primary = primary(for: project)
         var row = Row(project.name, subtitle: project.shortPath, symbol: project.kind == .workspace ? "square.stack.3d.up" : "folder", key: project.id)
-            .appIcon(editor?.bundleID)
-            .action("Open in \(project.editor)") { self.open(project) }
-        for other in found where other != project.editor {
-            row = row.action("Open in \(other)") { self.open(project, in: other) }
+            .appIcon(primary?.bundleID)
+        if let primary {
+            row = row.action("Open in \(primary.name)") { await self.open(project, in: primary) }
+        }
+        for other in others(for: project) {
+            row = row.action("Open in \(other.name)") { await self.open(project, in: other) }
         }
         return row
             .action("Copy Path", shortcut: "cmd+shift+c") { Stackbar.copy(project.path) }
             .badge(project.editor, role: .secondary)
+    }
+
+    // MARK: Settings
+
+    /// The editors to pick from: the installed ones, and the current choice
+    /// even when it isn't found.
+    var choices: [App] {
+        Self.apps.filter { installed.contains($0.bundleID) || $0.bundleID == defaultEditor }
+    }
+
+    var settings: ViewContent {
+        Section("Opening") {
+            Picker("Open projects in", options: [Self.lastUsed] + choices.map(\.name), selection: Self.apps.first { $0.bundleID == defaultEditor }?.name ?? Self.lastUsed) { choice in
+                self.defaultEditor = Self.app(named: choice)?.bundleID ?? ""
+            }
+            Text("Return opens a project in this editor and ⌘K offers the others. Workspace files (.code-workspace) open in VS Code, Cursor, Windsurf or VSCodium, since other editors can't read them.").style(.caption)
+            if choices.isEmpty {
+                Text("No editor found on this Mac yet. VS Code, Cursor, Windsurf, VSCodium, Zed, Xcode, Sublime Text, Nova, BBEdit, TextMate, JetBrains IDEs and Android Studio show up here once installed.").style(.caption).role(.secondary)
+            }
+        }
     }
 
     // MARK: Commands
