@@ -3,7 +3,7 @@ import Foundation
 
 /// A focus timer in the Stackbar look: Focus and Break modes, presets, a
 /// big countdown inside a progress ring, a tag for what you are working on,
-/// and today's sessions. Stackbar counts the timer and animates the ring, so
+/// today's sessions, a long break every few sessions and the week in a chart. Stackbar counts the timer and animates the ring, so
 /// the plugin only renders when something changes. Commands start, pause and
 /// skip from the palette, a hotkey or a Shortcut, and a stray tap never
 /// throws away a session already under way. Needs nothing.
@@ -12,8 +12,8 @@ final class Pomodoro: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.pomodoro",
         name: "Pomodoro",
-        version: "1.5.0",
-        summary: "A focus timer with presets, a progress ring, tags and today's sessions.",
+        version: "1.6.0",
+        summary: "A focus timer with presets, a progress ring, tags, long breaks and a week of focus in a chart.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(1)), .wake],
         minimumStackbar: "0.17.0",
@@ -27,7 +27,8 @@ final class Pomodoro: StackbarPlugin {
     static let previews: [PreviewScene<Pomodoro>] = [
         PreviewScene("hero", "Twenty-five focused minutes, counting down") { plugin in
             plugin.session = Session(mode: .focus, minutes: 25, tag: "Deep Work", started: Date().addingTimeInterval(-498), remaining: 25 * 60)
-            plugin.days = [plugin.dayKey: Day(sessions: 3, minutes: 75)]
+            plugin.days = sampleWeek(plugin)
+            plugin.cycle = 2
         },
         PreviewScene("break", "A real break between sessions") { plugin in
             plugin.mode = .rest
@@ -39,6 +40,16 @@ final class Pomodoro: StackbarPlugin {
             plugin.days = [plugin.dayKey: Day(sessions: 3, minutes: 75)]
         },
     ]
+
+    /// A believable week: busier midweek, today under way.
+    static func sampleWeek(_ plugin: Pomodoro) -> [String: Day] {
+        var days: [String: Day] = [:]
+        for (offset, sessions) in [5, 7, 6, 8, 4, 1, 3].enumerated() {
+            let date = Calendar.current.date(byAdding: .day, value: offset - 6, to: plugin.now) ?? plugin.now
+            days[plugin.key(for: date)] = Day(sessions: sessions, minutes: sessions * 25)
+        }
+        return days
+    }
 
     enum Mode: String, Codable, CaseIterable {
         case focus = "Focus", rest = "Break"
@@ -98,6 +109,11 @@ final class Pomodoro: StackbarPlugin {
     @Stored("sound") var sound = true
     @Stored("chime") var chime = SystemSound.glass.rawValue
     @Stored("days") var days: [String: Day] = [:]
+    /// A longer break after this many focus sessions; 0 turns it off.
+    @Stored("sessionsBeforeLongBreak") var sessionsBeforeLongBreak = 4
+    @Stored("longBreakMinutes") var longBreakMinutes = 15
+    /// Focus sessions finished since the last long break.
+    @Stored("cycle") var cycle = 0
     /// A left click on the menu-bar timer starts or pauses it; a right click
     /// opens the panel. Off: a left click opens the panel.
     @Stored("clickToToggle") var clickToToggle = true
@@ -152,10 +168,42 @@ final class Pomodoro: StackbarPlugin {
                 }
             }
             controls
+            cycleDots
         }
         HStack(spacing: Space.s) {
             StatTile("Sessions", value: "\(today.sessions)", symbol: "checkmark.circle.fill", theme: theme)
             StatTile("Focused", value: minutesText(today.minutes), symbol: "clock.fill", theme: theme)
+        }
+        let week = self.week
+        if week.contains(where: { $0.minutes > 0 }) {
+            Card("This week", detail: minutesText(week.reduce(0) { $0 + $1.minutes })) {
+                Chart("Focused minutes", values: week.map { Double($0.minutes) }, kind: .bar, labels: week.map(\.label), unit: "m", highlight: week.count - 1)
+            }
+        }
+    }
+
+    /// The last seven days, oldest first, today last.
+    var week: [(label: String, minutes: Int)] {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.setLocalizedDateFormatFromTemplate("EEE")
+        return (0..<7).map { back in
+            let date = Calendar.current.date(byAdding: .day, value: back - 6, to: now) ?? now
+            return (label: formatter.string(from: date), minutes: days[key(for: date)]?.minutes ?? 0)
+        }
+    }
+
+    /// Where you are in the run up to a long break: filled dots for the
+    /// sessions done, an empty one for each still to go.
+    @ViewBuilder private var cycleDots: ViewContent {
+        if sessionsBeforeLongBreak > 0 {
+            HStack(alignment: .center, spacing: Space.xs) {
+                ForEach(Array(0..<sessionsBeforeLongBreak)) { index in
+                    Circle().fill(index < cycle ? theme.sweep : theme.track).frame(width: 7, height: 7)
+                }
+                Text(longBreakDue ? "Long break next" : "\(sessionsBeforeLongBreak - cycle) to a long break").role(.secondary).typography(.caption)
+            }
+            .accessibilityLabel(longBreakDue ? "Long break next" : "\(cycle) of \(sessionsBeforeLongBreak) sessions before a long break")
         }
     }
 
@@ -179,6 +227,13 @@ final class Pomodoro: StackbarPlugin {
         Section("Durations") {
             Slider("Focus minutes", value: Double(focusMinutes), in: 5...120, step: 5) { self.focusMinutes = Int($0) }
             Slider("Break minutes", value: Double(breakMinutes), in: 1...30, step: 1) { self.breakMinutes = Int($0) }
+            Picker("Long break after", options: ["Off", "2", "3", "4", "5", "6"], selection: sessionsBeforeLongBreak == 0 ? "Off" : "\(sessionsBeforeLongBreak)", style: .segmented) { choice in
+                self.sessionsBeforeLongBreak = Int(choice) ?? 0
+                self.cycle = min(self.cycle, self.sessionsBeforeLongBreak)
+            }
+            if sessionsBeforeLongBreak > 0 {
+                Slider("Long break minutes", value: Double(longBreakMinutes), in: 5...60, step: 5) { self.longBreakMinutes = Int($0) }
+            }
             Toggle("Start the next session on its own", isOn: autoStart) { self.autoStart = $0 }
         }
         Section("Menu bar") {
@@ -203,7 +258,8 @@ final class Pomodoro: StackbarPlugin {
     var tools: [AgentTool] {
         AgentTool("status", description: "The timer's mode, time left and today's focus") { _ in
             let today = self.today
-            return "\(self.statusLine). Today: \(today.sessions) sessions, \(today.minutes) minutes focused."
+            let week = self.week.reduce(0) { $0 + $1.minutes }
+            return "\(self.statusLine). Today: \(today.sessions) sessions, \(today.minutes) minutes focused. Last 7 days: \(week) minutes."
         }
     }
 
@@ -296,12 +352,17 @@ final class Pomodoro: StackbarPlugin {
     // MARK: - State
 
     private var isRunning: Bool { session?.started != nil }
-    private var currentMinutes: Int { session?.minutes ?? (mode == .focus ? focusMinutes : breakMinutes) }
+    private var currentMinutes: Int { session?.minutes ?? (mode == .focus ? focusMinutes : restMinutes) }
+    /// The next break is the long one.
+    private var longBreakDue: Bool { sessionsBeforeLongBreak > 0 && cycle >= sessionsBeforeLongBreak }
+    private var restMinutes: Int { longBreakDue ? longBreakMinutes : breakMinutes }
     private var currentTag: String { session?.tag ?? tag }
-    private var presetMinutes: [Int] { mode == .focus ? [25, 50, 90] : [5, 10, 15] }
+    private var presetMinutes: [Int] { mode == .focus ? [25, 50, 90] : longBreakDue ? [15, 20, 30] : [5, 10, 15] }
 
-    private var dayKey: String {
-        let parts = Calendar.current.dateComponents([.year, .month, .day], from: now)
+    private var dayKey: String { key(for: now) }
+
+    func key(for date: Date) -> String {
+        let parts = Calendar.current.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 
@@ -373,7 +434,7 @@ final class Pomodoro: StackbarPlugin {
         pending = nil
         mode = kind
         if !name.isEmpty { tag = name }
-        let length = minutes ?? (kind == .focus ? focusMinutes : breakMinutes)
+        let length = minutes ?? (kind == .focus ? focusMinutes : restMinutes)
         session = Session(mode: kind, minutes: length, tag: tag, started: now, remaining: Double(length * 60))
         return .message(statusLine)
     }
@@ -400,7 +461,7 @@ final class Pomodoro: StackbarPlugin {
     }
 
     private func setMinutes(_ minutes: Int) {
-        if mode == .focus { focusMinutes = minutes } else { breakMinutes = minutes }
+        if mode == .focus { focusMinutes = minutes } else if longBreakDue { longBreakMinutes = minutes } else { breakMinutes = minutes }
         session = nil
     }
 
@@ -423,6 +484,9 @@ final class Pomodoro: StackbarPlugin {
     /// Ends a session: counts a finished focus session, chimes, and moves to
     /// the other mode, starting it when auto-start is on.
     private func finish(_ ended: Session, counted: Bool = true) {
+        let wasLong = ended.mode == .rest && longBreakDue
+        if ended.mode == .rest, wasLong { cycle = 0 }
+        if counted && ended.mode == .focus, sessionsBeforeLongBreak > 0 { cycle = min(sessionsBeforeLongBreak, cycle + 1) }
         if counted && ended.mode == .focus {
             var day = today
             day.sessions += 1
@@ -431,7 +495,12 @@ final class Pomodoro: StackbarPlugin {
             for old in days.keys.sorted().dropLast(60) { days[old] = nil }
         }
         if counted && sound, let chime = SystemSound(rawValue: chime) { Stackbar.play(chime) }
-        if counted { Stackbar.notify(ended.mode == .focus ? "Focus done" : "Break over", body: ended.mode == .focus ? "\(ended.minutes) minutes on \(ended.tag). Time for a break." : "Back to it.") }
+        if counted {
+            let body = ended.mode == .focus
+                ? "\(ended.minutes) minutes on \(ended.tag). " + (longBreakDue ? "\(sessionsBeforeLongBreak) in a row: take a long break." : "Time for a break.")
+                : wasLong ? "Rested. A fresh round starts now." : "Back to it."
+            Stackbar.notify(ended.mode == .focus ? "Focus done" : wasLong ? "Long break over" : "Break over", body: body)
+        }
         mode = ended.mode == .focus ? .rest : .focus
         pending = nil
         session = nil

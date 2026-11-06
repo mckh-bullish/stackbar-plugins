@@ -16,17 +16,19 @@ import Foundation
 /// the Keychain (a fine-grained token with read access to pull requests,
 /// issues and metadata covers everything but creating issues, which needs
 /// write access to issues), and every request goes through the host to the
-/// one declared domain.
+/// one declared domain. For GitHub Enterprise Server, turn it on in Settings
+/// and enter the server as `GITHUB_ENTERPRISE_URL`: requests then go to that
+/// server and no other.
 @main
 final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.7.0",
+        version: "1.8.0",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
-        capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN")],
+        capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN"), .userServer(secret: "GITHUB_ENTERPRISE_URL")],
         minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
         accent: .violet,
@@ -176,12 +178,16 @@ final class PRCockpit: StackbarPlugin {
         let subject: Subject
         let repository: Repository
 
-        /// The page on github.com: the API URL turned into the web one.
+        /// The page on github.com (or the Enterprise server): the API URL
+        /// turned into the web one.
         var webURL: String {
-            guard let api = subject.url, api.hasPrefix("https://api.github.com/repos/") else {
+            guard let api = subject.url, let repos = api.range(of: "/repos/") else {
                 return subject.type == "Release" ? repository.html_url + "/releases" : repository.html_url
             }
-            return "https://github.com/" + api.dropFirst("https://api.github.com/repos/".count)
+            // html_url is https://host/owner/repo; the web root is what comes before owner/repo.
+            let webRoot = repository.html_url.hasSuffix(repository.full_name)
+                ? String(repository.html_url.dropLast(repository.full_name.count)) : "https://github.com/"
+            return webRoot + api[repos.upperBound...]
                 .replacingOccurrences(of: "/pulls/", with: "/pull/")
                 .replacingOccurrences(of: "/commits/", with: "/commit/")
         }
@@ -278,6 +284,10 @@ final class PRCockpit: StackbarPlugin {
     @Stored("snoozed") var snoozed: [String: Date] = [:]
     @Stored("hiddenRepos") var hiddenRepos: [String] = []
     @Stored("showInbox") var showInbox = false
+    /// GitHub Enterprise Server instead of github.com.
+    @Stored("enterprise") var enterprise = false
+    /// The Enterprise server, `https://github.example.com`, from GITHUB_ENTERPRISE_URL.
+    var enterpriseServer: String?
     /// Only pull requests and issues updated in this many days; 0 for any age.
     @Stored("recentDays") var recentDays = 0
     var inbox: [InboxItem] = []
@@ -296,8 +306,30 @@ final class PRCockpit: StackbarPlugin {
     var formError: String?
     var created: String?
 
+    /// github.com's API, or the Enterprise server's (`/api/v3` and `/api/graphql`).
+    var apiBase: String { enterprise ? (enterpriseServer ?? "") + "/api/v3" : "https://api.github.com" }
+    var graphqlURL: String { enterprise ? (enterpriseServer ?? "") + "/api/graphql" : "https://api.github.com/graphql" }
+
+    /// Reads the Enterprise server once it's turned on. Only then, so people
+    /// on github.com are never asked for it.
+    func loadEnterpriseServer() async throws -> Bool {
+        guard enterprise else { return true }
+        if enterpriseServer == nil {
+            var text = try await Stackbar.secret("GITHUB_ENTERPRISE_URL")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            while text.hasSuffix("/") { text.removeLast() }
+            if text.hasSuffix("/api/v3") { text.removeLast("/api/v3".count) }
+            if !text.isEmpty, !text.contains("://") { text = "https://" + text }
+            enterpriseServer = text.isEmpty ? nil : text
+        }
+        return enterpriseServer != nil
+    }
+
     func refresh() async throws {
         defer { loaded = true }
+        guard try await loadEnterpriseServer() else {
+            lastError = "Enter your GitHub Enterprise server (https://github.example.com) as GITHUB_ENTERPRISE_URL."
+            return
+        }
         guard let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else {
             lastError = "Add a GitHub token to see your pull requests."
             return
@@ -325,7 +357,7 @@ final class PRCockpit: StackbarPlugin {
         """
         do {
             let body = try JSONEncoder().encode(["query": query])
-            let response = try await Stackbar.http(HTTPRequest(url: "https://api.github.com/graphql", method: "POST", headers: [
+            let response = try await Stackbar.http(HTTPRequest(url: graphqlURL, method: "POST", headers: [
                 "Authorization": "Bearer \(token)", "Content-Type": "application/json", "Accept": "application/json",
             ], body: body))
             guard (200..<300).contains(response.status) else {
@@ -361,7 +393,7 @@ final class PRCockpit: StackbarPlugin {
     /// the `notifications` scope; fine-grained tokens can't read it.
     func refreshInbox(token: String) async {
         do {
-            let response = try await Stackbar.http(HTTPRequest(url: "https://api.github.com/notifications?per_page=40", headers: [
+            let response = try await Stackbar.http(HTTPRequest(url: apiBase + "/notifications?per_page=40", headers: [
                 "Authorization": "Bearer \(token)", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28",
             ]))
             guard (200..<300).contains(response.status) else {
@@ -387,7 +419,7 @@ final class PRCockpit: StackbarPlugin {
 
     func markRead(_ item: InboxItem) async {
         guard let token = try? await Stackbar.secret("GITHUB_TOKEN") else { return }
-        let response = try? await Stackbar.http(HTTPRequest(url: "https://api.github.com/notifications/threads/\(item.id)", method: "PATCH", headers: [
+        let response = try? await Stackbar.http(HTTPRequest(url: apiBase + "/notifications/threads/\(item.id)", method: "PATCH", headers: [
             "Authorization": "Bearer \(token)", "Accept": "application/vnd.github+json",
         ]))
         if let response, (200..<300).contains(response.status) { inbox.removeAll { $0.id == item.id } }
@@ -519,10 +551,11 @@ final class PRCockpit: StackbarPlugin {
     }()
 
     func rest(_ path: String, method: String = "GET", body: Data? = nil) async throws -> Data {
+        guard try await loadEnterpriseServer() else { throw HostError("Enter your GitHub Enterprise server as GITHUB_ENTERPRISE_URL") }
         guard let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else {
             throw HostError("Add a GitHub token (GITHUB_TOKEN) first")
         }
-        let response = try await Stackbar.http(HTTPRequest(url: "https://api.github.com" + path, method: method, headers: [
+        let response = try await Stackbar.http(HTTPRequest(url: apiBase + path, method: method, headers: [
             "Authorization": "Bearer \(token)",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
@@ -846,6 +879,17 @@ final class PRCockpit: StackbarPlugin {
             Toggle("Notify me about changes", isOn: notifyChanges) { self.notifyChanges = $0 }
             Text("Review requests, approvals, changes requested, failing checks, ready to merge, merged and closed, and mentions in the inbox.").style(.caption).role(.secondary)
         }
+        Section("Server") {
+            Toggle("Use GitHub Enterprise Server", isOn: enterprise) { on in
+                self.enterprise = on
+                self.enterpriseServer = nil
+                try await self.refetch()
+            }
+            if enterprise {
+                LabeledContent("Server", value: enterpriseServer ?? "Not set: enter GITHUB_ENTERPRISE_URL")
+                Text("Enter your server's address (https://github.example.com) as GITHUB_ENTERPRISE_URL, and a token from that server as GITHUB_TOKEN. Requests go to that server and no other.").style(.caption).role(.secondary)
+            }
+        }
         Section("GitHub inbox") {
             Toggle("Show the notifications inbox", isOn: showInbox) { on in
                 self.showInbox = on
@@ -1066,6 +1110,10 @@ final class PRCockpit: StackbarPlugin {
             searchError = nil
             return
         }
+        guard try await loadEnterpriseServer() else {
+            searchError = "Enter your GitHub Enterprise server as GITHUB_ENTERPRISE_URL."
+            return
+        }
         guard let token = try await Stackbar.secret("GITHUB_TOKEN") else {
             searchError = "Add a GitHub token to search."
             return
@@ -1073,7 +1121,7 @@ final class PRCockpit: StackbarPlugin {
         let escaped = text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
         let query = "query { found: search(query: \"is:pr archived:false involves:@me \(escaped)\", type: ISSUE, first: 30) { nodes { ...pr } } } \(Self.fragment)"
         do {
-            let response = try await Stackbar.http(HTTPRequest(url: "https://api.github.com/graphql", method: "POST", headers: [
+            let response = try await Stackbar.http(HTTPRequest(url: graphqlURL, method: "POST", headers: [
                 "Authorization": "Bearer \(token)", "Content-Type": "application/json", "Accept": "application/json",
             ], body: try JSONEncoder().encode(["query": query])))
             guard (200..<300).contains(response.status) else { throw HostError("GitHub answered \(response.status)") }

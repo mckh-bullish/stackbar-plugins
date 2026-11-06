@@ -143,4 +143,56 @@ final class SnippetsTests: XCTestCase {
         XCTAssertNil(items.first { $0["name"] == "Spaced" }?["keyword"])
         await session.stop()
     }
+
+    func testImportingTextExpanderEspansoAndTextReplacements() async throws {
+        let host = host()
+        let session = try await host.session("Snippets")
+
+        let csv = "abbreviation,content,label\n;addr,\"1 Main St\nSpringfield\",Address\n;dt,Today is %Y-%m-%d,\n;hi,\"Hi %filltext:name=who%, \"\"thanks\"\"%|\",\n"
+        host.system.simulate(chosenFile: ChosenFile(name: "Group.csv", data: Data(csv.utf8)))
+        guard case .message = try await session.runCommand("import") else { return XCTFail("csv") }
+
+        let espanso = """
+        # base.yml
+        matches:
+          - trigger: ":sig"
+            replace: "Best,\\nSam"
+          - triggers: [":ty", ":thx"]
+            replace: Thank you!
+          - trigger: ":block"
+            label: Standup
+            replace: |
+              Yesterday:
+                - shipped
+              Today: $|$
+          - trigger: ":clip"
+            replace: "Pasted: {{clipboard}}"
+        """
+        host.system.simulate(chosenFile: ChosenFile(name: "base.yml", data: Data(espanso.utf8)))
+        guard case .message = try await session.runCommand("import") else { return XCTFail("espanso") }
+
+        let replacements: [[String: String]] = [["phrase": "On my way!", "shortcut": "omw"], ["phrase": "", "shortcut": "x"]]
+        let plist = try PropertyListSerialization.data(fromPropertyList: replacements, format: .xml, options: 0)
+        host.system.simulate(chosenFile: ChosenFile(name: "Text Substitutions.plist", data: plist))
+        guard case .message = try await session.runCommand("import") else { return XCTFail("plist") }
+
+        let byTitle = Dictionary(await snippets(session).map { ($0.title, $0) }, uniquingKeysWith: { first, _ in first })
+        XCTAssertEqual(Set(byTitle.keys), ["Address", ";dt", ";hi", ":sig", ":ty", ":thx", "Standup", ":clip", "omw: On my way!"])
+        XCTAssertTrue(byTitle["Address"]?.keywords.contains(";addr") == true)
+        XCTAssertEqual(byTitle[":thx"]?.keywords.contains(":thx"), true, "each Espanso trigger becomes its own snippet")
+
+        let date = try await session.runCommand(XCTUnwrap(byTitle[";dt"]).id)
+        let today = { () -> String in let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.string(from: Date()) }()
+        XCTAssertEqual(date, .paste("Today is \(today)", cursorFromEnd: 0))
+        let hi = try await session.runCommand(XCTUnwrap(byTitle[";hi"]).id, arguments: ["who": "Ana"])
+        XCTAssertEqual(hi, .paste("Hi Ana, \"thanks\"", cursorFromEnd: 0), "a fill-in becomes an argument and %| the cursor")
+        let sig = try await session.runCommand(XCTUnwrap(byTitle[":sig"]).id)
+        XCTAssertEqual(sig, .paste("Best,\nSam", cursorFromEnd: 0))
+        let block = try await session.runCommand(XCTUnwrap(byTitle["Standup"]).id)
+        XCTAssertEqual(block, .paste("Yesterday:\n  - shipped\nToday: \n", cursorFromEnd: 1))
+        let omw = try await session.runCommand(XCTUnwrap(byTitle["omw: On my way!"]).id)
+        XCTAssertEqual(omw, .paste("On my way!", cursorFromEnd: 0))
+        await session.stop()
+    }
+
 }

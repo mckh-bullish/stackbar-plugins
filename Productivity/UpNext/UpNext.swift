@@ -6,13 +6,15 @@ import Foundation
 /// It reads the calendars you have in Calendar.app (through the host, which
 /// asks for access once), finds the video link in the location, URL or notes
 /// (Zoom, Meet, Teams, Webex and a dozen more), counts down to it, reminds
-/// you a few minutes before, and can open the call for you when it starts.
+/// you a few minutes before and again as it starts, and can open the call
+/// for you. The panel steps through the week a day at a time, says how long
+/// you are free, and flags meetings that clash.
 @main
 final class UpNext: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.up-next",
         name: "Up Next",
-        version: "1.4.1",
+        version: "1.5.0",
         summary: "Your next meeting in the menu bar, with a countdown and one-click join.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(30)), .wake],
@@ -118,7 +120,10 @@ final class UpNext: StackbarPlugin {
     var calendars: [String] = []
     var lastError: String?
     var loaded = false
+    /// Which day the panel shows: 0 is today (with tomorrow under it).
+    var dayOffset = 0
     private var reminded: Set<String> = []
+    private var nudged: Set<String> = []
     private var joined: Set<String> = []
     private var alerted: Set<String> = []
 
@@ -180,6 +185,13 @@ final class UpNext: StackbarPlugin {
                     actions: link.map { [NotificationAction("Join", url: openInApps ? Self.appURL(for: $0) : $0.url)] } ?? []
                 )
             }
+            // A second, quieter nudge as it starts, unless the screen is covered anyway.
+            if remindMinutes > 0, !fullScreenAlert, until <= 20, until > -60, !nudged.contains(event.id) {
+                nudged.insert(event.id)
+                let link = Self.meetingLink(for: event)
+                Stackbar.notify("\(event.title) is starting", body: link.map { "On \($0.service)" } ?? event.location,
+                                actions: link.map { [NotificationAction("Join", url: openInApps ? Self.appURL(for: $0) : $0.url)] } ?? [])
+            }
             if fullScreenAlert, until <= 60, until > -60, !alerted.contains(event.id) {
                 alerted.insert(event.id)
                 let link = Self.meetingLink(for: event)
@@ -195,6 +207,7 @@ final class UpNext: StackbarPlugin {
         if reminded.count > 200 { reminded = Set(reminded.suffix(50)) }
         if joined.count > 200 { joined = Set(joined.suffix(50)) }
         if alerted.count > 200 { alerted = Set(alerted.suffix(50)) }
+        if nudged.count > 200 { nudged = Set(nudged.suffix(50)) }
     }
 
     func join(_ event: CalendarEvent) {
@@ -322,12 +335,21 @@ final class UpNext: StackbarPlugin {
             header(now: now)
             if let lastError { Banner(lastError) }
             hero(now: now)
-            if loaded, !meetings(on: now).isEmpty { dayCard(now: now) }
+            if loaded { dayPicker(now: now) }
+            let shown = date(offset: dayOffset, from: now)
+            if loaded, !meetings(on: shown).isEmpty { dayCard(now: now, on: shown) }
             List(searchable: true) {
-                day("Today", now, now: now)
-                if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now) {
-                    day("Tomorrow", tomorrow, now: now)
+                if dayOffset == 0 {
+                    day("Today", now, now: now)
+                    if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now) {
+                        day("Tomorrow", tomorrow, now: now)
+                    }
+                } else {
+                    day(shown.formatted(.dateTime.weekday(.wide).day().month(.wide)), shown, now: now)
                 }
+            }
+            if dayOffset > 0, meetings(on: shown).isEmpty, visible.filter({ $0.isAllDay && Calendar.current.isDate($0.start, inSameDayAs: shown) }).isEmpty {
+                EmptyState("Nothing on \(shown.formatted(.dateTime.weekday(.wide)))", symbol: "sun.max", theme: theme)
             }
         }
     }
@@ -335,9 +357,41 @@ final class UpNext: StackbarPlugin {
     @ViewBuilder func header(now: Date) -> ViewContent {
         let count = meetings(on: now).count
         let hours = meetingHours(on: now)
+        let free = freeUntil(now: now).map { " · Free until \(Self.time($0))" } ?? ""
         PanelHeader(now.formatted(.dateTime.weekday(.wide).day().month(.wide)),
-                    subtitle: !loaded ? "Reading your calendars…" : count == 0 ? "No meetings today" : "\(count) meeting\(count == 1 ? "" : "s") today · \(Self.hours(hours))",
+                    subtitle: !loaded ? "Reading your calendars…" : count == 0 ? "No meetings today" : "\(count) meeting\(count == 1 ? "" : "s") today · \(Self.hours(hours))" + free,
                     symbol: "calendar", theme: theme)
+    }
+
+    /// When the next meeting starts, while you're between meetings today.
+    func freeUntil(now: Date) -> Date? {
+        let soon = upcoming(now: now)
+        guard !soon.contains(where: { $0.start <= now }) else { return nil }
+        return soon.first { Calendar.current.isDate($0.start, inSameDayAs: now) }?.start
+    }
+
+    func date(offset: Int, from now: Date) -> Date {
+        Calendar.current.date(byAdding: .day, value: offset, to: now) ?? now
+    }
+
+    /// Today and the next six days as chips, each day's meeting count under
+    /// its name's tooltip.
+    @ViewBuilder func dayPicker(now: Date) -> ViewContent {
+        HStack(spacing: Space.xs) {
+            ForEach(Array(0..<7)) { offset in
+                let date = self.date(offset: offset, from: now)
+                let count = self.meetings(on: date).count
+                Chip(offset == 0 ? "Today" : date.formatted(.dateTime.weekday(.abbreviated)), theme: theme, selected: offset == dayOffset, key: "day-\(offset)") { self.dayOffset = offset }
+                    .accessibilityLabel("\(offset == 0 ? "Today" : date.formatted(.dateTime.weekday(.wide))): \(count) meeting\(count == 1 ? "" : "s")")
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// Other meetings you go to that share some of this one's time.
+    func clashes(with event: CalendarEvent) -> [CalendarEvent] {
+        guard !event.isAllDay, event.participation != .declined else { return [] }
+        return meetings(on: event.start).filter { $0.id != event.id && $0.start < event.end && $0.end > event.start }
     }
 
     /// What's on now or next, as big as the panel gets.
@@ -459,9 +513,9 @@ final class UpNext: StackbarPlugin {
     }
 
     /// Today's meetings on a bar from the morning to the evening, with now marked.
-    @ViewBuilder func dayCard(now: Date) -> ViewContent {
-        let start = Calendar.current.startOfDay(for: now)
-        let todays = meetings(on: now)
+    @ViewBuilder func dayCard(now: Date, on date: Date? = nil) -> ViewContent {
+        let start = Calendar.current.startOfDay(for: date ?? now)
+        let todays = meetings(on: date ?? now)
         let first = min(8, todays.map { Int($0.start.timeIntervalSince(start) / 3600) }.min() ?? 8)
         let last = max(20, todays.map { Int(($0.end.timeIntervalSince(start) / 3600).rounded(.up)) }.max() ?? 20)
         let from = start.addingTimeInterval(Double(max(0, first)) * 3600)
@@ -566,6 +620,10 @@ final class UpNext: StackbarPlugin {
             } else if !event.isAllDay, event.start.timeIntervalSince(now) < 3600 {
                 row = row.badge(countdown(event, now: now), role: .primary)
             }
+        }
+        if !past, let other = clashes(with: event).first {
+            row = row.badge("Clashes", role: .warning)
+                .preview(text: "Overlaps \(other.title), \(Self.time(other.start))–\(Self.time(other.end))")
         }
         if let link {
             row = row.action("Join on \(link.service)", shortcut: "cmd+return") { self.join(event) }

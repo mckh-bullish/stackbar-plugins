@@ -1,8 +1,9 @@
 import StackbarKit
 import Foundation
 
-/// Your Docker containers: what is running, with start, stop, restart, logs
-/// and cleanup a click away.
+/// Your Docker containers: what is running and what each one costs in CPU
+/// and memory, with start, stop, restart, logs, whole Compose projects and
+/// cleanup a click away.
 ///
 /// It runs the `docker` CLI through Stackbar (Docker Desktop, OrbStack,
 /// Colima and Rancher Desktop all install one), every 15 seconds while a
@@ -14,8 +15,8 @@ final class Docker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.docker",
         name: "Docker",
-        version: "1.5.0",
-        summary: "Your containers, with start, stop, restart and logs a click away.",
+        version: "1.6.0",
+        summary: "Your containers with live CPU and memory, Compose projects, and start, stop, restart and logs a click away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.run(commands: ["docker"])],
@@ -30,6 +31,7 @@ final class Docker: StackbarPlugin {
     static let previews: [PreviewScene<Docker>] = [
         PreviewScene("hero", "Every container, grouped by Compose project") { plugin in
             plugin.containers = samples
+            plugin.stats = sampleStats
             plugin.loaded = true
         },
         PreviewScene("trouble", "Catch the container that keeps crashing") { plugin in
@@ -59,6 +61,51 @@ final class Docker: StackbarPlugin {
             container("c8", "mailpit", "axllent/mailpit", "exited", "Exited (0) 2 hours ago", nil, project: nil),
         ]
     }()
+
+    static let sampleStats: [String: Stats] = [
+        "c1": Stats(cpu: 3.4, memory: 182e6, memoryLimit: 8e9),
+        "c2": Stats(cpu: 12.8, memory: 412e6, memoryLimit: 8e9),
+        "c3": Stats(cpu: 1.9, memory: 96e6, memoryLimit: 8e9),
+        "c4": Stats(cpu: 0.4, memory: 11e6, memoryLimit: 8e9),
+        "c5": Stats(cpu: 0.8, memory: 140e6, memoryLimit: 8e9),
+        "c7": Stats(cpu: 0.2, memory: 88e6, memoryLimit: 8e9),
+    ]
+
+    /// One container's share of the machine, from `docker stats`.
+    struct Stats: Equatable {
+        var cpu: Double
+        var memory: Double
+        var memoryLimit: Double
+    }
+
+    /// One line of `docker stats --no-stream --format '{{json .}}'`.
+    struct StatsLine: Decodable {
+        let id: String
+        let cpu: String
+        let memory: String
+        enum CodingKeys: String, CodingKey { case id = "ID", cpu = "CPUPerc", memory = "MemUsage" }
+    }
+
+    /// `12.5%` → 12.5; `1.2GiB / 7.6GiB` → bytes used and the limit.
+    static func parse(_ line: StatsLine) -> Stats? {
+        guard let cpu = Double(line.cpu.trimmingCharacters(in: CharacterSet(charactersIn: "% "))) else { return nil }
+        let parts = line.memory.components(separatedBy: "/").map { $0.trimmingCharacters(in: .whitespaces) }
+        return Stats(cpu: cpu, memory: parts.first.flatMap(bytes) ?? 0, memoryLimit: parts.count > 1 ? bytes(parts[1]) ?? 0 : 0)
+    }
+
+    /// Docker's sizes: `512KiB`, `1.2GiB`, `3.4MB`, `0B`.
+    static func bytes(_ text: String) -> Double? {
+        let units: [(String, Double)] = [("TiB", pow(1024, 4)), ("GiB", pow(1024, 3)), ("MiB", pow(1024, 2)), ("KiB", 1024),
+                                         ("TB", 1e12), ("GB", 1e9), ("MB", 1e6), ("kB", 1e3), ("KB", 1e3), ("B", 1)]
+        for (unit, scale) in units where text.hasSuffix(unit) {
+            return Double(text.dropLast(unit.count).trimmingCharacters(in: .whitespaces)).map { $0 * scale }
+        }
+        return Double(text)
+    }
+
+    static func size(_ bytes: Double) -> String {
+        bytes >= 1e9 ? String(format: "%.1f GB", bytes / 1e9) : String(format: "%.0f MB", max(1, bytes / 1e6))
+    }
 
     /// One line of `docker ps --format '{{json .}}'`.
     struct Container: Decodable, Equatable, Identifiable {
@@ -106,6 +153,8 @@ final class Docker: StackbarPlugin {
     }
 
     var containers: [Container] = []
+    /// CPU and memory of each running container, by id.
+    var stats: [String: Stats] = [:]
     var loaded = false
     var problem: String?
     var busy: Set<String> = []
@@ -153,12 +202,68 @@ final class Docker: StackbarPlugin {
             containers = fresh
             crashedIDs = crashedIDs.filter { id in fresh.contains { $0.id == id && !$0.isRunning } }
             problem = nil
+            await loadStats()
         } catch {
             problem = "\(error)".contains("not installed")
                 ? "The docker command isn't installed. Install Docker Desktop, OrbStack or Colima, then refresh."
                 : "\(error)"
         }
         loaded = true
+    }
+
+    /// One snapshot of every running container's CPU and memory. Takes a
+    /// second or two, so only while something runs.
+    func loadStats() async {
+        guard !running.isEmpty else { stats = [:]; return }
+        guard let result = try? await Stackbar.run("docker", ["stats", "--no-stream", "--no-trunc", "--format", "{{json .}}"], timeout: .seconds(20)), result.succeeded else { return }
+        let decoder = JSONDecoder()
+        var fresh: [String: Stats] = [:]
+        for line in result.text.split(separator: "\n") {
+            guard let parsed = try? decoder.decode(StatsLine.self, from: Data(line.utf8)), let numbers = Self.parse(parsed) else { continue }
+            // stats ids can be the short form; match them to the full ones.
+            if let container = containers.first(where: { $0.id.hasPrefix(parsed.id) || parsed.id.hasPrefix($0.id) }) { fresh[container.id] = numbers }
+        }
+        stats = fresh
+    }
+
+    var totalCPU: Double { stats.values.reduce(0) { $0 + $1.cpu } }
+    var totalMemory: Double { stats.values.reduce(0) { $0 + $1.memory } }
+
+    /// Compose projects, by name, with their containers.
+    var composeProjects: [(name: String, containers: [Container])] {
+        Dictionary(grouping: containers.filter { $0.project != nil }) { $0.project ?? "" }
+            .map { (name: $0.key, containers: $0.value) }
+            .sorted { $0.name < $1.name }
+    }
+
+    /// `docker compose -p <project> stop|start|restart`: Compose finds the
+    /// project from its containers' labels, so no compose file is needed.
+    func compose(_ verb: String, project: String) async throws {
+        let members = containers.filter { $0.project == project }
+        busyText = "\(["stop": "Stopping", "start": "Starting", "restart": "Restarting"][verb] ?? verb) \(project)…"
+        if verb != "start" { stopping.formUnion(members.map(\.id)) }
+        members.forEach { busy.insert($0.id) }
+        defer {
+            busyText = nil
+            members.forEach { busy.remove($0.id); stopping.remove($0.id) }
+        }
+        let result = try await Stackbar.run("docker", ["compose", "-p", project, verb], timeout: .seconds(180))
+        guard result.succeeded else { throw HostError("\(verb) \(project): " + Self.explain(result)) }
+        Stackbar.hud("\(project): \(["stop": "stopped", "start": "started", "restart": "restarted"][verb] ?? verb)")
+        await load()
+    }
+
+    /// Stops every running container at once.
+    func stopAll() async throws -> String {
+        let ids = running.map(\.id)
+        guard !ids.isEmpty else { return "Nothing is running" }
+        busyText = "Stopping \(ids.count) container\(ids.count == 1 ? "" : "s")…"
+        stopping.formUnion(ids)
+        defer { busyText = nil; stopping.subtract(ids) }
+        let result = try await Stackbar.run("docker", ["stop"] + ids, timeout: .seconds(180))
+        guard result.succeeded else { throw HostError(Self.explain(result)) }
+        await load()
+        return "Stopped \(ids.count) container\(ids.count == 1 ? "" : "s")"
     }
 
     /// Compares two lists and speaks up about what went wrong in between:
@@ -259,7 +364,12 @@ final class Docker: StackbarPlugin {
                     HeroCard(theme: theme, look: .glow) {
                         HStack(spacing: Space.l) {
                             HeroStat("Running", value: "\(running.count)", theme: theme, live: !running.isEmpty)
-                            HeroStat("Stopped", value: "\(containers.count - running.count)", theme: .neutral, symbol: "stop.fill")
+                            if !stats.isEmpty {
+                                HeroStat("CPU", value: String(format: "%.0f%%", totalCPU), theme: totalCPU >= 200 ? .warning : .neutral, symbol: "cpu")
+                                HeroStat("Memory", value: Self.size(totalMemory), theme: .neutral, symbol: "memorychip")
+                            } else {
+                                HeroStat("Stopped", value: "\(containers.count - running.count)", theme: .neutral, symbol: "stop.fill")
+                            }
                             if unhealthy > 0 {
                                 HeroStat("Unhealthy", value: "\(unhealthy)", theme: .critical, symbol: "cross.case.fill")
                             } else if projects > 0 {
@@ -288,6 +398,7 @@ final class Docker: StackbarPlugin {
                             let up = containers.filter { ($0.project ?? "") == project && $0.isRunning }.count
                             let all = containers.filter { ($0.project ?? "") == project }.count
                             Section(project.isEmpty ? (groups.count > 1 ? "Other containers" : "Containers") : "\(project) · \(up)/\(all) running") {
+                                if !project.isEmpty { self.projectControls(project, up: up, all: all) }
                                 ForEach(members) { container in self.row(container) }
                             }
                         }
@@ -296,6 +407,20 @@ final class Docker: StackbarPlugin {
                     List(shown, searchable: shown.count > 8) { container in self.row(container) }
                 }
             }
+        }
+    }
+
+    /// Start, stop and restart for a whole Compose project.
+    @ViewBuilder func projectControls(_ project: String, up: Int, all: Int) -> ViewContent {
+        HStack(spacing: Space.xs) {
+            if up < all {
+                Chip("Start all", symbol: "play.fill", theme: theme, key: "compose-start-\(project)") { try await self.compose("start", project: project) }
+            }
+            if up > 0 {
+                Chip("Restart", symbol: "arrow.clockwise", theme: theme, key: "compose-restart-\(project)") { try await self.compose("restart", project: project) }
+                Chip("Stop", symbol: "stop.fill", theme: theme, key: "compose-stop-\(project)") { try await self.compose("stop", project: project) }
+            }
+            Spacer()
         }
     }
 
@@ -392,7 +517,9 @@ final class Docker: StackbarPlugin {
         } else if container.state == "paused" {
             row = row.badge("paused")
         }
-        if container.isRunning, let url = container.localURLs.first {
+        if container.isRunning, let numbers = stats[container.id] {
+            row = row.badge(String(format: "%.1f%% · ", numbers.cpu) + Self.size(numbers.memory), role: numbers.cpu >= 80 ? .warning : .secondary)
+        } else if container.isRunning, let url = container.localURLs.first {
             row = row.badge(String(url.dropFirst("http://".count)))
         }
         if let url = container.localURLs.first {
@@ -470,17 +597,53 @@ final class Docker: StackbarPlugin {
                 }
             }
             .stackbarOnly()
+        Command("compose", title: "Docker Compose Projects", symbol: "square.stack.3d.up", keywords: ["docker", "compose", "project", "stack"])
+            .view(search: { _ in await self.load() }) { _ in
+                if let problem = self.problem {
+                    ContentUnavailableView("Docker isn't available", symbol: "shippingbox", message: problem)
+                } else if self.composeProjects.isEmpty {
+                    ContentUnavailableView("No Compose projects", symbol: "square.stack.3d.up", message: "Projects you start with docker compose up show here.")
+                } else {
+                    List(self.composeProjects.map { ComposeProject(id: $0.name, containers: $0.containers) }, searchable: true) { project in self.projectRow(project) }
+                }
+            }
+        Command("stop-all", title: "Stop All Docker Containers", symbol: "stop.circle", keywords: ["docker", "stop", "containers", "all"]) { _ in
+            .message(try await self.stopAll())
+        }
         Command("prune", title: "Remove Stopped Docker Containers", symbol: "trash", keywords: ["docker", "prune", "clean"]) { _ in
             .message(try await self.prune())
         }
         .stackbarOnly()
     }
 
+    func projectRow(_ project: ComposeProject) -> Row {
+        let up = project.containers.filter(\.isRunning).count
+        var row = Row(project.id, subtitle: "\(up) of \(project.containers.count) running · " + project.containers.map(\.name).joined(separator: ", "),
+                      symbol: up == 0 ? "square.stack.3d.up" : "square.stack.3d.up.fill", key: project.id)
+        if up < project.containers.count {
+            row = row.action("Start", shortcut: "cmd+return") { try await self.compose("start", project: project.id) }
+        }
+        if up > 0 {
+            row = row
+                .action("Restart", shortcut: "cmd+r") { try await self.compose("restart", project: project.id) }
+                .action("Stop", shortcut: "cmd+.") { try await self.compose("stop", project: project.id) }
+        }
+        return row
+    }
+
+    struct ComposeProject: Identifiable {
+        let id: String
+        let containers: [Container]
+    }
+
     var tools: [AgentTool] {
         AgentTool("containers", description: "Docker containers with name, image, state and status") { _ in
             if self.containers.isEmpty { await self.load() }
             if let problem = self.problem { return problem }
-            return self.containers.map { "\($0.name)\t\($0.image)\t\($0.state)\t\($0.status)" }.joined(separator: "\n")
+            return self.containers.map { container in
+                let numbers = self.stats[container.id].map { String(format: "\t%.1f%% cpu\t", $0.cpu) + Self.size($0.memory) } ?? ""
+                return "\(container.name)\t\(container.image)\t\(container.state)\t\(container.status)\(numbers)"
+            }.joined(separator: "\n")
         }
     }
 }

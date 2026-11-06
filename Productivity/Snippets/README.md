@@ -11,7 +11,8 @@ another snippet.
   `{selection}`, 16 MB of storage for the snippets, and keyword expansion.
   Stackbar 0.24.0 or later.
 - **Surfaces:** panel, settings. Hotkey ⌃⌥S opens Search Snippets.
-- **Settings:** your snippets, importing a Raycast export, and whether
+- **Settings:** your snippets, importing from Raycast, TextExpander, Espanso or
+  Apple's Text Replacements, and whether
   keywords are expanding.
 - **Commands:** Search Snippets, Create Snippet, Import Snippets, Export
   Snippets (a file Raycast reads too), plus one command per snippet.
@@ -19,6 +20,25 @@ another snippet.
   replaced with the snippet. A snippet that asks for an argument opens in the
   palette first. Stackbar does the watching, so this plugin never sees what
   you type; switch it off or skip apps in Settings › Privacy & Secrets.
+
+## Bring your snippets with you
+
+Import Snippets reads:
+
+- **Raycast:** its JSON export, as it is.
+- **TextExpander:** a `.textexpander` group file or its CSV export.
+  `%clipboard`, `%|` (cursor), fill-ins (`%filltext:name=who%`) and date
+  codes like `%Y-%m-%d` become placeholders; abbreviations become keywords.
+- **Espanso:** a match file (`base.yml`). `trigger` or `triggers` become
+  keywords, `$|$` the cursor and `{{clipboard}}` the clipboard.
+- **Text Replacements:** select them in System Settings > Keyboard > Text
+  Replacements and drag them to the Desktop, then import the plist.
+
+Duplicates are skipped, and keywords already taken are left off.
+
+## What's new in 1.5.0
+
+- Import from TextExpander, Espanso and Apple's Text Replacements, with their placeholders and keywords.
 
 ## What's new in 1.4.0
 

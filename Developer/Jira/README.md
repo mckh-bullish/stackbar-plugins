@@ -1,23 +1,36 @@
 # Jira
 
-Your Jira Cloud issues in the menu bar and the palette. The number is how
+Your Jira issues in the menu bar and the palette, on Jira Cloud or Jira Data
+Center. The number is how
 many assigned issues are in progress; the panel lists them, in progress
 first.
 
 - **Needs:** `*.atlassian.net` and the secret `JIRA_API_TOKEN`, an API token
   from id.atlassian.com (Security > API tokens). Your site and email are set
-  in Settings.
+  in Settings. On Data Center, `JIRA_SERVER_URL` is your server's address and
+  `JIRA_API_TOKEN` a personal access token; the plugin reaches that server
+  and no other.
 - **Surfaces:** menu bar, panel, settings.
-- **On each issue:** Open, Copy Link, Copy Key, Copy Branch Name
-  (`ABC-123-short-summary`, which Jira's development panel links).
+- **On each issue:** Open, Change Status (the issue's own workflow), Comment,
+  Assign to Me (on issues that aren't yours yet), Watch, Copy Link, Copy Key,
+  Copy Branch Name (`ABC-123-short-summary`, which Jira's development panel
+  links).
+- **Notifications:** when an issue is newly assigned to you; Highest and
+  Blocker issues say so in the title. Turn it off in Settings.
 - **Commands:** My Jira Issues, Search Jira (text, or a key like `ABC-123`),
-  Create Jira Issue (project, type, summary, description).
-- **Settings:** site, email, the JQL behind the menu bar and panel (open
-  issues assigned to you by default), and the default project for new
-  issues.
+  Change Jira Issue Status, Comment on Jira Issue, Create Jira Issue
+  (project, type, summary, description).
+- **Settings:** Cloud or Data Center, site, email, the JQL behind the menu
+  bar and panel (open issues assigned to you by default), notifications,
+  and the default project for new issues.
 - **Agent tool:** `assigned` lists your open issues.
 
-Jira Server and Data Center aren't supported: only Atlassian's cloud sites.
+## What's new in 1.5.0
+
+- Change an issue's status, comment on it, assign it to yourself or watch it, from its row.
+- A notification when an issue is assigned to you, louder for Highest and Blocker.
+- Jira Data Center: pick it in Settings and enter your server and a personal access token.
+- Updating asks once more for approval, because the plugin can now reach a Data Center server you enter.
 
 ## What's new in 1.4.0
 

@@ -5,23 +5,32 @@ A focus timer in the Stackbar look: red for focus, teal for breaks. Pick Focus o
 the ring around it move on their own, the menu bar shows the time
 left (dimmed behind a pause sign while paused), and a chime and a
 notification mark the end. Today's finished sessions
-and focused minutes sit under the timer.
+and focused minutes sit under the timer, with the last seven days in a chart.
 
 - **Needs:** nothing. No network, files or secrets.
 - **Surfaces:** menu bar, panel, widget, settings.
 - **In the panel:** the tag chip cycles through your tags; skip ends the
   session without counting it; Auto starts the next session on its own; the
   note turns the sound on or off; reset clears the timer.
+- **Long breaks:** after four focus sessions (you can pick two to six, or
+  off) the break is a long one, 15 minutes by default. Dots under the timer
+  show how far you are into the round.
 - **No lost sessions:** once a session is a minute in, a mode, preset, skip
   or reset tap asks first, with a banner to confirm or keep going.
 - **Commands:** Start or Pause Pomodoro, Start a Focus Session (optional
   minutes and tag), Take a Break (optional minutes), Skip and Reset. Run them
   from the palette, give them a hotkey, or call them from a Shortcut or a
   `stackbar://commands/io.navbytes.stackbar.plugins.pomodoro/<command>` link.
-- **Settings:** custom focus and break lengths, auto-start, the sound, and
-  your tags.
-- **Agent tool:** `status` returns the mode, the time left and today's focus.
+- **Settings:** custom focus, break and long-break lengths, how many
+  sessions before a long break, auto-start, the sound, and your tags.
+- **Agent tool:** `status` returns the mode, the time left, today's focus
+  and the last seven days.
 - **Requires:** Stackbar 0.14.0 or later.
+
+## What's new in 1.6.0
+
+- A long break every four sessions (or two to six, or off), with dots under the timer for where you are in the round.
+- The last seven days of focus in a chart under the timer.
 
 ## What's new in 1.5.0
 

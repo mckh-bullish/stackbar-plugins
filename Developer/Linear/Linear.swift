@@ -2,8 +2,10 @@ import StackbarKit
 import Foundation
 
 /// Your Linear issues in the menu bar and the palette: what's assigned to
-/// you, grouped by state, with the branch name a keystroke away, and new
-/// issues filed without leaving what you're doing.
+/// you, grouped by state, with the branch name a keystroke away, your inbox
+/// with a notification when something needs you, status, priority and
+/// comments from a row, and new issues filed without leaving what you're
+/// doing.
 ///
 /// It talks to Linear's GraphQL API with a personal API key (Settings >
 /// Security & access > Personal API keys in Linear), kept in your Keychain
@@ -13,8 +15,8 @@ final class Linear: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.linear",
         name: "Linear",
-        version: "1.4.0",
-        summary: "Your assigned Linear issues, branch names, search and new issues from the palette.",
+        version: "1.5.0",
+        summary: "Your assigned Linear issues and inbox: change status and priority, start work, comment, and new issues from the palette.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("api.linear.app"), .secret(name: "LINEAR_API_KEY")],
@@ -31,6 +33,7 @@ final class Linear: StackbarPlugin {
             plugin.teams = [Team(id: "t1", key: "ENG", name: "Engineering"), Team(id: "t2", key: "DES", name: "Design")]
             plugin.defaultTeam = "t1"
             plugin.assigned = samples
+            plugin.inbox = inboxSamples
             plugin.loaded = true
         },
         PreviewScene("widget", "What you're on, on your desktop", surface: .widget) { plugin in
@@ -55,9 +58,62 @@ final class Linear: StackbarPlugin {
         ]
     }()
 
+    static let inboxSamples: [InboxItem] = [
+        InboxItem(id: "n1", type: "issueAssignedToYou", readAt: nil, createdAt: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-600)),
+                  actor: .init(name: "Ravi"), issue: .init(identifier: "ENG-247", title: "Webhooks drop events over 1 MB", url: "https://linear.app/acme/issue/ENG-247")),
+        InboxItem(id: "n2", type: "issueMention", readAt: nil, createdAt: ISO8601DateFormatter().string(from: Date().addingTimeInterval(-3600)),
+                  actor: .init(name: "Mei"), issue: .init(identifier: "DES-54", title: "Empty states for the new dashboard", url: "https://linear.app/acme/issue/DES-54")),
+    ]
+
+    /// One entry in Linear's inbox.
+    struct InboxItem: Codable, Equatable, Identifiable {
+        struct Actor: Codable, Equatable { let name: String }
+        struct Subject: Codable, Equatable { let identifier: String; let title: String; let url: String }
+        let id: String
+        let type: String
+        let readAt: String?
+        let createdAt: String
+        let actor: Actor?
+        let issue: Subject?
+
+        /// "Ravi assigned you", "Mei mentioned you", from Linear's type names.
+        var headline: String {
+            let who = actor?.name ?? "Linear"
+            switch type {
+            case "issueAssignedToYou": return "\(who) assigned you"
+            case "issueMention", "issueCommentMention", "issueDescriptionMention": return "\(who) mentioned you"
+            case "issueNewComment", "issueCommentReaction": return "\(who) commented"
+            case "issueStatusChanged": return "\(who) changed the status"
+            case "issuePriorityUrgent": return "Marked urgent"
+            case "issueBlocking", "issueUnblocked": return "Blocking changed"
+            case "issueDue", "issueDueSoon": return "Due soon"
+            default: return "\(who) updated it"
+            }
+        }
+
+        var symbol: String {
+            switch type {
+            case "issueAssignedToYou": return "person.crop.circle.badge.plus"
+            case "issueMention", "issueCommentMention", "issueDescriptionMention": return "at"
+            case "issueNewComment", "issueCommentReaction": return "text.bubble"
+            default: return "bell"
+            }
+        }
+    }
+
+    struct WorkflowState: Codable, Equatable, Identifiable {
+        let id: String
+        let name: String
+        let type: String
+        let position: Double
+    }
+
     struct Issue: Codable, Equatable, Identifiable {
         struct State: Codable, Equatable { let name: String; let type: String }
-        struct Team: Codable, Equatable { let key: String }
+        struct Team: Codable, Equatable {
+            var id: String?
+            let key: String
+        }
         let id: String
         let identifier: String
         let title: String
@@ -87,12 +143,24 @@ final class Linear: StackbarPlugin {
     @Stored("teams") var teams: [Team] = []
     @Stored("defaultTeam") var defaultTeam = ""
     @Stored("menuBarCount") var menuBarCount = "In progress"
+    @Stored("notify") var notifyInbox = true
+    /// Inbox entries already seen, so only new ones notify. The first good
+    /// refresh only remembers.
+    @Stored("seenInbox") var seenInbox: [String] = []
+    @Stored("seenReady") var seenReady = false
+    var inbox: [InboxItem] = []
+    var states: [String: [WorkflowState]] = [:]
+    var viewerID: String?
+    var searchProblem: String?
+    var actionProblem: String?
+    var commentDone: String?
     var problem: String?
     var loaded = false
     var formError: String?
     var created: String?
 
-    static let fields = "id identifier title url branchName priority state { name type } team { key }"
+    static let fields = "id identifier title url branchName priority state { name type } team { id key }"
+    static let inboxFields = "id type readAt createdAt actor { name } ... on IssueNotification { issue { identifier title url } }"
 
     // MARK: API
 
@@ -113,18 +181,25 @@ final class Linear: StackbarPlugin {
 
     func refresh() async throws {
         struct Data: Decodable {
-            struct Viewer: Decodable { struct Issues: Decodable { let nodes: [Issue] }; let assignedIssues: Issues }
+            struct Viewer: Decodable { struct Issues: Decodable { let nodes: [Issue] }; let id: String; let assignedIssues: Issues }
             struct Teams: Decodable { let nodes: [Team] }
+            struct Inbox: Decodable { let nodes: [InboxItem] }
             let viewer: Viewer
             let teams: Teams
+            let notifications: Inbox
         }
         do {
             let data = try await query("""
-            query { viewer { assignedIssues(first: 100, orderBy: updatedAt, filter: { state: { type: { nin: ["completed", "canceled"] } } }) { nodes { \(Self.fields) } } } \
-            teams(first: 50) { nodes { id key name } } }
+            query { viewer { id assignedIssues(first: 100, orderBy: updatedAt, filter: { state: { type: { nin: ["completed", "canceled"] } } }) { nodes { \(Self.fields) } } } \
+            teams(first: 50) { nodes { id key name } } \
+            notifications(first: 30) { nodes { \(Self.inboxFields) } } }
             """, as: Data.self)
             assigned = data.viewer.assignedIssues.nodes
+            viewerID = data.viewer.id
             teams = data.teams.nodes
+            // Archived and snoozed entries come back too; unread issue ones are the inbox.
+            inbox = data.notifications.nodes.filter { $0.issue != nil }
+            noticeInbox()
             problem = nil
         } catch {
             problem = "\(error)"
@@ -132,16 +207,170 @@ final class Linear: StackbarPlugin {
         loaded = true
     }
 
+    /// `ENG-123` or a pasted issue URL names one issue; anything else
+    /// searches titles. A failure says why instead of an empty list.
     func search(_ text: String) async {
         let term = text.trimmingCharacters(in: .whitespaces)
-        guard term.count >= 2 else { found = []; return }
+        guard term.count >= 2 else { found = []; searchProblem = nil; return }
+        if let identifier = Self.identifier(in: term) {
+            await lookUp(identifier: identifier)
+            found = keyed[identifier].map { [$0] } ?? []
+            searchProblem = found.isEmpty ? "No issue \(identifier)" : nil
+            return
+        }
         struct Data: Decodable { struct Issues: Decodable { let nodes: [Issue] }; let issues: Issues }
         do {
             let data = try await query("query($term: String!) { issues(first: 25, orderBy: updatedAt, filter: { title: { containsIgnoreCase: $term } }) { nodes { \(Self.fields) } } }", variables: ["term": term], as: Data.self)
             found = data.issues.nodes
+            searchProblem = nil
         } catch {
             found = []
+            searchProblem = "\(error)"
         }
+    }
+
+    /// `ENG-123`, or the identifier in `https://linear.app/acme/issue/ENG-123/title`.
+    static func identifier(in text: String) -> String? {
+        let pattern = #"(?:^|/issue/)([A-Za-z][A-Za-z0-9]*-\d+)(?:$|[/?#])"#
+        guard let match = text.range(of: pattern, options: .regularExpression) else { return nil }
+        let piece = String(text[match])
+        guard let id = piece.range(of: #"[A-Za-z][A-Za-z0-9]*-\d+"#, options: .regularExpression) else { return nil }
+        let identifier = String(piece[id]).uppercased()
+        // A bare word must be the whole text; a URL just has to contain it.
+        return text.contains("/") || text.uppercased() == identifier ? identifier : nil
+    }
+
+    // MARK: Inbox
+
+    var unread: [InboxItem] { inbox.filter { $0.readAt == nil } }
+
+    func noticeInbox() {
+        let ids = inbox.map(\.id)
+        defer { seenInbox = ids; seenReady = true }
+        guard seenReady, notifyInbox else { return }
+        let known = Set(seenInbox)
+        let fresh = unread.filter { !known.contains($0.id) }
+        if fresh.count > 3 {
+            Stackbar.notify("\(fresh.count) new in your Linear inbox", body: fresh.prefix(3).compactMap { $0.issue?.identifier }.joined(separator: ", ") + "…",
+                            actions: [NotificationAction("Open Inbox", url: "https://linear.app/inbox")])
+            return
+        }
+        for item in fresh {
+            guard let issue = item.issue else { continue }
+            Stackbar.notify("\(item.headline): \(issue.identifier)", body: issue.title, actions: [NotificationAction("Open", url: issue.url)])
+        }
+    }
+
+    func markRead(_ item: InboxItem) async throws {
+        let now = ISO8601DateFormatter().string(from: Date())
+        struct Done: Decodable { struct Payload: Decodable { let success: Bool }; let notificationUpdate: Payload }
+        _ = try await query("mutation($id: String!, $at: DateTime!) { notificationUpdate(id: $id, input: { readAt: $at }) { success } }", variables: ["id": item.id, "at": now], as: Done.self)
+        if let index = inbox.firstIndex(where: { $0.id == item.id }) {
+            inbox[index] = InboxItem(id: item.id, type: item.type, readAt: now, createdAt: item.createdAt, actor: item.actor, issue: item.issue)
+        }
+    }
+
+    func inboxRow(_ item: InboxItem) -> Row {
+        let issue = item.issue
+        let when = ISO8601DateFormatter().date(from: item.createdAt).map { Self.ago($0) } ?? ""
+        var row = Row(issue?.title ?? item.headline, subtitle: [item.headline, issue?.identifier, when].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "), symbol: item.symbol, key: "inbox-\(item.id)")
+        if item.readAt == nil { row = row.badge("New", role: .accent) }
+        return row
+            .action("Open") {
+                if let url = issue?.url { Stackbar.open(url) }
+                try? await self.markRead(item)
+            }
+            .action("Mark as Read", shortcut: "cmd+r") { try await self.markRead(item) }
+            .action("Copy ID", shortcut: "cmd+shift+c") { if let id = issue?.identifier { Stackbar.copy(id) } }
+    }
+
+    static func ago(_ date: Date) -> String {
+        let minutes = Int(-date.timeIntervalSinceNow / 60)
+        if minutes < 1 { return "now" }
+        if minutes < 60 { return "\(minutes)m" }
+        if minutes < 60 * 24 { return "\(minutes / 60)h" }
+        return "\(minutes / 60 / 24)d"
+    }
+
+    // MARK: Actions
+
+    func update(_ issue: Issue, _ input: [String: Any], done: String) async {
+        struct Done: Decodable { struct Payload: Decodable { let success: Bool }; let issueUpdate: Payload }
+        do {
+            _ = try await query("mutation($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success } }", variables: ["id": issue.id, "input": input], as: Done.self)
+            Stackbar.hud(done)
+            try await refresh()
+        } catch {
+            Stackbar.hud("\(error)", isError: true)
+        }
+    }
+
+    func myID() async throws -> String {
+        if let viewerID { return viewerID }
+        struct Viewer: Decodable { struct Me: Decodable { let id: String }; let viewer: Me }
+        let id = try await query("query { viewer { id } }", as: Viewer.self).viewer.id
+        viewerID = id
+        return id
+    }
+
+    /// The team's workflow, in Linear's order.
+    func loadStates(team: String) async {
+        guard states[team] == nil else { return }
+        struct Data: Decodable { struct Team: Decodable { struct States: Decodable { let nodes: [WorkflowState] }; let states: States }; let team: Team }
+        do {
+            states[team] = try await query("query($id: String!) { team(id: $id) { states { nodes { id name type position } } } }", variables: ["id": team], as: Data.self)
+                .team.states.nodes.sorted { (Self.typeOrder($0.type), $0.position) < (Self.typeOrder($1.type), $1.position) }
+            actionProblem = nil
+        } catch {
+            actionProblem = "\(error)"
+        }
+    }
+
+    static func typeOrder(_ type: String) -> Int {
+        ["triage", "backlog", "unstarted", "started", "completed", "canceled"].firstIndex(of: type) ?? 9
+    }
+
+    /// In Progress (the team's first started state), assigned to you, and the
+    /// branch name on the clipboard: everything before `git switch -c`.
+    func startWork(_ issue: Issue) async throws {
+        do {
+            guard let team = issue.team.id else { throw HostError("Linear didn't say which team \(issue.identifier) is in") }
+            await loadStates(team: team)
+            var input: [String: Any] = ["assigneeId": try await myID()]
+            if issue.state.type != "started", let started = states[team]?.first(where: { $0.type == "started" }) { input["stateId"] = started.id }
+            Stackbar.copy(issue.branchName)
+            await update(issue, input, done: "Started \(issue.identifier) · branch name copied")
+        } catch {
+            Stackbar.hud("\(error)", isError: true)
+        }
+    }
+
+    func comment(on issue: Issue, _ text: String) async throws {
+        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !body.isEmpty else { actionProblem = "Write a comment first"; return }
+        struct Done: Decodable { struct Payload: Decodable { let success: Bool }; let commentCreate: Payload }
+        do {
+            _ = try await query("mutation($input: CommentCreateInput!) { commentCreate(input: $input) { success } }", variables: ["input": ["issueId": issue.id, "body": body]], as: Done.self)
+            actionProblem = nil
+            commentDone = "Comment added to \(issue.identifier)"
+            Stackbar.hud("Comment added to \(issue.identifier)")
+        } catch {
+            actionProblem = "\(error)"
+        }
+    }
+
+    /// The issue a status, priority or comment view acts on: one you can see,
+    /// else fetched by identifier.
+    func issue(_ identifier: String?) async -> Issue? {
+        guard let identifier = identifier?.trimmingCharacters(in: .whitespaces).uppercased(), !identifier.isEmpty else { return nil }
+        if let known = (assigned + found).first(where: { $0.identifier == identifier }) ?? keyed[identifier] { return known }
+        await lookUp(identifier: identifier)
+        return keyed[identifier]
+    }
+
+    func known(_ identifier: String?) -> Issue? {
+        guard let identifier = identifier?.trimmingCharacters(in: .whitespaces).uppercased() else { return nil }
+        return (assigned + found).first { $0.identifier == identifier } ?? keyed[identifier]
     }
 
     /// Looks up one issue by identifier (ENG-231) for the palette's root:
@@ -196,6 +425,10 @@ final class Linear: StackbarPlugin {
         }
         return row
             .action("Open") { Stackbar.open(issue.url) }
+            .action("Start Work", shortcut: "cmd+return") { try await self.startWork(issue) }
+            .navigate("Change Status…", to: "status", arguments: ["issue": issue.identifier], shortcut: "cmd+s")
+            .navigate("Set Priority…", to: "priority", arguments: ["issue": issue.identifier], shortcut: "cmd+p")
+            .navigate("Comment…", to: "comment", arguments: ["issue": issue.identifier], shortcut: "cmd+k")
             .action("Copy Branch Name", shortcut: "cmd+shift+b") { Stackbar.copy(issue.branchName) }
             .action("Copy Link", shortcut: "cmd+c") { Stackbar.copy(issue.url) }
             .action("Copy ID", shortcut: "cmd+shift+c") { Stackbar.copy(issue.identifier) }
@@ -229,6 +462,8 @@ final class Linear: StackbarPlugin {
         let count = menuBarCount == "All assigned" ? assigned.count : inProgress.count
         if problem != nil, loaded {
             Label("", symbol: "checklist").role(.warning)
+        } else if !unread.isEmpty {
+            Label("\(unread.count)", symbol: "bell.badge.fill").role(.warning)
         } else if count == 0 {
             Label("", symbol: "checklist").role(.secondary)
         } else {
@@ -263,6 +498,9 @@ final class Linear: StackbarPlugin {
                     }
                 }
                 if let problem { Banner(problem) }
+                if !unread.isEmpty {
+                    Section("Inbox · \(unread.count) new") { ForEach(Array(unread.prefix(5))) { item in self.inboxRow(item) } }
+                }
                 if assigned.isEmpty {
                     EmptyState("Nothing assigned to you", symbol: "checkmark", theme: .success)
                 } else {
@@ -281,6 +519,10 @@ final class Linear: StackbarPlugin {
     var settings: ViewContent {
         Section("Menu bar") {
             Picker("Count", options: ["In progress", "All assigned"], selection: menuBarCount, style: .segmented) { self.menuBarCount = $0 }
+        }
+        Section("Notifications") {
+            Toggle("Notify when something new reaches my inbox", isOn: notifyInbox) { self.notifyInbox = $0 }
+            Text("Assignments, mentions and comments, as Linear's own inbox lists them. The menu bar shows a bell while any are unread.").style(.caption)
         }
         Section("New issues") {
             if teams.isEmpty {
@@ -311,11 +553,74 @@ final class Linear: StackbarPlugin {
         Command("search", title: "Search Linear Issues", symbol: "magnifyingglass", keywords: ["linear", "issue", "find"])
             .view(search: { invocation in await self.search(invocation.text) }) { invocation in
                 if invocation.text.count < 2 {
-                    ContentUnavailableView("Type to search issue titles", symbol: "magnifyingglass")
+                    ContentUnavailableView("Type to search titles, or paste an ID or link", symbol: "magnifyingglass")
+                } else if let problem = self.searchProblem, self.found.isEmpty {
+                    ContentUnavailableView("Can't search Linear", symbol: "exclamationmark.triangle", message: problem)
+                } else if self.found.isEmpty {
+                    ContentUnavailableView("No issues match", symbol: "magnifyingglass")
                 } else {
                     List(self.found) { issue in self.row(issue) }
                 }
             }
+        Command("inbox", title: "Linear Inbox", symbol: "tray", keywords: ["linear", "notifications", "mentions", "inbox"])
+            .view(search: { _ in try await self.refresh() }) { _ in
+                if let problem = self.problem, self.inbox.isEmpty {
+                    ContentUnavailableView("Can't reach Linear", symbol: "exclamationmark.triangle", message: problem)
+                } else if self.inbox.isEmpty {
+                    ContentUnavailableView("Inbox zero", symbol: "tray")
+                } else {
+                    List(self.inbox, searchable: true) { item in self.inboxRow(item) }
+                }
+            }
+        Command("status", title: "Change Linear Issue Status", symbol: "arrow.triangle.swap", keywords: ["linear", "state", "move", "done"])
+            .argument("issue", placeholder: "ENG-123")
+            .view(search: { invocation in
+                if let issue = await self.issue(invocation["issue"]), let team = issue.team.id { await self.loadStates(team: team) }
+            }) { invocation in
+                if let issue = self.known(invocation["issue"]), let team = issue.team.id {
+                    if let problem = self.actionProblem, self.states[team] == nil {
+                        ContentUnavailableView("Can't load the workflow", symbol: "exclamationmark.triangle", message: problem)
+                    } else {
+                        List(self.states[team] ?? [], searchable: true) { state in
+                            Row(state.name, subtitle: state.name == issue.state.name ? "Current · \(issue.identifier)" : issue.identifier, symbol: Self.symbol(state.type), key: state.id)
+                                .action("Move to \(state.name)") { await self.update(issue, ["stateId": state.id], done: "\(issue.identifier) moved to \(state.name)") }
+                        }
+                    }
+                } else {
+                    ContentUnavailableView("Which issue?", symbol: "checklist", message: "Type its ID, like ENG-123.")
+                }
+            }
+            .stackbarOnly()
+        Command("priority", title: "Set Linear Issue Priority", symbol: "exclamationmark.square", keywords: ["linear", "priority", "urgent"])
+            .argument("issue", placeholder: "ENG-123")
+            .view(search: { invocation in _ = await self.issue(invocation["issue"]) }) { invocation in
+                if let issue = self.known(invocation["issue"]) {
+                    List(Array(["No priority", "Urgent", "High", "Medium", "Low"].enumerated()).map { PriorityChoice(id: $0.offset, name: $0.element) }) { choice in
+                        Row(choice.name, subtitle: Int(issue.priority) == choice.id ? "Current · \(issue.identifier)" : issue.identifier,
+                            symbol: choice.id == 1 ? "exclamationmark.square.fill" : choice.id == 0 ? "minus" : "chart.bar.fill", key: "p\(choice.id)")
+                            .action("Set \(choice.name)") { await self.update(issue, ["priority": choice.id], done: "\(issue.identifier): \(choice.name)") }
+                    }
+                } else {
+                    ContentUnavailableView("Which issue?", symbol: "checklist", message: "Type its ID, like ENG-123.")
+                }
+            }
+            .stackbarOnly()
+        Command("comment", title: "Comment on Linear Issue", symbol: "text.bubble", keywords: ["linear", "comment", "reply"])
+            .argument("issue", placeholder: "ENG-123")
+            .view(search: { invocation in _ = await self.issue(invocation["issue"]) }) { invocation in
+                if let issue = self.known(invocation["issue"]) {
+                    Form(submit: "Add Comment", key: "comment-\(issue.identifier)") {
+                        FormField.multiline("Comment on \(issue.identifier)", name: "body", placeholder: "Markdown")
+                    } onSubmit: { values in
+                        try await self.comment(on: issue, values.string("body") ?? "")
+                    }
+                    if let problem = self.actionProblem { Banner(problem) }
+                    if let done = self.commentDone { Banner(done, symbol: "checkmark.circle.fill", theme: .success) }
+                } else {
+                    ContentUnavailableView("Which issue?", symbol: "checklist", message: "Type its ID, like ENG-123.")
+                }
+            }
+            .stackbarOnly()
         // An identifier typed at the palette's root opens that issue.
         Command("issue", title: "Linear Issue by ID", symbol: "checklist", keywords: ["linear"])
             .view(search: { invocation in await self.lookUp(identifier: invocation.text) }) { invocation in
@@ -371,6 +676,8 @@ final class Linear: StackbarPlugin {
             formError = "\(error)"
         }
     }
+
+    struct PriorityChoice: Identifiable { let id: Int; let name: String }
 
     var tools: [AgentTool] {
         AgentTool("assigned", description: "Open Linear issues assigned to the user, with identifier, state, priority, title and branch name") { _ in

@@ -78,10 +78,15 @@ final class UpNextTests: XCTestCase {
         if today {
             XCTAssertEqual(week.values.first, 1.5)
             let header = await supervisor.views[.panel]?.tree.contains { node in
-                if case .text(let text, _, _) = node { return text.hasSuffix("· 1h 30m") }
+                if case .text(let text, _, _) = node { return text.contains("· 1h 30m · Free until ") }
                 return false
             }
-            XCTAssertEqual(header, true, "the panel's header says today's hours")
+            XCTAssertEqual(header, true, "the panel's header says today's hours, and how long you're free")
+            let clashes = await supervisor.views[.panel]?.tree.filter { node in
+                if case .row(let row) = node { return row.accessories.contains(.badge("Clashes", role: .warning)) }
+                return false
+            }.count
+            XCTAssertEqual(clashes, 2, "both overlapping meetings are flagged")
             let byCalendar = window.charts.first { $0.kind == .donut }
             XCTAssertEqual(byCalendar?.values.sorted(), [1, 1], "today split by calendar")
         }

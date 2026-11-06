@@ -32,21 +32,21 @@ An update that asks for something new waits for your approval.
 | [Menu Search](System/MenuSearch) | System | Search the menus of the app you're in and choose an item without the mouse. |
 | [Stay Awake](System/StayAwake) | System | Keeps your Mac awake for a while, until a time, while an app runs or on a schedule. |
 | [System Commands](System/SystemCommands) | System | Lock, sleep, restart, empty the Trash or switch to dark mode from the palette. |
-| [Docker](Developer/Docker) | Developer | Your containers, with start, stop, restart and logs a click away. |
+| [Docker](Developer/Docker) | Developer | Your containers with live CPU and memory, Compose projects, and start, stop, restart and logs a click away. |
 | [Homebrew](Developer/Homebrew) | Developer | Outdated formulae and casks, with upgrades a click away. |
-| [Jira](Developer/Jira) | Developer | Your assigned Jira Cloud issues, search and new issues from the palette. |
-| [Linear](Developer/Linear) | Developer | Your assigned Linear issues, branch names, search and new issues from the palette. |
+| [Jira](Developer/Jira) | Developer | Your assigned Jira issues: change status, assign, comment and watch, with alerts and new issues from the palette. |
+| [Linear](Developer/Linear) | Developer | Your assigned Linear issues and inbox: change status and priority, start work, comment, and new issues from the palette. |
 | [PR Cockpit](Developer/PRCockpit) | Developer | Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away. |
 | [Ports](Developer/Ports) | Developer | Which process is listening on which port, and a way to stop it. |
 | [LiteLLM](Monitoring/LiteLLM) | Monitoring | Tokens, spend, budget and model mix from your LiteLLM proxy, with charts. |
-| [System Monitor](Monitoring/SystemMonitor) | Monitoring | CPU, memory and disk in the menu bar, with the processes using the most. |
+| [System Monitor](Monitoring/SystemMonitor) | Monitoring | CPU, memory, disk and network speed in the menu bar, the processes using the most, and alerts when one stays high. |
 | [App Switcher](Productivity/AppSwitcher) | Productivity | Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide. |
 | [Calculator](Productivity/Calculator) | Productivity | Sums, units, currencies and time zones answered right in the command palette. |
 | [Clipboard History](Productivity/Clipboard) | Productivity | Everything you copy, searchable and one keystroke from pasting back. |
 | [Emoji](Productivity/Emoji) | Productivity | Search every emoji by name in a grid, and paste it where you were typing. |
 | [File Search](Productivity/FileSearch) | Productivity | Find files and folders by name from the command palette, most recently used first. |
 | [Music](Productivity/Music) | Productivity | What's playing in Music or Spotify, with play, pause, skip and volume. |
-| [Pomodoro](Productivity/Pomodoro) | Productivity | A focus timer with presets, a progress ring, tags and today's sessions. |
+| [Pomodoro](Productivity/Pomodoro) | Productivity | A focus timer with presets, a progress ring, tags, long breaks and a week of focus in a chart. |
 | [Quicklinks](Productivity/Quicklinks) | Productivity | Open links and folders by name, with placeholders filled in. |
 | [Snippets](Productivity/Snippets) | Productivity | Paste text by name, with placeholders filled in. |
 | [Todo](Productivity/Todo) | Productivity | A calm to-do list that understands dates as you type them, kept in Apple Reminders so it's on all your devices. |

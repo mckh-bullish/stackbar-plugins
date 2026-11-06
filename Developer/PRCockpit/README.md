@@ -13,7 +13,9 @@ all here, with the same `GITHUB_TOKEN`.
 - **Needs:** network access to `api.github.com` only, and a `GITHUB_TOKEN`
   secret kept in the Keychain. A fine-grained token with read access to pull
   requests, issues and metadata covers everything except creating issues,
-  which needs write access to issues.
+  which needs write access to issues. On GitHub Enterprise Server, turn it
+  on in Settings and enter the server as `GITHUB_ENTERPRISE_URL`; the plugin
+  then reaches that server and no other.
 - **Surfaces:** menu bar, panel (To review, Mine, Issues and an optional
   Inbox), window, widget, settings.
 - **Settings:** include team review requests, include drafts, how recently a
@@ -45,6 +47,11 @@ requests, issues or Actions, copy a clone URL, or start a new issue.
 ### On your desktop too
 A widget keeps the review queue in view.
 <!-- preview: widget -->
+
+## What's new in 1.8.0
+
+- GitHub Enterprise Server: turn it on in Settings and enter your server's address. Pull requests, issues, the inbox and search all come from it.
+- Updating asks once more for approval, because the plugin can now reach an Enterprise server you enter.
 
 ## What's new in 1.7.0
 

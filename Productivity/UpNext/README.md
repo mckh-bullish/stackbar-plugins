@@ -37,6 +37,13 @@ crowded afternoon coming.
 A widget keeps what's next in view without opening anything.
 <!-- preview: widget -->
 
+## What's new in 1.5.0
+
+- Step through the week: chips under the meeting pick any of the next seven days.
+- "Free until 14:30" in the header while you're between meetings.
+- Meetings that clash with another are flagged, and the row says which.
+- A second, quieter nudge as a meeting starts, with a Join button.
+
 ## What's new in 1.4.1
 
 - Its store screenshots no longer show a meeting under both Today and Tomorrow.

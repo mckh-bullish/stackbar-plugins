@@ -1,21 +1,28 @@
 # System Monitor
 
-CPU and memory in the menu bar, with the processes using the most a click
-away.
+CPU, memory and network in the menu bar, with the processes using the most a
+click away and a notification when something stays high.
 
-- **Needs:** to run `top`, `vm_stat`, `df` and `kill` (all come with
-  macOS). No network, files or secrets.
+- **Needs:** to run `ps`, `sysctl`, `vm_stat`, `netstat`, `df` and `kill`
+  (all come with macOS). No network, files or secrets.
 - **Surfaces:** menu bar, panel, widget, settings.
-- **How it measures:** every 10 seconds, `top` takes two one-second samples
-  (the second is the accurate one), `vm_stat` gives memory the way Activity
-  Monitor counts it (app memory, wired and compressed, not the file cache),
-  and `df` the disk.
+- **How it measures:** every 10 seconds, `ps` gives every process's CPU and
+  memory (total CPU is their sum over the cores), `sysctl` the load,
+  `vm_stat` memory the way Activity Monitor counts it (app memory, wired
+  and compressed, not the file cache), `netstat` the bytes through Wi-Fi and
+  Ethernet, and `df` the disk. Each answers at once, so nothing waits a
+  second between two samples the way `top` does.
 - **In the panel:** a CPU chart for the last five minutes, load averages,
-  memory and disk bars, and the top eight processes, each with Copy PID and
-  Quit Process.
-- **Settings:** what the menu bar shows (CPU and memory, CPU, or memory)
-  and whether processes are sorted by CPU or memory.
-- **Agent tool:** `usage` returns CPU, memory, disk and the busiest processes.
+  memory and disk, download and upload speeds with their recent history,
+  and the top eight processes, each with Copy PID and Quit Process.
+- **Alerts:** a notification when CPU stays above your line (85% by
+  default) or memory above 90% for a minute, naming the busiest process,
+  and when the disk is 95% full. Once per spell, then quiet for 30 minutes.
+- **Settings:** what the menu bar shows (CPU and memory, CPU, memory, or
+  download speed), alerts and the CPU line, and whether processes are
+  sorted by CPU or memory.
+- **Agent tool:** `usage` returns CPU, memory, disk, network and the
+  busiest processes.
 
 ## Highlights
 
@@ -35,6 +42,13 @@ the same thing it does in Activity Monitor.
 ### On your desktop too
 A widget shows your Mac's load without opening anything.
 <!-- preview: widget -->
+
+## What's new in 1.5.0
+
+- Download and upload speeds in the panel, the widget and (if you pick it) the menu bar.
+- A notification when CPU or memory stays high for a minute, naming the process behind it, and when the disk is nearly full.
+- Lighter: it reads `ps` instead of running `top` for two seconds every ten.
+- Updating asks once more for approval, because it now runs `ps`, `sysctl` and `netstat` instead of `top`.
 
 ## What's new in 1.4.0
 

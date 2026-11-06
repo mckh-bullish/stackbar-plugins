@@ -8,7 +8,9 @@ import Foundation
 /// Raycast's syntax: `{clipboard}`, `{selection}`, `{date format="d MMM"}`,
 /// `{argument name="who"}` asks first, `{cursor}` leaves the caret there, and
 /// `{snippet name="Signature"}` pulls in another snippet. "Search Snippets"
-/// (⌃⌥S) lists them with a preview. Raycast exports import as they are.
+/// (⌃⌥S) lists them with a preview. Raycast exports import as they are;
+/// TextExpander, Espanso and Apple's Text Replacements import with their
+/// placeholders turned into these.
 ///
 /// A snippet's keyword, like `;sig`, expands as you type it in any app:
 /// Stackbar watches for the keywords this plugin registers, deletes the one
@@ -18,7 +20,7 @@ final class Snippets: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.snippets",
         name: "Snippets",
-        version: "1.4.0",
+        version: "1.5.0",
         summary: "Paste text by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -205,7 +207,7 @@ final class Snippets: StackbarPlugin {
             .argument("id", placeholder: "Snippet", required: false)
             .stackbarOnly()
             .view { invocation in self.form(editing: invocation["id"].flatMap(UUID.init(uuidString:))) }
-        Command("import", title: "Import Snippets", subtitle: "From a Raycast export", symbol: "square.and.arrow.down", keywords: ["snippet", "raycast"]) { _ in
+        Command("import", title: "Import Snippets", subtitle: "From Raycast, TextExpander, Espanso or Text Replacements", symbol: "square.and.arrow.down", keywords: ["snippet", "raycast", "textexpander", "espanso", "text replacements"]) { _ in
             .message(try await self.importSnippets())
         }
         .stackbarOnly()
@@ -244,7 +246,7 @@ final class Snippets: StackbarPlugin {
         if snippets.isEmpty {
             EmptyState("No snippets yet", symbol: "text.quote", message: "Save text you type often, with placeholders for what changes.", theme: theme) {
                 ActionButton("Create Snippet", symbol: "plus", theme: theme, prominent: true) { self.openCommand("create") }
-                ActionButton("Import from Raycast", symbol: "square.and.arrow.down", theme: theme) { self.notice = try await self.importSnippets() }
+                ActionButton("Import Snippets", symbol: "square.and.arrow.down", theme: theme) { self.notice = try await self.importSnippets() }
             }
         } else {
             List(searchable: true) {
@@ -389,14 +391,12 @@ final class Snippets: StackbarPlugin {
         return result + rest
     }
 
+    /// What Import Snippets reads.
+    static let importTypes = ["json", "plist", "textexpander", "csv", "yml", "yaml"]
+
     func importSnippets() async throws -> String {
-        guard let file = try await Stackbar.chooseFile(types: ["json"]) else { return "Import cancelled" }
-        let items: [Exported]
-        do {
-            items = try JSONDecoder().decode([Exported].self, from: file.data)
-        } catch {
-            throw HostError("\(file.name) is not a snippets export: \(error.localizedDescription)")
-        }
+        guard let file = try await Stackbar.chooseFile(types: Self.importTypes) else { return "Import cancelled" }
+        let items = try Self.parseImport(name: file.name, data: file.data)
         var imported = 0
         var duplicates = 0
         var problems: [String] = []
@@ -425,6 +425,234 @@ final class Snippets: StackbarPlugin {
         if !droppedKeywords.isEmpty { summary += "; left out keywords already taken or not allowed: " + droppedKeywords.prefix(5).joined(separator: ", ") }
         notice = summary
         return summary
+    }
+
+    // MARK: Importers
+
+    /// Reads any export the importer knows, by its extension and then its
+    /// contents: Raycast's JSON, Apple's Text Replacements (a plist dragged
+    /// out of System Settings), TextExpander (`.textexpander` or CSV) and
+    /// Espanso's YAML match files.
+    static func parseImport(name: String, data: Data) throws -> [Exported] {
+        let lower = name.lowercased()
+        let text = String(decoding: data, as: UTF8.self)
+        if lower.hasSuffix(".yml") || lower.hasSuffix(".yaml") || text.range(of: #"(?m)^matches\s*:"#, options: .regularExpression) != nil {
+            let items = espanso(text)
+            guard !items.isEmpty else { throw HostError("\(name) has no Espanso matches with a trigger and a replace") }
+            return items
+        }
+        if lower.hasSuffix(".csv") {
+            let items = textExpanderCSV(text)
+            guard !items.isEmpty else { throw HostError("\(name) has no abbreviation,content rows") }
+            return items
+        }
+        if !lower.hasSuffix(".json"), let plist = try? PropertyListSerialization.propertyList(from: data, format: nil), !(plist is String) {
+            if let items = textReplacements(plist) ?? textExpander(plist), !items.isEmpty { return items }
+            throw HostError("\(name) is a property list, but not Text Replacements or a TextExpander group")
+        }
+        do {
+            return try JSONDecoder().decode([Exported].self, from: data)
+        } catch {
+            throw HostError("\(name) is not a snippets export Stackbar knows (Raycast JSON, TextExpander, Espanso or Text Replacements)")
+        }
+    }
+
+    /// Apple's Text Replacements: `[{phrase, shortcut}]`.
+    static func textReplacements(_ plist: Any) -> [Exported]? {
+        guard let rows = plist as? [[String: Any]], rows.contains(where: { $0["phrase"] != nil }) else { return nil }
+        return rows.compactMap { row in
+            guard let phrase = row["phrase"] as? String, !phrase.isEmpty else { return nil }
+            let shortcut = (row["shortcut"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+            return Exported(name: shortcut.map { "\($0): \(clip(firstLine(of: phrase), 40))" } ?? clip(firstLine(of: phrase), 40),
+                            text: phrase, keyword: shortcut, tags: ["Text Replacements"])
+        }
+    }
+
+    /// A TextExpander group: `{groupName, snippetsTE2: [{abbreviation, plainText, label}]}`.
+    static func textExpander(_ plist: Any) -> [Exported]? {
+        guard let group = plist as? [String: Any], let rows = (group["snippetsTE2"] ?? group["snippets"]) as? [[String: Any]] else { return nil }
+        let tag = (group["groupName"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "TextExpander"
+        return rows.compactMap { row in
+            guard let content = (row["plainText"] ?? row["snippetText"]) as? String, !content.isEmpty else { return nil }
+            let abbreviation = (row["abbreviation"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+            let label = (row["label"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+            return Exported(name: label ?? abbreviation ?? clip(firstLine(of: content), 40), text: fromTextExpander(content), keyword: abbreviation, tags: [tag])
+        }
+    }
+
+    /// TextExpander's CSV export: abbreviation, content, label.
+    static func textExpanderCSV(_ text: String) -> [Exported] {
+        csvRows(text).compactMap { fields in
+            guard fields.count >= 2, !fields[1].isEmpty, fields[0].lowercased() != "abbreviation" else { return nil }
+            let abbreviation = fields[0].isEmpty ? nil : fields[0]
+            let label = fields.count > 2 && !fields[2].isEmpty ? fields[2] : nil
+            return Exported(name: label ?? abbreviation ?? clip(firstLine(of: fields[1]), 40), text: fromTextExpander(fields[1]), keyword: abbreviation, tags: ["TextExpander"])
+        }
+    }
+
+    /// RFC 4180 rows: quoted fields may hold commas, newlines and `""`.
+    static func csvRows(_ text: String) -> [[String]] {
+        var rows: [[String]] = []
+        var row: [String] = []
+        var field = ""
+        var quoted = false
+        var characters = Array(text)
+        if characters.first == "\u{FEFF}" { characters.removeFirst() }
+        var index = 0
+        func endRow() {
+            row.append(field)
+            field = ""
+            if row.contains(where: { !$0.isEmpty }) { rows.append(row) }
+            row = []
+        }
+        while index < characters.count {
+            let character = characters[index]
+            if quoted {
+                if character == "\"" {
+                    if index + 1 < characters.count, characters[index + 1] == "\"" {
+                        field.append("\"")
+                        index += 1
+                    } else {
+                        quoted = false
+                    }
+                } else {
+                    field.append(character)
+                }
+            } else if character == "\"" {
+                quoted = true
+            } else if character == "," {
+                row.append(field)
+                field = ""
+            } else if character == "\n" || character == "\r\n" || character == "\r" {
+                endRow()
+            } else {
+                field.append(character)
+            }
+            index += 1
+        }
+        endRow()
+        return rows
+    }
+
+    /// TextExpander's `%clipboard`, `%|` (cursor), `%filltext:name=who%` and
+    /// date codes, as this plugin's placeholders. Anything else stays as
+    /// written.
+    static func fromTextExpander(_ content: String) -> String {
+        var text = content.replacingOccurrences(of: "%clipboard", with: "{clipboard}").replacingOccurrences(of: "%|", with: "{cursor}")
+        if let fill = try? NSRegularExpression(pattern: #"%fill(?:text|area|popup)?:name=([^:%]+)(?::[^%]*)?%"#) {
+            text = fill.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: "{argument name=\"$1\"}")
+        }
+        let dates: [(String, String)] = [("%1m", "M"), ("%1H", "H"), ("%1I", "h"), ("%Y", "yyyy"), ("%y", "yy"), ("%m", "MM"), ("%d", "dd"), ("%e", "d"),
+                                         ("%B", "MMMM"), ("%b", "MMM"), ("%A", "EEEE"), ("%a", "EEE"), ("%H", "HH"), ("%I", "hh"), ("%M", "mm"), ("%S", "ss"), ("%p", "a")]
+        for (code, format) in dates {
+            text = text.replacingOccurrences(of: code, with: "{date format=\"\(format)\"}")
+        }
+        return text
+    }
+
+    /// Espanso's `matches:` list, from a match file. A small reader for the
+    /// shapes Espanso's docs use: `trigger:` or `triggers: [...]`,
+    /// `replace:` as a plain, quoted or block (`|`, `>`) value, and `label:`.
+    /// `$|$` becomes the cursor and `{{clipboard}}` the clipboard; other
+    /// variables stay as written.
+    static func espanso(_ yaml: String) -> [Exported] {
+        var items: [Exported] = []
+        var current: [String: String] = [:]
+        var triggers: [String] = []
+        func flush() {
+            defer { current = [:]; triggers = [] }
+            guard let replace = current["replace"], !replace.isEmpty else { return }
+            let text = replace.replacingOccurrences(of: "$|$", with: "{cursor}").replacingOccurrences(of: "{{clipboard}}", with: "{clipboard}")
+            for trigger in triggers.isEmpty ? [nil] : triggers.map(Optional.some) {
+                items.append(Exported(name: current["label"] ?? trigger ?? clip(firstLine(of: replace), 40), text: text, keyword: trigger, tags: ["Espanso"]))
+            }
+        }
+        let lines = yaml.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n")
+        var index = 0
+        var inMatches = false
+        while index < lines.count {
+            let line = lines[index]
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            index += 1
+            if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
+            let indent = line.prefix { $0 == " " }.count
+            if indent == 0, !trimmed.hasPrefix("- ") {
+                flush()
+                inMatches = trimmed.hasPrefix("matches:")
+                continue
+            }
+            guard inMatches else { continue }
+            var entry = trimmed
+            if entry.hasPrefix("- ") {
+                flush()
+                entry = String(entry.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+            }
+            guard let colon = entry.firstIndex(of: ":") else { continue }
+            let key = String(entry[..<colon]).trimmingCharacters(in: .whitespaces)
+            let raw = String(entry[entry.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+            // Where the key starts, past any "- ".
+            let keyIndent = line.prefix { $0 == " " || $0 == "-" }.count
+            var value: String
+            if raw.hasPrefix("|") || raw.hasPrefix(">") {
+                // A block: every following line indented past the key.
+                var block: [String] = []
+                var blockIndent: Int?
+                while index < lines.count {
+                    let next = lines[index]
+                    let nextIndent = next.prefix { $0 == " " }.count
+                    let blank = next.trimmingCharacters(in: .whitespaces).isEmpty
+                    if !blank, nextIndent <= keyIndent - (trimmed.hasPrefix("- ") ? 2 : 0) || (!blank && nextIndent < keyIndent && blockIndent == nil) { break }
+                    if blockIndent == nil, !blank { blockIndent = nextIndent }
+                    if !blank, let blockIndent, nextIndent < blockIndent { break }
+                    block.append(blank ? "" : String(next.dropFirst(blockIndent ?? 0)))
+                    index += 1
+                }
+                while block.last?.isEmpty == true { block.removeLast() }
+                value = raw.hasPrefix(">") ? block.joined(separator: " ") : block.joined(separator: "\n")
+                if !raw.hasSuffix("-") { value += "\n" }
+            } else {
+                value = unquoted(raw)
+            }
+            switch key {
+            case "trigger": triggers.append(value)
+            case "triggers":
+                triggers += raw.trimmingCharacters(in: CharacterSet(charactersIn: "[]")).split(separator: ",")
+                    .map { unquoted($0.trimmingCharacters(in: .whitespaces)) }.filter { !$0.isEmpty }
+            case "replace", "label": current[key] = value
+            default: break
+            }
+        }
+        flush()
+        return items
+    }
+
+    /// A YAML scalar: double quoted (with `\n` escapes), single quoted, or plain.
+    static func unquoted(_ raw: String) -> String {
+        if raw.count >= 2, raw.hasPrefix("\""), raw.hasSuffix("\"") {
+            var result = ""
+            var escaped = false
+            for character in raw.dropFirst().dropLast() {
+                if escaped {
+                    switch character {
+                    case "n": result.append("\n")
+                    case "t": result.append("\t")
+                    default: result.append(character)
+                    }
+                    escaped = false
+                } else if character == "\\" {
+                    escaped = true
+                } else {
+                    result.append(character)
+                }
+            }
+            return result
+        }
+        if raw.count >= 2, raw.hasPrefix("'"), raw.hasSuffix("'") {
+            return String(raw.dropFirst().dropLast()).replacingOccurrences(of: "''", with: "'")
+        }
+        // A plain scalar ends at a comment.
+        if let hash = raw.range(of: " #") { return String(raw[..<hash.lowerBound]).trimmingCharacters(in: .whitespaces) }
+        return raw
     }
 
     /// The checks that don't depend on the other snippets, which may arrive

@@ -6,17 +6,19 @@ import Foundation
 ///
 /// It signs in to your site (`yourteam.atlassian.net`) with your email and
 /// an API token from id.atlassian.com, kept in your Keychain as
-/// `JIRA_API_TOKEN`. Requests go only to `*.atlassian.net`.
+/// `JIRA_API_TOKEN`. Requests go only to `*.atlassian.net`, or, for Jira Data
+/// Center, to the server you enter as `JIRA_SERVER_URL` with a personal
+/// access token.
 @main
 final class Jira: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.jira",
         name: "Jira",
-        version: "1.4.0",
-        summary: "Your assigned Jira Cloud issues, search and new issues from the palette.",
+        version: "1.5.0",
+        summary: "Your assigned Jira issues: change status, assign, comment and watch, with alerts and new issues from the palette.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(5), .wake],
-        capabilities: [.network("*.atlassian.net"), .secret(name: "JIRA_API_TOKEN")],
+        capabilities: [.network("*.atlassian.net"), .secret(name: "JIRA_API_TOKEN"), .userServer(secret: "JIRA_SERVER_URL")],
         minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
         accent: .blue,
@@ -84,6 +86,17 @@ final class Jira: StackbarPlugin {
         var category: String { fields.status?.statusCategory?.key ?? "new" }
     }
 
+    struct Transition: Decodable, Equatable, Identifiable {
+        struct Target: Decodable, Equatable {
+            struct Category: Decodable, Equatable { let key: String }
+            let name: String
+            let statusCategory: Category?
+        }
+        let id: String
+        let name: String
+        let to: Target?
+    }
+
     struct Project: Codable, Equatable, Identifiable {
         let id: String
         let key: String
@@ -95,6 +108,21 @@ final class Jira: StackbarPlugin {
     @Stored("projects") var projects: [Project] = []
     @Stored("defaultProject") var defaultProject = ""
     @Stored("jql") var jql = Jira.defaultJQL
+    /// "Cloud" or "Data Center".
+    @Stored("deployment") var deployment = "Cloud"
+    @Stored("notify") var notifyOnAssign = true
+    /// Keys of the issues already assigned, so only new ones notify. Empty
+    /// until the first good refresh, which notifies nothing.
+    @Stored("seen") var seen: [String] = []
+    @Stored("seenReady") var seenReady = false
+    /// The Data Center server's base URL, read from JIRA_SERVER_URL.
+    var server: String?
+    /// The signed-in user: accountId on Cloud, the username on Data Center.
+    var me: String?
+    /// Workflow transitions of an issue, by key, for the status command.
+    var transitions: [String: [Transition]] = [:]
+    var actionProblem: String?
+    var commentDone: String?
     var assigned: [Issue] = []
     /// The issue an issue key typed at the palette's root names.
     var keyed: [String: Issue] = [:]
@@ -122,26 +150,57 @@ final class Jira: StackbarPlugin {
         return text.hasSuffix(".atlassian.net") ? text : text + ".atlassian.net"
     }
 
-    func url(for issue: Issue) -> String {
-        "https://\(Self.host(of: site) ?? "")/browse/\(issue.key)"
+    var isDataCenter: Bool { deployment == "Data Center" }
+    /// Cloud speaks REST v3 (rich text in Atlassian Document Format); Data
+    /// Center speaks v2 (plain text).
+    var apiVersion: String { isDataCenter ? "2" : "3" }
+
+    /// Where the site is: the Cloud host, or the Data Center server.
+    var base: String {
+        if isDataCenter { return server.map(Self.trimmed) ?? "" }
+        return "https://\(Self.host(of: site) ?? "")"
     }
+
+    static func trimmed(_ url: String) -> String {
+        var text = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        while text.hasSuffix("/") { text.removeLast() }
+        return text
+    }
+
+    func url(for issue: Issue) -> String { "\(base)/browse/\(issue.key)" }
+    func url(key: String) -> String { "\(base)/browse/\(key)" }
 
     // MARK: API
 
+    /// `path` starts after the API version: `/search`, `/issue/ABC-1`.
     func api(_ path: String, method: String = "GET", body: Any? = nil) async throws -> Data {
-        guard let host = Self.host(of: site), !email.isEmpty else {
-            throw HostError("Set your Jira site and email in Settings")
+        let authorization: String
+        let where_: String
+        if isDataCenter {
+            if server == nil { server = try await Stackbar.secret("JIRA_SERVER_URL").map(Self.trimmed).flatMap { $0.isEmpty ? nil : $0 } }
+            guard let server else { throw HostError("Enter your Jira server's URL as JIRA_SERVER_URL") }
+            guard let token = try await Stackbar.secret("JIRA_API_TOKEN"), !token.isEmpty else {
+                throw HostError("Add a personal access token from your Jira profile as JIRA_API_TOKEN")
+            }
+            authorization = "Bearer \(token)"
+            where_ = server
+        } else {
+            guard let host = Self.host(of: site), !email.isEmpty else {
+                throw HostError("Set your Jira site and email in Settings")
+            }
+            guard let token = try await Stackbar.secret("JIRA_API_TOKEN"), !token.isEmpty else {
+                throw HostError("Add your Jira API token (JIRA_API_TOKEN) from id.atlassian.com")
+            }
+            authorization = "Basic " + Data("\(email):\(token)".utf8).base64EncodedString()
+            where_ = "https://\(host)"
         }
-        guard let token = try await Stackbar.secret("JIRA_API_TOKEN"), !token.isEmpty else {
-            throw HostError("Add your Jira API token (JIRA_API_TOKEN) from id.atlassian.com")
-        }
-        let basic = Data("\(email):\(token)".utf8).base64EncodedString()
-        let response = try await Stackbar.http(HTTPRequest(url: "https://\(host)\(path)", method: method, headers: [
-            "Authorization": "Basic \(basic)", "Accept": "application/json", "Content-Type": "application/json",
-        ], body: try body.map { try JSONSerialization.data(withJSONObject: $0) }))
+        let host = URL(string: where_)?.host ?? where_
+        let response = try await Stackbar.http(HTTPRequest(url: "\(where_)/rest/api/\(apiVersion)\(path)", method: method, headers: [
+            "Authorization": authorization, "Accept": "application/json", "Content-Type": "application/json",
+        ], body: try body.map { try JSONSerialization.data(withJSONObject: $0, options: .fragmentsAllowed) }))
         switch response.status {
         case 200..<300: return response.body
-        case 401: throw HostError("Jira rejected the email or API token (401)")
+        case 401: throw HostError(isDataCenter ? "Jira rejected the access token (401)" : "Jira rejected the email or API token (401)")
         case 403: throw HostError("Jira says this account can't do that (403)")
         case 404: throw HostError("Jira didn't find that on \(host) (404)")
         default:
@@ -154,18 +213,19 @@ final class Jira: StackbarPlugin {
 
     func search(jql: String, limit: Int = 50) async throws -> [Issue] {
         struct Reply: Decodable { let issues: [Issue] }
-        let data = try await api("/rest/api/3/search/jql", method: "POST", body: ["jql": jql, "fields": Self.fields, "maxResults": limit] as [String: Any])
+        let data = try await api(isDataCenter ? "/search" : "/search/jql", method: "POST", body: ["jql": jql, "fields": Self.fields, "maxResults": limit] as [String: Any])
         return try JSONDecoder().decode(Reply.self, from: data).issues
     }
 
     func refresh() async throws {
-        guard Self.host(of: site) != nil, !email.isEmpty else {
+        guard !needsSetup else {
             problem = "Set your Jira site and email in Settings"
             loaded = true
             return
         }
         do {
             assigned = try await search(jql: jql)
+            noticeNewAssignments()
             // Only a stat, so a site that rejects this query keeps the rest of the panel.
             doneThisWeek = (try? await search(jql: Self.doneJQL, limit: 50)) ?? []
             if projects.isEmpty { try await loadProjects() }
@@ -178,8 +238,13 @@ final class Jira: StackbarPlugin {
 
     func loadProjects() async throws {
         struct Reply: Decodable { let values: [Project] }
-        let data = try await api("/rest/api/3/project/search?maxResults=50&orderBy=-lastIssueUpdatedTime")
-        projects = try JSONDecoder().decode(Reply.self, from: data).values
+        if isDataCenter {
+            // Data Center lists every project in one array.
+            projects = Array(try JSONDecoder().decode([Project].self, from: try await api("/project")).prefix(50))
+        } else {
+            let data = try await api("/project/search?maxResults=50&orderBy=-lastIssueUpdatedTime")
+            projects = try JSONDecoder().decode(Reply.self, from: data).values
+        }
     }
 
     /// A key like `ABC-123` is looked up directly; anything else is a text search.
@@ -210,6 +275,98 @@ final class Jira: StackbarPlugin {
         if let issue = try? await search(jql: "key = \"\(key)\"", limit: 1).first { keyed[key] = issue }
     }
 
+    // MARK: Alerts
+
+    static let urgentPriorities: Set<String> = ["Highest", "Blocker", "Critical"]
+
+    /// Notifies about issues newly assigned to you since the last refresh,
+    /// louder for Highest and Blocker. The first refresh only remembers.
+    func noticeNewAssignments() {
+        let keys = assigned.map(\.key)
+        defer { seen = keys; seenReady = true }
+        guard seenReady, notifyOnAssign else { return }
+        let known = Set(seen)
+        let fresh = assigned.filter { !known.contains($0.key) && $0.category != "done" }
+        guard !fresh.isEmpty else { return }
+        if fresh.count > 3 {
+            Stackbar.notify("\(fresh.count) Jira issues assigned to you", body: fresh.prefix(3).map(\.key).joined(separator: ", ") + "…",
+                            actions: [NotificationAction("Open Jira", url: "\(base)/jira/your-work")])
+            return
+        }
+        for issue in fresh {
+            let urgent = issue.fields.priority.map { Self.urgentPriorities.contains($0.name) } ?? false
+            Stackbar.notify(urgent ? "\(issue.fields.priority?.name ?? "Urgent"): \(issue.key) assigned to you" : "\(issue.key) assigned to you",
+                            body: issue.fields.summary, actions: [NotificationAction("Open", url: url(for: issue))])
+        }
+    }
+
+    // MARK: Actions
+
+    /// The signed-in user, as the assignee and watcher APIs want them.
+    func myself() async throws -> String {
+        if let me { return me }
+        struct Me: Decodable { let accountId: String?; let name: String? }
+        let reply = try JSONDecoder().decode(Me.self, from: try await api("/myself"))
+        guard let id = isDataCenter ? reply.name : reply.accountId else { throw HostError("Jira didn't say who you are") }
+        me = id
+        return id
+    }
+
+    func loadTransitions(_ key: String) async {
+        struct Reply: Decodable { let transitions: [Transition] }
+        do {
+            transitions[key] = try JSONDecoder().decode(Reply.self, from: try await api("/issue/\(key)/transitions")).transitions
+            actionProblem = nil
+        } catch {
+            actionProblem = "\(error)"
+        }
+    }
+
+    func move(_ key: String, with transition: Transition) async throws {
+        do {
+            _ = try await api("/issue/\(key)/transitions", method: "POST", body: ["transition": ["id": transition.id]])
+            Stackbar.hud("\(key) moved to \(transition.to?.name ?? transition.name)")
+            transitions[key] = nil
+            try await refresh()
+        } catch {
+            Stackbar.hud("\(error)", isError: true)
+        }
+    }
+
+    func assignToMe(_ key: String) async throws {
+        do {
+            let me = try await myself()
+            _ = try await api("/issue/\(key)/assignee", method: "PUT", body: [isDataCenter ? "name" : "accountId": me])
+            Stackbar.hud("\(key) assigned to you")
+            try await refresh()
+        } catch {
+            Stackbar.hud("\(error)", isError: true)
+        }
+    }
+
+    func watch(_ key: String) async throws {
+        do {
+            // The body is a bare JSON string: the account id or username.
+            _ = try await api("/issue/\(key)/watchers", method: "POST", body: try await myself())
+            Stackbar.hud("Watching \(key)")
+        } catch {
+            Stackbar.hud("\(error)", isError: true)
+        }
+    }
+
+    func comment(_ key: String, _ text: String) async throws {
+        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !body.isEmpty else { actionProblem = "Write a comment first"; return }
+        do {
+            _ = try await api("/issue/\(key)/comment", method: "POST", body: ["body": isDataCenter ? body : Self.document(body)] as [String: Any])
+            actionProblem = nil
+            commentDone = "Comment added to \(key)"
+            Stackbar.hud("Comment added to \(key)")
+        } catch {
+            actionProblem = "\(error)"
+        }
+    }
+
     // MARK: Rows
 
     func row(_ issue: Issue) -> Row {
@@ -219,8 +376,15 @@ final class Jira: StackbarPlugin {
             row = row.badge(priority, role: ["Highest", "Blocker"].contains(priority) ? .critical : .warning)
         }
         let link = url(for: issue)
-        return row
+        row = row
             .action("Open") { Stackbar.open(link) }
+            .navigate("Change Status…", to: "status", arguments: ["key": issue.key], shortcut: "cmd+s")
+            .navigate("Comment…", to: "comment", arguments: ["key": issue.key], shortcut: "cmd+k")
+        if !assigned.contains(where: { $0.key == issue.key }) {
+            row = row.action("Assign to Me", shortcut: "cmd+i") { try await self.assignToMe(issue.key) }
+        }
+        return row
+            .action("Watch", shortcut: "cmd+shift+w") { try await self.watch(issue.key) }
             .action("Copy Link", shortcut: "cmd+c") { Stackbar.copy(link) }
             .action("Copy Key", shortcut: "cmd+shift+c") { Stackbar.copy(issue.key) }
             .action("Copy Branch Name", shortcut: "cmd+shift+b") { Stackbar.copy(Self.branchName(issue)) }
@@ -243,7 +407,7 @@ final class Jira: StackbarPlugin {
     }
 
     let theme = Theme.blue
-    var needsSetup: Bool { Self.host(of: site) == nil || email.isEmpty }
+    var needsSetup: Bool { isDataCenter ? false : Self.host(of: site) == nil || email.isEmpty }
 
     var menuBar: ViewContent {
         if problem != nil, loaded, !needsSetup {
@@ -286,7 +450,7 @@ final class Jira: StackbarPlugin {
             } else {
                 let toDo = assigned.filter { $0.category == "new" }
                 let done = self.done
-                PanelHeader(inProgress.isEmpty ? (assigned.isEmpty ? "Nothing assigned" : "Nothing in progress") : "\(inProgress.count) in progress", subtitle: "\(toDo.count) to do · \(Self.host(of: site) ?? site)", symbol: "square.stack.3d.up.fill", theme: theme)
+                PanelHeader(inProgress.isEmpty ? (assigned.isEmpty ? "Nothing assigned" : "Nothing in progress") : "\(inProgress.count) in progress", subtitle: "\(toDo.count) to do · \(isDataCenter ? (URL(string: base)?.host ?? "Data Center") : Self.host(of: site) ?? site)", symbol: "square.stack.3d.up.fill", theme: theme)
                 if !assigned.isEmpty {
                     HeroCard(theme: theme, look: .glow) {
                         HStack(spacing: Space.l) {
@@ -318,6 +482,16 @@ final class Jira: StackbarPlugin {
         }
     }
 
+    func setDeployment(_ value: String) async {
+        guard value != deployment else { return }
+        deployment = value
+        projects = []
+        me = nil
+        server = nil
+        seenReady = false
+        try? await refresh()
+    }
+
     func setSite(_ value: String) async {
         site = Self.host(of: value) ?? value
         projects = []
@@ -331,12 +505,22 @@ final class Jira: StackbarPlugin {
 
     var settings: ViewContent {
         Section("Account") {
-            LabeledContent("Site", value: Self.host(of: site) ?? "Not set")
-            TextField("yourteam.atlassian.net", text: site, key: "site") { value in await self.setSite(value) }
-            LabeledContent("Email", value: email.isEmpty ? "Not set" : email)
-            TextField("you@example.com", text: email, key: "email") { value in await self.setEmail(value) }
-            Text("Create an API token at id.atlassian.com > Security > API tokens. Stackbar asks for it the first time and keeps it in your Keychain as JIRA_API_TOKEN.").style(.caption)
+            Picker("Jira", options: ["Cloud", "Data Center"], selection: deployment, style: .segmented) { value in await self.setDeployment(value) }
+            if isDataCenter {
+                LabeledContent("Server", value: server ?? "Not set: enter JIRA_SERVER_URL")
+                Text("Enter your server's address (https://jira.example.com) as JIRA_SERVER_URL and a personal access token (your Jira profile > Personal Access Tokens) as JIRA_API_TOKEN. Stackbar keeps both in your Keychain and reaches that server and no other.").style(.caption)
+            } else {
+                LabeledContent("Site", value: Self.host(of: site) ?? "Not set")
+                TextField("yourteam.atlassian.net", text: site, key: "site") { value in await self.setSite(value) }
+                LabeledContent("Email", value: email.isEmpty ? "Not set" : email)
+                TextField("you@example.com", text: email, key: "email") { value in await self.setEmail(value) }
+                Text("Create an API token at id.atlassian.com > Security > API tokens. Stackbar asks for it the first time and keeps it in your Keychain as JIRA_API_TOKEN.").style(.caption)
+            }
             if let problem { Text(problem).role(.warning).style(.caption) }
+        }
+        Section("Notifications") {
+            Toggle("Notify when an issue is assigned to me", isOn: notifyOnAssign) { self.notifyOnAssign = $0 }
+            Text("Highest and Blocker issues say so in the title.").style(.caption)
         }
         Section("Issues") {
             TextField("JQL for the panel", text: jql, key: "jql") { value in
@@ -388,6 +572,44 @@ final class Jira: StackbarPlugin {
             }
             .rootSearch(section: "Jira", matching: #"[A-Za-z][A-Za-z0-9_]*-\d+"#)
             .stackbarOnly()
+        Command("status", title: "Change Jira Issue Status", symbol: "arrow.triangle.swap", keywords: ["jira", "transition", "move", "done", "progress"])
+            .argument("key", placeholder: "ABC-123")
+            .view(search: { invocation in
+                if let key = invocation["key"]?.uppercased() { await self.loadTransitions(key) }
+            }) { invocation in
+                let key = invocation["key"]?.uppercased() ?? ""
+                if key.isEmpty {
+                    ContentUnavailableView("Which issue?", symbol: "square.stack.3d.up", message: "Type its key, like ABC-123.")
+                } else if let problem = self.actionProblem, self.transitions[key] == nil {
+                    ContentUnavailableView("Can't load \(key)'s workflow", symbol: "exclamationmark.triangle", message: problem)
+                } else {
+                    List(self.transitions[key] ?? [], searchable: true) { transition in
+                        let target = transition.to?.name ?? transition.name
+                        let category = transition.to?.statusCategory?.key ?? "new"
+                        Row(target, subtitle: transition.name == target ? key : "\(transition.name) · \(key)",
+                            symbol: category == "done" ? "checkmark.circle" : category == "indeterminate" ? "circle.lefthalf.filled" : "circle", key: transition.id)
+                            .action("Move to \(target)") { try await self.move(key, with: transition) }
+                    }
+                }
+            }
+            .stackbarOnly()
+        Command("comment", title: "Comment on Jira Issue", symbol: "text.bubble", keywords: ["jira", "comment", "reply", "note"])
+            .argument("key", placeholder: "ABC-123")
+            .view { invocation in
+                let key = invocation["key"]?.uppercased() ?? ""
+                if key.isEmpty {
+                    ContentUnavailableView("Which issue?", symbol: "square.stack.3d.up", message: "Type its key, like ABC-123.")
+                } else {
+                    Form(submit: "Add Comment", key: "comment-\(key)") {
+                        FormField.multiline("Comment on \(key)", name: "body")
+                    } onSubmit: { values in
+                        try await self.comment(key, values.string("body") ?? "")
+                    }
+                    if let problem = self.actionProblem { Banner(problem) }
+                    if let done = self.commentDone { Banner(done, symbol: "checkmark.circle.fill", theme: .success) }
+                }
+            }
+            .stackbarOnly()
         Command("create", title: "Create Jira Issue", symbol: "plus.circle", keywords: ["jira", "issue", "new", "ticket", "bug"])
             .stackbarOnly()
             .view { _ in self.form }
@@ -421,12 +643,12 @@ final class Jira: StackbarPlugin {
         guard let project = projects.first(where: { $0.name == values.string("project") }) ?? projects.first else { formError = "Pick a project"; return }
         formError = nil
         var fields: [String: Any] = ["project": ["key": project.key], "summary": summary, "issuetype": ["name": values.string("type") ?? "Task"]]
-        if let description = values.string("description"), !description.isEmpty { fields["description"] = Self.document(description) }
+        if let description = values.string("description"), !description.isEmpty { fields["description"] = isDataCenter ? description : Self.document(description) }
         do {
             struct Created: Decodable { let key: String }
-            let created = try JSONDecoder().decode(Created.self, from: try await api("/rest/api/3/issue", method: "POST", body: ["fields": fields]))
+            let created = try JSONDecoder().decode(Created.self, from: try await api("/issue", method: "POST", body: ["fields": fields]))
             self.created = "Created \(created.key)"
-            Stackbar.open("https://\(Self.host(of: site) ?? "")/browse/\(created.key)")
+            Stackbar.open(url(key: created.key))
             try await refresh()
         } catch {
             formError = "\(error)"
