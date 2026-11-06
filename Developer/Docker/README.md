@@ -2,11 +2,13 @@
 
 Your containers in the menu bar. The number is how many are running; the
 panel lists them grouped by Compose project, each with its CPU and memory,
-Start, Stop, Restart, Logs, Open (for a published port), Copy ID and Remove,
+Start, Stop, Restart, Open Shell, Logs, Open (for a published port), Copy ID
+and Remove,
 and each project with Start all, Restart and Stop.
 
 - **Needs:** to run `docker`, from Docker Desktop, OrbStack, Colima or
-  Rancher Desktop. No network, files or secrets of its own.
+  Rancher Desktop. No network, files or secrets of its own. Open Shell
+  needs to open your terminal app.
 - **Surfaces:** menu bar, panel, settings.
 - **How it checks:** `docker ps --all` every 15 seconds while something runs,
   every minute otherwise, and one `docker stats --no-stream` snapshot while
@@ -25,8 +27,15 @@ and each project with Start all, Restart and Stop.
 - **Commands:** Docker Containers, Docker Compose Projects, Stop All Docker
   Containers, Docker Logs (the last 200 lines of one container), Remove
   Stopped Docker Containers.
+- **Open Shell** (⌘T on a running container) opens your terminal app in
+  `docker exec -it <container>`, with bash when the image has it.
+- **Requires:** Stackbar 0.26.0 or later.
 - **Agent tool:** `containers` lists every container with its image, state,
   CPU and memory.
+
+## What's new in 1.7.0
+
+- Open Shell on a running container opens your terminal app inside it.
 
 ## What's new in 1.6.0
 

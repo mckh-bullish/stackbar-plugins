@@ -15,12 +15,12 @@ final class SystemMonitor: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.system-monitor",
         name: "System Monitor",
-        version: "1.5.0",
+        version: "1.6.0",
         summary: "CPU, memory, disk and network speed in the menu bar, the processes using the most, and alerts when one stays high.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(10)), .wake],
-        capabilities: [.run(commands: ["ps", "sysctl", "vm_stat", "netstat", "df", "kill"])],
-        minimumStackbar: "0.17.0",
+        capabilities: [.run(commands: ["ps", "sysctl", "vm_stat", "netstat", "df", "kill"]), .sensors],
+        minimumStackbar: "0.26.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
         accent: .green,
         symbol: "gauge.with.dots.needle.67percent"
@@ -108,6 +108,9 @@ final class SystemMonitor: StackbarPlugin {
     var sample: Sample?
     var disk: Disk?
     var network: Network?
+    /// Temperatures and fans, as the Mac reports them (none on a Mac that
+    /// exposes none).
+    var sensors: [SensorReading] = []
     var counters: Counters?
     var cpuHistory: [Double] = []
     var memoryHistory: [Double] = []
@@ -154,6 +157,7 @@ final class SystemMonitor: StackbarPlugin {
             problem = "\(error)"
         }
         await measureNetwork()
+        if let readings = try? await Stackbar.sensors() { sensors = readings }
         disk = await Self.readDisk()
         checkAlerts()
     }
@@ -372,6 +376,10 @@ final class SystemMonitor: StackbarPlugin {
         return "CPU \(Self.percent(sample.cpu / 100)) · Memory \(Self.percent(sample.memoryFraction))"
     }
 
+    var cpuTemperature: Double? { sensors.first { $0.id == "cpu" }?.value }
+
+    static func degrees(_ value: Double) -> String { "\(Int(value.rounded()))°" }
+
     // MARK: Surfaces
 
     var menuBar: ViewContent {
@@ -380,6 +388,7 @@ final class SystemMonitor: StackbarPlugin {
             case "CPU": Label(Self.percent(sample.cpu / 100), symbol: "cpu").role(Self.role(sample.cpu / 100))
             case "Memory": Label(Self.percent(sample.memoryFraction), symbol: "memorychip").role(Self.role(sample.memoryFraction))
             case "Network": Label(network.map { "↓\(Self.speed($0.down))" } ?? "–", symbol: "network").role(.primary)
+            case "Temperature": Label(cpuTemperature.map(Self.degrees) ?? "–", symbol: "thermometer.medium").role(cpuTemperature.map { $0 >= 95 ? .critical : $0 >= 85 ? .warning : .primary } ?? .secondary)
             default: Label("\(Self.percent(sample.cpu / 100)) · \(Self.percent(sample.memoryFraction))", symbol: "gauge.with.dots.needle.33percent").role(Self.role(max(sample.cpu / 100, sample.memoryFraction)))
             }
         } else {
@@ -431,6 +440,23 @@ final class SystemMonitor: StackbarPlugin {
                                 if network.upHistory.count >= 3 { Sparkline(network.upHistory, theme: .violet, height: 28, label: "Upload over time") }
                             }
                             .frame(fillWidth: true)
+                        }
+                    }
+                }
+                if !sensors.isEmpty {
+                    Card("Sensors", detail: sensors.contains { $0.kind == .fan } ? "temperatures and fans" : "temperatures") {
+                        HStack(spacing: Space.l) {
+                            ForEach(sensors.filter { $0.kind == .temperature }) { reading in
+                                VStack(spacing: Space.xs) {
+                                    Label(reading.name, symbol: "thermometer.medium").role(.secondary).typography(.caption)
+                                    Text(Self.degrees(reading.value)).role(reading.value >= 95 ? .critical : reading.value >= 85 ? .warning : .primary).typography(.stat).numericTransition()
+                                }
+                                .frame(fillWidth: true)
+                            }
+                        }
+                        ForEach(sensors.filter { $0.kind == .fan }) { fan in
+                            Row(fan.name, subtitle: fan.maximum.map { "of \(Int($0)) rpm" }, symbol: "fan", key: fan.id)
+                                .badge(fan.value < 1 ? "Off" : "\(Int(fan.value)) rpm", role: .secondary)
                         }
                     }
                 }
@@ -510,7 +536,7 @@ final class SystemMonitor: StackbarPlugin {
 
     var settings: ViewContent {
         Section("Menu bar") {
-            Picker("Show", options: ["CPU and memory", "CPU", "Memory", "Network"], selection: menuBarShows, style: .segmented) { self.menuBarShows = $0 }
+            Picker("Show", options: ["CPU and memory", "CPU", "Memory", "Network", "Temperature"], selection: menuBarShows) { self.menuBarShows = $0 }
         }
         Section("Alerts") {
             Toggle("Notify when CPU or memory stays high", isOn: alertsOn) { self.alertsOn = $0 }
@@ -551,6 +577,7 @@ final class SystemMonitor: StackbarPlugin {
             ]
             if let disk = self.disk { lines.append("disk: \(Self.size(disk.used)) of \(Self.size(disk.total))") }
             if let network = self.network { lines.append("network: \(Self.speed(network.down)) down, \(Self.speed(network.up)) up") }
+            lines += self.sensors.map { "\($0.name.lowercased()): \($0.kind == .fan ? "\(Int($0.value)) rpm" : Self.degrees($0.value))" }
             lines += sample.processes.map { "\($0.pid) \($0.command) \($0.cpu)% cpu \($0.memory)" }
             return lines.joined(separator: "\n")
         }

@@ -4,7 +4,9 @@ Everything you copy, searchable, pinnable and one keystroke from being pasted
 back. ⌘⇧V opens it from anywhere: type to filter, ↑↓ and Return (or ⌘1 to ⌘9)
 to paste into the app you were in, ⌥Return to paste as plain text, ⌘P to pin
 and ⌥⌫ to delete. Formatted text keeps its formatting, and images are kept by
-the host and pasted back.
+the host and pasted back. The text in a copied image (a screenshot, a
+photo of a receipt) is read on your Mac, so typing finds the image, and ⌘⇧T
+copies that text.
 
 - **Needs:** the clipboard. Passwords are skipped: the host never hands out
   items an app marks as concealed or transient, and copies from password
@@ -14,12 +16,13 @@ the host and pasted back.
   minutes unless you pin them.
 - **Surfaces:** menu bar, panel, window, settings. Hotkey ⌘⇧V.
 - **Settings:** how many items to keep, the order, pasting directly or only
-  copying, showing matching copies in the palette's results, keeping images, plain text by default, how long to keep secrets
+  copying, showing matching copies in the palette's results, keeping images, finding images by their text, plain text by default, how long to keep secrets
   (not at all, 5 minutes to an hour, or like any copy), apps and text patterns
   to ignore, and pausing the history.
 - **Commands:** Search Clipboard History, Paste Last Copy as Plain Text,
   Pause Clipboard History, Ignore Next Copy.
 - **Agent tools:** `recent_clips`, `search_clips` and `copy_clip`.
+- **Requires:** Stackbar 0.26.0 or later.
 
 ## Highlights
 
@@ -39,6 +42,10 @@ key or card number is masked, kept away from agent tools, and dropped after
 ### See what you copy
 The window shows how much you copy, and from which apps.
 <!-- preview: insights -->
+
+## What's new in 1.8.0
+
+- Search finds images by the text in them, read on your Mac with Apple's text recognition, and Copy Text in Image (⌘⇧T) copies it.
 
 ## What's new in 1.7.0
 

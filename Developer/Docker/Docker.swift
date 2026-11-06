@@ -15,12 +15,12 @@ final class Docker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.docker",
         name: "Docker",
-        version: "1.6.0",
+        version: "1.7.0",
         summary: "Your containers with live CPU and memory, Compose projects, and start, stop, restart and logs a click away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
-        capabilities: [.run(commands: ["docker"])],
-        minimumStackbar: "0.17.0",
+        capabilities: [.run(commands: ["docker"]), .terminal],
+        minimumStackbar: "0.26.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
         accent: .cyan,
         symbol: "shippingbox.fill"
@@ -529,6 +529,10 @@ final class Docker: StackbarPlugin {
             row = row
                 .action("Stop", shortcut: "cmd+.") { try await self.act("stop", container) }
                 .action("Restart", shortcut: "cmd+r") { try await self.act("restart", container) }
+                .action("Open Shell", shortcut: "cmd+t") {
+                    // bash when the image has it, sh otherwise.
+                    try await Stackbar.openInTerminal(["docker", "exec", "-it", container.name, "sh", "-c", "command -v bash >/dev/null && exec bash || exec sh"], title: container.name)
+                }
         } else {
             row = row.action("Start", shortcut: "cmd+return") { try await self.act("start", container) }
         }

@@ -14,13 +14,13 @@ final class UpNext: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.up-next",
         name: "Up Next",
-        version: "1.5.0",
+        version: "1.6.0",
         summary: "Your next meeting in the menu bar, with a countdown and one-click join.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(30)), .wake],
-        capabilities: [.calendar],
+        capabilities: [.calendar, .calendarWrite],
         hotkey: "ctrl+option+j",
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.26.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
         accent: .red,
         symbol: "calendar"
@@ -174,6 +174,7 @@ final class UpNext: StackbarPlugin {
     }
 
     func remindAndJoin(now: Date) {
+        remindSnoozed(now: now)
         for event in upcoming(now: now) {
             let until = event.start.timeIntervalSince(now)
             if remindMinutes > 0, until > 0, until <= remindMinutes * 60 + 15, !reminded.contains(event.id) {
@@ -182,15 +183,14 @@ final class UpNext: StackbarPlugin {
                 Stackbar.notify(
                     "\(event.title) in \(max(1, Int((until / 60).rounded()))) min",
                     body: link.map { "On \($0.service)" } ?? event.location,
-                    actions: link.map { [NotificationAction("Join", url: openInApps ? Self.appURL(for: $0) : $0.url)] } ?? []
+                    actions: reminderActions(event)
                 )
             }
             // A second, quieter nudge as it starts, unless the screen is covered anyway.
             if remindMinutes > 0, !fullScreenAlert, until <= 20, until > -60, !nudged.contains(event.id) {
                 nudged.insert(event.id)
                 let link = Self.meetingLink(for: event)
-                Stackbar.notify("\(event.title) is starting", body: link.map { "On \($0.service)" } ?? event.location,
-                                actions: link.map { [NotificationAction("Join", url: openInApps ? Self.appURL(for: $0) : $0.url)] } ?? [])
+                Stackbar.notify("\(event.title) is starting", body: link.map { "On \($0.service)" } ?? event.location, actions: reminderActions(event))
             }
             if fullScreenAlert, until <= 60, until > -60, !alerted.contains(event.id) {
                 alerted.insert(event.id)
@@ -208,6 +208,154 @@ final class UpNext: StackbarPlugin {
         if joined.count > 200 { joined = Set(joined.suffix(50)) }
         if alerted.count > 200 { alerted = Set(alerted.suffix(50)) }
         if nudged.count > 200 { nudged = Set(nudged.suffix(50)) }
+    }
+
+    // MARK: Snooze and quick add
+
+    /// Reminders the user snoozed, by event id, and when to remind again.
+    private var snoozedUntil: [String: Date] = [:]
+
+    /// The buttons on a reminder: join the call, and snooze for five minutes.
+    func reminderActions(_ event: CalendarEvent, joinTitle: String = "Join") -> [NotificationAction] {
+        var actions = Self.meetingLink(for: event).map { [NotificationAction(joinTitle, url: openInApps ? Self.appURL(for: $0) : $0.url)] } ?? []
+        actions.append(NotificationAction("Snooze 5 Min", command: "snooze", arguments: ["event": event.id]))
+        return actions
+    }
+
+    func snooze(_ id: String?, minutes: Int = 5) -> CommandResult {
+        guard let event = id.flatMap({ id in events.first { $0.id == id } }) ?? focus() else { return .message("No meeting to snooze") }
+        snoozedUntil[event.id] = Date().addingTimeInterval(TimeInterval(minutes * 60))
+        return .message("Reminding you about \(event.title) in \(minutes) min")
+    }
+
+    /// Reminds again about the events whose snooze has run out and that
+    /// haven't ended.
+    func remindSnoozed(now: Date) {
+        for (id, due) in snoozedUntil where due <= now {
+            snoozedUntil[id] = nil
+            guard let event = events.first(where: { $0.id == id }), event.end > now else { continue }
+            let until = event.start.timeIntervalSince(now)
+            let title = until > 60 ? "\(event.title) in \(Int((until / 60).rounded())) min" : until > -60 ? "\(event.title) is starting" : "\(event.title) started \(Int((-until / 60).rounded())) min ago"
+            Stackbar.notify(title, body: Self.meetingLink(for: event).map { "On \($0.service)" } ?? event.location, actions: reminderActions(event))
+        }
+    }
+
+    /// "Lunch with Sam tomorrow 1pm for 45m", "Dentist fri 9:30", "Offsite
+    /// next monday" (all day). Words for the day, the time and the length are
+    /// taken out; the rest is the title. A time already past today means
+    /// tomorrow.
+    static func quickAdd(_ text: String, now: Date = Date(), calendar: Calendar = .current) -> CalendarEventDraft? {
+        var words = text.split(whereSeparator: \.isWhitespace).map(String.init)
+        var day: Date?
+        var time: (hour: Int, minute: Int)?
+        var minutes: Int?
+        var index = 0
+        while index < words.count {
+            let word = words[index].lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ",."))
+            let next = index + 1 < words.count ? words[index + 1].lowercased() : ""
+            var used = 1
+            if day == nil, word == "today" {
+                day = now
+            } else if day == nil, word == "tomorrow" || word == "tmr" || word == "tmrw" {
+                day = calendar.date(byAdding: .day, value: 1, to: now)
+            } else if day == nil, let weekday = Self.weekdays[word] {
+                day = Self.next(weekday: weekday, after: now, calendar: calendar)
+            } else if day == nil, word == "next", let weekday = Self.weekdays[next] {
+                day = Self.next(weekday: weekday, after: calendar.date(byAdding: .day, value: 1, to: now) ?? now, calendar: calendar)
+                used = 2
+            } else if time == nil, word == "at", let parsed = Self.clock(next) {
+                time = parsed
+                used = 2
+            } else if time == nil, let parsed = Self.clock(word) {
+                time = parsed
+            } else if minutes == nil, word == "for", let length = Self.length(next) {
+                minutes = length
+                used = 2
+            } else if minutes == nil, let length = Self.length(word) {
+                minutes = length
+            } else {
+                index += 1
+                continue
+            }
+            words.removeSubrange(index..<min(words.count, index + used))
+        }
+        let title = words.joined(separator: " ").trimmingCharacters(in: .whitespaces)
+        guard !title.isEmpty else { return nil }
+        if let time {
+            var start = calendar.date(bySettingHour: time.hour, minute: time.minute, second: 0, of: day ?? now) ?? now
+            if day == nil, start < now { start = calendar.date(byAdding: .day, value: 1, to: start) ?? start }
+            return CalendarEventDraft(title: title, start: start, end: start.addingTimeInterval(TimeInterval((minutes ?? 60) * 60)))
+        }
+        let start = calendar.startOfDay(for: day ?? now)
+        let days = max(1, (minutes ?? 0) / (24 * 60))
+        return CalendarEventDraft(title: title, start: start, end: calendar.date(byAdding: .day, value: days, to: start) ?? start, isAllDay: true)
+    }
+
+    private static let weekdays: [String: Int] = [
+        "sun": 1, "sunday": 1, "mon": 2, "monday": 2, "tue": 3, "tues": 3, "tuesday": 3, "wed": 4, "wednesday": 4,
+        "thu": 5, "thur": 5, "thurs": 5, "thursday": 5, "fri": 6, "friday": 6, "sat": 7, "saturday": 7,
+    ]
+
+    /// The first day on or after `date` that is `weekday` (1 is Sunday).
+    private static func next(weekday: Int, after date: Date, calendar: Calendar) -> Date? {
+        let ahead = (weekday - calendar.component(.weekday, from: date) + 7) % 7
+        return calendar.date(byAdding: .day, value: ahead, to: date)
+    }
+
+    /// "3pm", "3:30pm", "15:30", "9", "noon", "midnight".
+    static func clock(_ word: String) -> (hour: Int, minute: Int)? {
+        let text = word.lowercased()
+        if text == "noon" { return (12, 0) }
+        if text == "midnight" { return (0, 0) }
+        var digits = text
+        var meridiem: String?
+        for suffix in ["am", "pm", "a", "p"] where digits.hasSuffix(suffix) {
+            meridiem = suffix.hasPrefix("a") ? "am" : "pm"
+            digits = String(digits.dropLast(suffix.count))
+            break
+        }
+        let parts = digits.split(separator: ":", omittingEmptySubsequences: false)
+        guard (1...2).contains(parts.count), let hour = Int(parts[0]), parts[0].count <= 2 else { return nil }
+        let minute = parts.count == 2 ? Int(parts[1]) : 0
+        guard let minute, (0..<60).contains(minute), parts.count == 1 || parts[1].count == 2 else { return nil }
+        // A bare number is only a time with am/pm or a colon.
+        guard meridiem != nil || parts.count == 2 else { return nil }
+        switch meridiem {
+        case "am": return (1...12).contains(hour) ? (hour % 12, minute) : nil
+        case "pm": return (1...12).contains(hour) ? (hour % 12 + 12, minute) : nil
+        default: return (0..<24).contains(hour) ? (hour, minute) : nil
+        }
+    }
+
+    /// "45m", "45min", "1h", "1h30m", "1.5h", "2d" in minutes.
+    static func length(_ word: String) -> Int? {
+        let units: [String: Double] = ["m": 1, "min": 1, "mins": 1, "minute": 1, "minutes": 1, "h": 60, "hr": 60, "hrs": 60, "hour": 60, "hours": 60, "d": 1440, "day": 1440, "days": 1440]
+        var total = 0.0
+        var rest = Substring(word.lowercased())
+        while !rest.isEmpty {
+            let number = rest.prefix { $0.isNumber || $0 == "." }
+            rest = rest.dropFirst(number.count)
+            let unit = rest.prefix { $0.isLetter }
+            rest = rest.dropFirst(unit.count)
+            guard let value = Double(number), let scale = units[String(unit)] else { return nil }
+            total += value * scale
+        }
+        guard total > 0, total <= 31 * 1440 else { return nil }
+        return Int(total.rounded())
+    }
+
+    func add(_ text: String) async -> CommandResult {
+        guard let draft = Self.quickAdd(text) else { return .failure("Type what it is and when, like \"Lunch with Sam tomorrow 1pm\"") }
+        do {
+            let saved = try await Stackbar.saveCalendarEvent(draft)
+            try? await refresh()
+            let when = saved.isAllDay
+                ? saved.start.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+                : saved.start.formatted(.dateTime.weekday(.abbreviated).hour().minute())
+            return .message("Added \(saved.title), \(when), to \(saved.calendar)")
+        } catch {
+            return .failure("Couldn't add it: \(error)")
+        }
     }
 
     func join(_ event: CalendarEvent) {
@@ -721,6 +869,14 @@ final class UpNext: StackbarPlugin {
             guard let link = Self.meetingLink(for: event) else { return .failure("\(event.title) has no call link") }
             return .copy(link.url)
         }
+        Command("add-event", title: "Add Calendar Event", subtitle: "Like \"Lunch with Sam tomorrow 1pm for 45m\"", symbol: "calendar.badge.plus", keywords: ["calendar", "event", "meeting", "new", "add", "schedule", "create"]) { invocation in
+            await self.add(invocation["text"] ?? "")
+        }
+        .argument("text", placeholder: "Lunch with Sam tomorrow 1pm")
+        Command("snooze", title: "Snooze Meeting Reminder", subtitle: "Remind again in five minutes", symbol: "zzz", keywords: ["meeting", "remind", "snooze", "later"]) { invocation in
+            self.snooze(invocation["event"])
+        }
+        .argument("event", required: false)
         Command("agenda", title: "Today's Meetings", symbol: "calendar", keywords: ["meeting", "agenda", "calendar", "today", "schedule"])
             .view(search: { _ in try await self.refresh() }) { invocation in
                 let now = Date()

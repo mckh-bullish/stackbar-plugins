@@ -12,11 +12,11 @@ final class Pomodoro: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.pomodoro",
         name: "Pomodoro",
-        version: "1.6.0",
+        version: "1.7.0",
         summary: "A focus timer with presets, a progress ring, tags, long breaks and a week of focus in a chart.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(1)), .wake],
-        minimumStackbar: "0.17.0",
+        minimumStackbar: "0.26.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Pomodoro",
         accent: .red,
         symbol: "timer"
@@ -499,7 +499,11 @@ final class Pomodoro: StackbarPlugin {
             let body = ended.mode == .focus
                 ? "\(ended.minutes) minutes on \(ended.tag). " + (longBreakDue ? "\(sessionsBeforeLongBreak) in a row: take a long break." : "Time for a break.")
                 : wasLong ? "Rested. A fresh round starts now." : "Back to it."
-            Stackbar.notify(ended.mode == .focus ? "Focus done" : wasLong ? "Long break over" : "Break over", body: body)
+            // Auto-start already moves on; otherwise the alert offers the next step.
+            let actions = autoStart ? [] : ended.mode == .focus
+                ? [NotificationAction("Start Break", command: "start-break"), NotificationAction("5 More Minutes", command: "start-focus", arguments: ["minutes": "5", "tag": ended.tag])]
+                : [NotificationAction("Start Focus", command: "start-focus"), NotificationAction("5 More Minutes", command: "start-break", arguments: ["minutes": "5"])]
+            Stackbar.notify(ended.mode == .focus ? "Focus done" : wasLong ? "Long break over" : "Break over", body: body, actions: actions)
         }
         mode = ended.mode == .focus ? .rest : .focus
         pending = nil

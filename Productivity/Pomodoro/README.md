@@ -4,7 +4,7 @@ A focus timer in the Stackbar look: red for focus, teal for breaks. Pick Focus o
 90 minutes of focus; 5, 10 or 15 of break), and press play. The countdown and
 the ring around it move on their own, the menu bar shows the time
 left (dimmed behind a pause sign while paused), and a chime and a
-notification mark the end. Today's finished sessions
+notification mark the end, with buttons to start the next session or take five more minutes. Today's finished sessions
 and focused minutes sit under the timer, with the last seven days in a chart.
 
 - **Needs:** nothing. No network, files or secrets.
@@ -25,7 +25,11 @@ and focused minutes sit under the timer, with the last seven days in a chart.
   sessions before a long break, auto-start, the sound, and your tags.
 - **Agent tool:** `status` returns the mode, the time left, today's focus
   and the last seven days.
-- **Requires:** Stackbar 0.14.0 or later.
+- **Requires:** Stackbar 0.26.0 or later.
+
+## What's new in 1.7.0
+
+- The end-of-session notification has Start Break (or Start Focus) and 5 More Minutes buttons, unless Auto is on.
 
 ## What's new in 1.6.0
 

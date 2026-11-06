@@ -6,16 +6,20 @@ and a dozen more), reminds you a few minutes before, and can open the call for
 you when it starts.
 
 - **Needs:** your calendars in Calendar.app, through the host, which asks for
-  access once. No network.
+  access once, and permission to add events (for Add Calendar Event). No
+  network.
 - **Surfaces:** menu bar, panel, window, widget, settings. Hotkey ⌃⌥J joins.
 - **Settings:** calendars to hide, all-day and declined events, only meetings
   with a link or with other people, the reminder lead time, auto-join, a
   full-screen alert, how the title shows in the menu bar, and opening calls in
   their apps.
-- **Commands:** Join Next Meeting, Copy Next Meeting Link and Today's
-  Meetings. Give them a hotkey or an alias in Stackbar's Settings, or run them
+- **Commands:** Join Next Meeting, Copy Next Meeting Link, Today's
+  Meetings, Add Calendar Event ("Lunch with Sam tomorrow 1pm for 45m",
+  "Offsite fri" for all day) and Snooze Meeting Reminder. Give them a hotkey or an alias in Stackbar's Settings, or run them
   from Spotlight, Shortcuts or a `stackbar://` link.
+- **Reminders** have Join and Snooze 5 Min buttons.
 - **Agent tools:** `next_meeting`, `agenda` and `join_next`.
+- **Requires:** Stackbar 0.26.0 or later.
 
 ## Highlights
 
@@ -36,6 +40,11 @@ crowded afternoon coming.
 ### On your desktop too
 A widget keeps what's next in view without opening anything.
 <!-- preview: widget -->
+
+## What's new in 1.6.0
+
+- Add Calendar Event: type "Dentist fri 9:30" in the palette and it goes in your calendar.
+- Snooze 5 Min on meeting reminders.
 
 ## What's new in 1.5.0
 

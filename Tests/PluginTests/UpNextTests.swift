@@ -29,8 +29,33 @@ final class UpNextTests: XCTestCase {
         let supervisor = try await host.start("UpNext")
         let posted = await waitUntil(5) { !host.notifications.all.isEmpty }
         XCTAssertTrue(posted, "a meeting in 90 seconds is reminded about")
-        XCTAssertEqual(host.notifications.all.first?.actions.map(\.url), ["https://meet.google.com/abc-defg-hij"])
+        XCTAssertEqual(host.notifications.all.first?.actions.map(\.url), ["https://meet.google.com/abc-defg-hij", ""])
+        XCTAssertEqual(host.notifications.all.first?.actions.last, NotificationAction("Snooze 5 Min", command: "snooze", arguments: ["event": "soon"]))
         await supervisor.stop()
+    }
+
+    func testQuickAddAndSnooze() async throws {
+        let now = Date()
+        let system = SimulatedSystem(events: [
+            CalendarEvent(id: "soon", title: "Sync", start: now.addingTimeInterval(90), end: now.addingTimeInterval(1800), calendar: "Work", participation: .accepted, attendees: 3),
+        ])
+        let host = Host(self, system: system)
+        let session = try await host.session("UpNext")
+        guard case .message(let added) = try await session.runCommand("add-event", arguments: ["text": "Lunch with Sam tomorrow 1pm for 45m"]) else { return XCTFail("add-event adds") }
+        XCTAssertEqual(added?.hasPrefix("Added Lunch with Sam, "), true, added ?? "")
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now) ?? now
+        let events = try await system.calendarEvents(from: Calendar.current.startOfDay(for: tomorrow), to: Calendar.current.startOfDay(for: tomorrow).addingTimeInterval(86400))
+        let lunch = try XCTUnwrap(events.first { $0.title == "Lunch with Sam" })
+        XCTAssertEqual(Calendar.current.component(.hour, from: lunch.start), 13)
+        XCTAssertEqual(lunch.end.timeIntervalSince(lunch.start), 45 * 60)
+
+        guard case .message = try await session.runCommand("add-event", arguments: ["text": "Offsite fri"]) else { return XCTFail("an all-day event") }
+        let week = try await system.calendarEvents(from: now, to: now.addingTimeInterval(8 * 86400))
+        XCTAssertEqual(week.first { $0.title == "Offsite" }?.isAllDay, true)
+        guard case .failure = try await session.runCommand("add-event", arguments: ["text": "tomorrow 3pm"]) else { return XCTFail("a title is needed") }
+
+        guard case .message(let snoozed) = try await session.runCommand("snooze", arguments: ["event": "soon"]) else { return XCTFail("snooze answers") }
+        XCTAssertEqual(snoozed, "Reminding you about Sync in 5 min")
     }
 
     func testDialsInAndCoversTheScreen() async throws {

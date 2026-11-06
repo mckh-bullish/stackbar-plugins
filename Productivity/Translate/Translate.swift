@@ -19,7 +19,7 @@ final class Translate: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.translate",
         name: "Translate",
-        version: "1.5.0",
+        version: "1.6.0",
         summary: "Translate the selected text in place, on your Mac or with Google or DeepL.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -27,8 +27,8 @@ final class Translate: StackbarPlugin {
         // result; Google Translate's keyless endpoint, used when the Mac
         // can't translate the pair itself; DeepL's two API hosts (free and
         // paid keys).
-        capabilities: [.context, .clipboard, .network("translate.googleapis.com", "api-free.deepl.com", "api.deepl.com"), .secret(name: "DEEPL_API_KEY")],
-        minimumStackbar: "0.20.0",
+        capabilities: [.context, .clipboard, .screenText, .network("translate.googleapis.com", "api-free.deepl.com", "api.deepl.com"), .secret(name: "DEEPL_API_KEY")],
+        minimumStackbar: "0.26.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate",
         accent: .teal,
         symbol: "character.bubble.fill"
@@ -232,6 +232,17 @@ final class Translate: StackbarPlugin {
         translateCommand("translate-typed", title: "Translate", subtitle: "What you typed")
             .fallback()
             .stackbarOnly()
+        Command("translate-screen", title: "Translate Text on Screen", subtitle: "Drag over any text, even in an image", symbol: "text.viewfinder", keywords: ["translate", "screen", "ocr", "image", "capture"]) { invocation in
+            guard let read = try await Stackbar.captureScreenText() else { return .done }
+            let text = read.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { return .failure("No text found there") }
+            guard self.inPlace else { return .open(url: Self.googleURL(text, to: Self.language(invocation["to"] ?? self.target)), app: nil) }
+            try await self.translate(text, to: invocation["to"])
+            guard let result = self.result else { return .failure("Couldn't translate it") }
+            Stackbar.copy(result.text)
+            return .message("Copied: " + (result.text.count > 120 ? String(result.text.prefix(119)) + "…" : result.text))
+        }
+        .argument("to", placeholder: "Into", required: false, options: Self.languages.map(\.name))
         Command("open-google", title: "Translate Selection in Google Translate", symbol: "globe", keywords: ["translate", "google"]) { invocation in
             guard let text = try await self.input(invocation) else { return .failure("Select some text first, or copy it") }
             return .open(url: Self.googleURL(text, to: Self.language(invocation["to"] ?? self.target)), app: nil)

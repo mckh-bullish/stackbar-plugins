@@ -15,14 +15,14 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.7.0",
+        version: "1.8.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
         triggers: [.launch, .clipboard, .every(.seconds(60))],
         capabilities: [.clipboard],
         hotkey: "cmd+shift+v",
-        minimumStackbar: "0.21.0",
+        minimumStackbar: "0.26.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
         accent: .blue,
         symbol: "doc.on.clipboard.fill"
@@ -92,6 +92,8 @@ final class Clipboard: StackbarPlugin {
         /// What kind of secret this looks like ("GitHub token"), when it
         /// looks like one: shown masked, and dropped after a while.
         var secret: String?
+        /// The text in an image, read on the Mac, so a search finds it.
+        var recognized: String?
 
         /// What makes two copies the same item.
         var fingerprint: String {
@@ -120,6 +122,9 @@ final class Clipboard: StackbarPlugin {
         var title: String {
             switch kind {
             case .image:
+                if let line = recognized?.split(whereSeparator: \.isNewline).first.map({ $0.trimmingCharacters(in: .whitespaces) }), !line.isEmpty {
+                    return "Image: " + (line.count > 80 ? String(line.prefix(79)) + "…" : line)
+                }
                 let size = imageSize.map { "\($0.first ?? 0)×\($0.last ?? 0)" } ?? ""
                 return "Image \(size)".trimmingCharacters(in: .whitespaces)
             case .files:
@@ -213,6 +218,7 @@ final class Clipboard: StackbarPlugin {
     @Stored("order") var order = Order.recent
     @Stored("pasteDirectly") var pasteDirectly = true
     @Stored("keepImages") var keepImages = true
+    @Stored("readImageText") var readImageText = true
     @Stored("ignoredApps") var ignoredApps = Clipboard.defaultIgnored
     @Stored("paused") var paused = false
     /// Off by default: ⌘⇧V and the palette open the history, so the icon
@@ -258,6 +264,11 @@ final class Clipboard: StackbarPlugin {
 
     func refresh() async throws {
         expireSecrets()
+        try await capture()
+        await readImageTexts()
+    }
+
+    func capture() async throws {
         guard let item = try await Stackbar.clipboard() else { return }
         // The first read after a launch records what is on the clipboard
         // now; if it is already in the history it just moves to the top.
@@ -309,6 +320,23 @@ final class Clipboard: StackbarPlugin {
         history.insert(entry, at: 0)
         entries = trimmed(history)
         if !ownWrite { countCopy(on: item.copiedAt) }
+    }
+
+    /// Reads the text in images not read yet, a few at a time, and keeps it
+    /// with each entry; an image with none keeps "" so it isn't read again.
+    func readImageTexts() async {
+        guard readImageText else { return }
+        for entry in entries.filter({ $0.kind == .image && $0.recognized == nil && $0.imageID != nil }).prefix(5) {
+            do {
+                let read = try await Stackbar.recognizeText(imageID: entry.imageID ?? "")
+                let text = read.lines.filter { $0.confidence >= 0.3 }.map(\.text).joined(separator: "\n")
+                update(entry.id) { $0.recognized = String(text.prefix(Self.maxEntryCharacters)) }
+            } catch {
+                // Busy: try again later. Gone or unreadable: stop.
+                if "\(error)".contains("too many") { return }
+                update(entry.id) { $0.recognized = "" }
+            }
+        }
     }
 
     func countCopy(on date: Date) {
@@ -520,6 +548,7 @@ final class Clipboard: StackbarPlugin {
                 self.entries = self.trimmed(self.entries)
             }
             Toggle("Keep images", isOn: keepImages) { self.keepImages = $0 }
+            Toggle("Find images by the text in them", isOn: readImageText) { self.readImageText = $0 }
             Button("Clear history (keeps pinned)", symbol: "trash", role: .critical) { self.clear() }
         }
         Section("Ignored apps") {
@@ -592,6 +621,12 @@ final class Clipboard: StackbarPlugin {
         }
         row = row.action(pasteDirectly ? "Copy" : "Paste") { await self.use(entry, paste: !self.pasteDirectly) }
             .action(entry.pinned ? "Unpin" : "Pin", shortcut: "cmd+p") { self.update(entry.id) { $0.pinned.toggle() } }
+        if entry.kind == .image, let text = entry.recognized, !text.isEmpty {
+            row = row.action("Copy Text in Image", shortcut: "cmd+shift+t") {
+                self.lastWrite = Date()
+                Stackbar.copy(text)
+            }
+        }
         if entry.kind == .url, let url = entry.text {
             row = row.action("Open link") { Stackbar.open(url.trimmingCharacters(in: .whitespacesAndNewlines)) }
         }
@@ -606,7 +641,8 @@ final class Clipboard: StackbarPlugin {
         switch entry.kind {
         case .image:
             if let size = entry.imageSize, size.count == 2 { caption.insert("\(size[0]) × \(size[1])", at: 0) }
-            return { $0.preview(imageID: entry.imageID, caption: caption.joined(separator: " · ")) }
+            let text = entry.recognized.flatMap { $0.isEmpty ? nil : String($0.prefix(2000)) }
+            return { $0.preview(text: text, imageID: entry.imageID, caption: caption.joined(separator: " · ")) }
         case .files:
             return { $0.preview(text: entry.files.joined(separator: "\n"), caption: caption.joined(separator: " · ")) }
         case .text, .url:
@@ -683,7 +719,7 @@ final class Clipboard: StackbarPlugin {
         .optIn()
         AgentTool("search_clips", description: "Clipboard items containing the text, newest first, in full", parameters: [ToolParameter("query", description: "Text to look for")]) { arguments in
             let query = arguments.string("query") ?? ""
-            let found = self.sorted.filter { $0.secret == nil && ($0.text ?? "").localizedCaseInsensitiveContains(query) }.prefix(10)
+            let found = self.sorted.filter { $0.secret == nil && ($0.text ?? $0.recognized ?? "").localizedCaseInsensitiveContains(query) }.prefix(10)
             return found.isEmpty ? "Nothing in the history contains \"\(query)\"." : found.map { $0.text ?? $0.title }.joined(separator: "\n---\n")
         }
         .optIn()

@@ -1,10 +1,11 @@
 # System Monitor
 
-CPU, memory and network in the menu bar, with the processes using the most a
-click away and a notification when something stays high.
+CPU, memory, network and temperature in the menu bar, with the processes
+using the most a click away and a notification when something stays high.
 
 - **Needs:** to run `ps`, `sysctl`, `vm_stat`, `netstat`, `df` and `kill`
-  (all come with macOS). No network, files or secrets.
+  (all come with macOS), and the Mac's temperature sensors and fans, which
+  Stackbar reads for it. No network, files or secrets.
 - **Surfaces:** menu bar, panel, widget, settings.
 - **How it measures:** every 10 seconds, `ps` gives every process's CPU and
   memory (total CPU is their sum over the cores), `sysctl` the load,
@@ -14,15 +15,18 @@ click away and a notification when something stays high.
   second between two samples the way `top` does.
 - **In the panel:** a CPU chart for the last five minutes, load averages,
   memory and disk, download and upload speeds with their recent history,
-  and the top eight processes, each with Copy PID and Quit Process.
+  CPU, GPU, SSD and battery temperatures and fan speeds (where the Mac
+  reports them), and the top eight processes, each with Copy PID and Quit
+  Process.
 - **Alerts:** a notification when CPU stays above your line (85% by
   default) or memory above 90% for a minute, naming the busiest process,
   and when the disk is 95% full. Once per spell, then quiet for 30 minutes.
 - **Settings:** what the menu bar shows (CPU and memory, CPU, memory, or
-  download speed), alerts and the CPU line, and whether processes are
+  download speed, or CPU temperature), alerts and the CPU line, and whether processes are
   sorted by CPU or memory.
-- **Agent tool:** `usage` returns CPU, memory, disk, network and the
-  busiest processes.
+- **Agent tool:** `usage` returns CPU, memory, disk, network, temperatures
+  and the busiest processes.
+- **Requires:** Stackbar 0.26.0 or later.
 
 ## Highlights
 
@@ -42,6 +46,10 @@ the same thing it does in Activity Monitor.
 ### On your desktop too
 A widget shows your Mac's load without opening anything.
 <!-- preview: widget -->
+
+## What's new in 1.6.0
+
+- Temperatures (CPU, GPU, SSD, battery) and fan speeds in the panel, and CPU temperature as a menu bar choice.
 
 ## What's new in 1.5.0
 

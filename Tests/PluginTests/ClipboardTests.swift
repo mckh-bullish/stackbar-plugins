@@ -4,6 +4,20 @@ import StackbarHostCore
 import StackbarProtocol
 
 final class ClipboardTests: XCTestCase {
+    func testFindsImagesByTheirText() async throws {
+        let host = Host(self)
+        host.system.simulate(text: RecognizedText(lines: [.init(text: "Invoice 42", confidence: 0.99), .init(text: "Total $10", confidence: 0.9)]), inImage: "abc123")
+        let supervisor = try await host.start("Clipboard")
+        try host.system.writeClipboard(.image(id: "abc123"))
+        let read = await waitUntil(10) { await supervisor.views[.panel]?.rows.contains { $0.title == "Image: Invoice 42" } ?? false }
+        let rows = await supervisor.views[.panel]?.rows ?? []
+        XCTAssertTrue(read, "\(rows.map(\.title))")
+        let row = try XCTUnwrap(rows.first { $0.title == "Image: Invoice 42" })
+        XCTAssertEqual(row.preview?.text, "Invoice 42\nTotal $10", "the preview carries the text, so the filter finds it")
+        XCTAssertTrue(row.actions.contains { $0.title == "Copy Text in Image" })
+        await supervisor.stop()
+    }
+
     func testRecordsCopiesAndSkipsPasswords() async throws {
         let host = Host(self)
         let supervisor = try await host.start("Clipboard")

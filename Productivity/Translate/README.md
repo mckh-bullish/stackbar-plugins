@@ -23,11 +23,19 @@ share its selection, it uses what you last copied.
 - **Needs:** the selection (`.context`), the clipboard (as a fallback, and
   to paste), `translate.googleapis.com`, `api-free.deepl.com` and
   `api.deepl.com`, and the secret `DEEPL_API_KEY`, which is asked for only
-  when you choose DeepL.
+  when you choose DeepL. Translate Text on Screen reads the screen where
+  you drag (macOS asks for Screen Recording once).
 - **Surfaces:** panel, settings. No menu-bar item.
 - **Settings:** the engine, the language to translate into and the second
   language, and DeepL's formality.
-- **Commands:** Translate Selection, Translate Selection in Google Translate.
+- **Commands:** Translate Selection, Translate Text on Screen (drag over
+  any text, even in an image or a video; the translation is copied),
+  Translate Selection in Google Translate.
+- **Requires:** Stackbar 0.26.0 or later.
+
+## What's new in 1.6.0
+
+- Translate Text on Screen: drag over any text, even text in a picture, and the translation is copied.
 
 ## What's new in 1.5.0
 
