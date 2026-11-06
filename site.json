@@ -899,20 +899,35 @@
       "changes": [
         {
           "notes": [
+            "A default editor in Settings, picked from the editors installed on your Mac, Zed, Xcode, Sublime Text and JetBrains IDEs included. Return opens projects there; \u2318K still offers the others.",
+            "Asks to open folders in any app and to list installed apps, for the setting."
+          ],
+          "version": "1.1.0"
+        },
+        {
+          "notes": [
             "First release."
           ],
           "version": "1.0.0"
         }
       ],
-      "description": "The folders and workspaces you opened lately in VS Code, Cursor, Windsurf\nand VSCodium, in the palette. Type a few letters of a project's name or path\nand Return opens it in the editor you last used it in; \u2318K opens it in\nanother editor you have or copies its path. The projects you open from here\nrank higher, and they show up in the palette's own results too.",
+      "description": "The folders and workspaces you opened lately in VS Code, Cursor, Windsurf\nand VSCodium, in the palette. Type a few letters of a project's name or path\nand Return opens it in the editor you last used it in, or in the default\neditor you pick in Settings; \u2318K opens it in another editor you have or\ncopies its path. The projects you open from here\nrank higher, and they show up in the palette's own results too.",
       "facts": [
         {
+          "label": "How it finds projects",
+          "text": "VS Code, Cursor, Windsurf and VSCodium each keep their recently opened list in `state.vscdb` under `~/Library/Application Support/<Editor>/User/globalStorage`. The plugin reads its `history.recentlyOpenedPathsList` entry, up to 30 from each editor, and lists each folder or workspace once."
+        },
+        {
+          "label": "Settings",
+          "text": "the default editor. \"Where it was last opened\" (the default) keeps each project in the editor it came from; or pick any installed editor: the VS Code family, Zed, Xcode, Sublime Text, Nova, BBEdit, TextMate, IntelliJ IDEA, WebStorm, PyCharm, GoLand, RustRover or Android Studio. Workspace files (`.code-workspace`) still open in a VS Code-style editor."
+        },
+        {
           "label": "Needs",
-          "text": "running `sqlite3` (part of macOS) in read-only mode on each editor's `state.vscdb`, the editors' storage folders under Application Support, and opening `vscode:`, `cursor:`, `windsurf:` and `vscodium:` links. Stackbar 0.22.0 or later."
+          "text": "running `sqlite3` (part of macOS) in read-only mode on each editor's `state.vscdb`, the editors' storage folders under Application Support, opening links and folders in any app (to hand a folder to your default editor), and the list of installed apps (to show which editors you have). Stackbar 0.22.0 or later."
         },
         {
           "label": "Surfaces",
-          "text": "panel (the latest projects)."
+          "text": "panel (the latest projects) and settings."
         },
         {
           "label": "Commands",
@@ -923,7 +938,7 @@
           "text": "single files and remote (SSH, container) projects."
         }
       ],
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     "io.navbytes.stackbar.plugins.script-commands": {
       "changes": [
@@ -2400,6 +2415,12 @@
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.0.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.0.0/light/panel.png"
         }
+      },
+      "1.1.0": {
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.1.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.1.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.script-commands": {
@@ -3626,6 +3647,15 @@
         {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.0.0/dark/previews/hero/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your projects, a few letters away"
+        }
+      ],
+      "1.1.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.1.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.1.0/light/previews/hero/panel.png",
           "name": "hero",
           "surface": "panel",
           "title": "Your projects, a few letters away"
