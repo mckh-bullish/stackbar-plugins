@@ -80,7 +80,9 @@ PY
     done
 }
 
-for source in */*/*.swift; do
+# Community plugins sit one folder deeper: Community/<user>/<Name>/.
+for source in */*/*.swift Community/*/*/*.swift; do
+    [ -f "$source" ] || continue
     case "$source" in scripts/*|.build/*|Tests/*) continue ;; esac
     category=${source%%/*}
     first=$("$CTL" manifest "$source" | head -1)          # "Name 1.2.0 (io.navbytes...)"

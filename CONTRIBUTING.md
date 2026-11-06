@@ -26,7 +26,8 @@ A plugin is accepted when all of these hold:
 6. **Destructive actions say so** with `role: .critical`.
 7. **It renders every surface it declares** and survives the soak in CI.
 8. **Its manifest is complete:** an id starting `io.navbytes.stackbar.plugins.`
-   (the plugins that moved here from Stackbar keep their old ids),
+   (the plugins that moved here from Stackbar keep their old ids; community
+   plugins use `io.github.<user>.`, see below),
    a `version` (`x.y.z`), a one-sentence `summary`, `minimumStackbar` (the
    oldest Stackbar it builds against) and `homepage` (its folder on GitHub).
 9. **It has a README** saying what it does, what it needs and its settings,
@@ -54,6 +55,23 @@ The categories are `System`, `Developer`, `Network`, `Monitoring` and
 `Productivity`; the folder is the category the store shows. A new category is
 a new entry in `CATEGORIES` in `scripts/lint.py` and `categories` in
 `Package.swift`.
+
+## The community lane
+
+Your own plugin can be in the store under your name. It goes in
+`Community/<your-github-user>/<Name>/`, with the same two files, and its id is
+`io.github.<your-github-user>.<name>` in lowercase:
+
+```
+Community/octocat/HackerNews/HackerNews.swift   id: io.github.octocat.hacker-news
+Community/octocat/HackerNews/README.md
+```
+
+Everything in "The bar" above still holds, except the id prefix. Open a pull
+request from your fork; when it is merged the plugin is signed and published
+like the others, shows in the store's Community section with "by @octocat" on
+its page, and you keep it: a later pull request from you (and only you, or a
+maintainer) changes it. A plugin left broken for a release is withdrawn.
 
 ## The loop
 

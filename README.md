@@ -29,6 +29,7 @@ An update that asks for something new waits for your approval.
 | Plugin | Category | What it does |
 | --- | --- | --- |
 | [Applications](System/Applications) | System | Open any app or System Settings pane from the command palette by typing a few letters. |
+| [Kill Process](System/KillProcess) | System | Find a process by name, see its CPU and memory, and quit or force quit it. |
 | [Menu Search](System/MenuSearch) | System | Search the menus of the app you're in and choose an item without the mouse. |
 | [Stay Awake](System/StayAwake) | System | Keeps your Mac awake for a while, until a time, while an app runs or on a schedule. |
 | [System Commands](System/SystemCommands) | System | Lock, sleep, restart, empty the Trash or switch to dark mode from the palette. |
@@ -38,9 +39,12 @@ An update that asks for something new waits for your approval.
 | [Linear](Developer/Linear) | Developer | Your assigned Linear issues and inbox: change status and priority, start work, comment, and new issues from the palette. |
 | [PR Cockpit](Developer/PRCockpit) | Developer | Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away. |
 | [Ports](Developer/Ports) | Developer | Which process is listening on which port, and a way to stop it. |
+| [Recent Projects](Developer/RecentProjects) | Developer | Open the projects you used lately in VS Code, Cursor, Windsurf or VSCodium from the palette. |
+| [Script Commands](Developer/ScriptCommands) | Developer | Run your own scripts from the palette, in Raycast's Script Commands format. |
 | [LiteLLM](Monitoring/LiteLLM) | Monitoring | Tokens, spend, budget and model mix from your LiteLLM proxy, with charts. |
 | [System Monitor](Monitoring/SystemMonitor) | Monitoring | CPU, memory, disk and network speed in the menu bar, the processes using the most, and alerts when one stays high. |
 | [App Switcher](Productivity/AppSwitcher) | Productivity | Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide. |
+| [Browser Tabs](Productivity/BrowserTabs) | Productivity | Switch to any open tab in Safari, Chrome, Arc, Brave or Edge, and search your bookmarks. |
 | [Calculator](Productivity/Calculator) | Productivity | Sums, units, currencies and time zones answered right in the command palette. |
 | [Clipboard History](Productivity/Clipboard) | Productivity | Everything you copy, searchable and one keystroke from pasting back. |
 | [Emoji](Productivity/Emoji) | Productivity | Search every emoji by name in a grid, and paste it where you were typing. |
@@ -49,6 +53,7 @@ An update that asks for something new waits for your approval.
 | [Pomodoro](Productivity/Pomodoro) | Productivity | A focus timer with presets, a progress ring, tags, long breaks and a week of focus in a chart. |
 | [Quicklinks](Productivity/Quicklinks) | Productivity | Open links and folders by name, with placeholders filled in. |
 | [Snippets](Productivity/Snippets) | Productivity | Paste text by name, with placeholders filled in. |
+| [Timers](Productivity/Timers) | Productivity | Countdown timers from the palette, several at once, the soonest in the menu bar. |
 | [Todo](Productivity/Todo) | Productivity | A calm to-do list that understands dates as you type them, kept in Apple Reminders so it's on all your devices. |
 | [Translate](Productivity/Translate) | Productivity | Translate the selected text in place, on your Mac or with Google or DeepL. |
 | [Up Next](Productivity/UpNext) | Productivity | Your next meeting in the menu bar, with a countdown and one-click join. |
@@ -57,6 +62,9 @@ An update that asks for something new waits for your approval.
 | [World Clock](Productivity/WorldClock) | Productivity | The time in the cities you work with, with offsets and working hours. |
 
 <!-- plugins:end -->
+
+Wrote a plugin you'd like others to have? The community lane takes it under
+your own name: see [CONTRIBUTING.md](CONTRIBUTING.md#the-community-lane).
 
 The four plugins that ship inside Stackbar (Clipboard History, Stay Awake,
 Up Next and PR Cockpit) live in the Stackbar repository and update with the app.

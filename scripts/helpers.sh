@@ -63,7 +63,9 @@ for tag in $TAGS; do
     records="$SITE/helpers/$short"
     mkdir -p "$records"
 
-    for source in */*/*.swift; do
+    # Community plugins sit one folder deeper: Community/<user>/<Name>/.
+    for source in */*/*.swift Community/*/*/*.swift; do
+        [ -f "$source" ] || continue
         case "$source" in scripts/*|.build/*|Tests/*) continue ;; esac
         sum=$(shasum -a 256 "$source" | cut -c1-12)
         asset="$(basename "$source" .swift)-$sum"

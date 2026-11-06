@@ -27,7 +27,9 @@ export STACKBAR_PACKAGE
 STACKBARCTL="$CTL" python3 scripts/lint.py "$@"
 
 summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
-for source in */*/*.swift; do
+# Community plugins sit one folder deeper: Community/<user>/<Name>/.
+for source in */*/*.swift Community/*/*/*.swift; do
+    [ -f "$source" ] || continue
     case "$source" in scripts/*|.build/*|Tests/*) continue ;; esac
     echo "== $source"
     manifest=$("$CTL" manifest "$source")

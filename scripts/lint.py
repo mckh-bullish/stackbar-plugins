@@ -17,6 +17,7 @@ import tempfile
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CATEGORIES = ["System", "Developer", "Network", "Monitoring", "Productivity"]
 ID_PREFIX = "io.navbytes.stackbar.plugins."
+COMMUNITY = "Community"
 # Plugins that shipped inside Stackbar before they moved here keep their ids,
 # so settings, storage and approvals (all keyed by id) carry over.
 LEGACY_IDS = {
@@ -41,6 +42,17 @@ def plugins():
             continue
         for directory in sorted(p for p in folder.iterdir() if p.is_dir()):
             yield category, directory
+    # The community lane: Community/<github-user>/<Name>/.
+    community = ROOT / COMMUNITY
+    if community.is_dir():
+        for user in sorted(p for p in community.iterdir() if p.is_dir() and not p.name.startswith(".")):
+            for directory in sorted(p for p in user.iterdir() if p.is_dir()):
+                yield f"{COMMUNITY}/{user.name}", directory
+
+
+def community_user(category):
+    """The GitHub user a Community/<user> category belongs to, else None."""
+    return category.split("/", 1)[1] if category.startswith(COMMUNITY + "/") else None
 
 
 def stackbarctl():
@@ -98,7 +110,18 @@ def lint(ctl, base=None):
         plugin_id, version, summary = manifest["id"], manifest["version"], manifest.get("summary")
         # The version format, summary and minimumStackbar every published plugin needs.
         problems += [f"{where}: {problem}" for problem in report["publishingProblems"]]
-        if not (plugin_id.startswith(ID_PREFIX) or plugin_id in LEGACY_IDS):
+        user = community_user(category)
+        if user is not None:
+            prefix = f"io.github.{user.lower()}."
+            if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})", user):
+                problems.append(f"{where}: {COMMUNITY}/<user> is a GitHub user name")
+            if not re.fullmatch(re.escape(prefix) + r"[a-z0-9][a-z0-9-]*", plugin_id):
+                problems.append(f"{where}: a community plugin's id is {prefix}<name>, lowercase, like {prefix}{re.sub(r'(?<!^)(?=[A-Z])', '-', name).lower()}")
+            elif plugin_id in seen_ids:
+                problems.append(f"{where}: id {plugin_id} is also used by {seen_ids[plugin_id]}")
+            else:
+                seen_ids[plugin_id] = where
+        elif not (plugin_id.startswith(ID_PREFIX) or plugin_id in LEGACY_IDS):
             problems.append(f"{where}: manifest id must start with {ID_PREFIX}")
         elif plugin_id in seen_ids:
             problems.append(f"{where}: id {plugin_id} is also used by {seen_ids[plugin_id]}")
@@ -115,7 +138,8 @@ def lint(ctl, base=None):
                     print(f"warning: {where}: can't build its source at {base}, so its version bump isn't checked")
                 elif version_tuple(version) <= version_tuple(old_version):
                     problems.append(f"{where}: source changed since {base} but version is still {version}; raise it")
-        rows.append(f"| [{manifest['name']}]({category}/{name}) | {category} | {summary or ''} |")
+        shown = f"{COMMUNITY} (by @{user})" if user else category
+        rows.append(f"| [{manifest['name']}]({category}/{name}) | {shown} | {summary or ''} |")
     return problems, rows
 
 

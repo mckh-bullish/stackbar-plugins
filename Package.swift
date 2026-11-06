@@ -20,16 +20,28 @@ let stackbarRevision = "3a43ed52b655271d712603e1b79d72769ded2c02" // 0.25.0: plu
 let categories = ["System", "Developer", "Network", "Monitoring", "Productivity"]
 
 let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-let plugins: [(category: String, name: String)] = categories.flatMap { category in
-    let folder = root.appendingPathComponent(category, isDirectory: true)
+
+/// The plugins in a folder: each subfolder holding `<Name>/<Name>.swift`.
+func pluginNames(in folder: URL) -> [String] {
     let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
     return names.sorted().filter { name in
         FileManager.default.fileExists(atPath: folder.appendingPathComponent(name).appendingPathComponent("\(name).swift").path)
-    }.map { (category, $0) }
+    }
+}
+
+/// Community plugins live one level deeper, under their author's GitHub
+/// name: `Community/<user>/<Name>/<Name>.swift`. Their targets carry the
+/// user too, so two authors can use the same name.
+let communityUsers = ((try? FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("Community").path)) ?? []).sorted()
+
+let plugins: [(category: String, name: String, target: String)] = categories.flatMap { category in
+    pluginNames(in: root.appendingPathComponent(category, isDirectory: true)).map { (category, $0, "Plugin_\($0)") }
+} + communityUsers.flatMap { user in
+    pluginNames(in: root.appendingPathComponent("Community/\(user)", isDirectory: true)).map { ("Community/\(user)", $0, "Plugin_\(user)_\($0)") }
 }
 
 /// The plugins Tests/PluginTests runs.
-let testedPlugins = ["AppSwitcher", "Clipboard", "MenuSearch", "PRCockpit", "Pomodoro", "Quicklinks", "Snippets", "StayAwake", "Todo", "UpNext", "WindowSwitcher", "Windows"]
+let testedPlugins = ["AppSwitcher", "Clipboard", "MenuSearch", "PRCockpit", "Pomodoro", "Quicklinks", "Snippets", "StayAwake", "Timers", "Todo", "UpNext", "WindowSwitcher", "Windows"]
 
 let stackbar: Package.Dependency = ProcessInfo.processInfo.environment["STACKBAR_PATH"].map { .package(name: "stackbar", path: $0) }
     ?? .package(url: "https://github.com/navbytes/stackbar", revision: stackbarRevision)
@@ -41,7 +53,7 @@ let package = Package(
     targets: plugins.map { plugin in
         // A prefix keeps plugin target names clear of stackbar's own targets.
         .executableTarget(
-            name: "Plugin_\(plugin.name)",
+            name: plugin.target,
             dependencies: [.product(name: "StackbarKit", package: "stackbar")],
             path: "\(plugin.category)/\(plugin.name)",
             exclude: ["README.md"]
