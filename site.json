@@ -515,6 +515,36 @@
       ],
       "version": "1.4.0"
     },
+    "io.navbytes.stackbar.plugins.menu-search": {
+      "changes": [
+        {
+          "notes": [
+            "First release."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "The menus of the app you're in, searchable from the palette, as Raycast's\nSearch Menu Items has it. In any app, open the palette, choose Search Menu\nItems and type part of an item (\"export\", \"view zoom\"). Return chooses it.\nEach row shows where the item lives (File \u203a Export) and its keyboard\nshortcut, so you learn them as you go. The items you choose most rank\nhigher for that app.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "reading the menus of the app you were in and choosing an item (`.menus`), which uses Accessibility access. Stackbar 0.25.0 or later."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel (how to use it)."
+        },
+        {
+          "label": "Commands",
+          "text": "Search Menu Items."
+        },
+        {
+          "label": "Leaves out",
+          "text": "the Apple menu, submenu titles and separators. Dimmed items show at the bottom and can't be chosen."
+        }
+      ],
+      "version": "1.0.0"
+    },
     "io.navbytes.stackbar.plugins.music": {
       "changes": [
         {
@@ -900,6 +930,36 @@
         }
       ],
       "version": "1.5.0"
+    },
+    "io.navbytes.stackbar.plugins.window-switcher": {
+      "changes": [
+        {
+          "notes": [
+            "First release."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Every open window in the command palette, as Raycast's Switch Windows has\nit. Open the palette, choose Switch Windows and type a few letters of the\napp or the window's title (\"saf pull\" finds Safari's Pull requests window).\nReturn brings that window to the front, out of the Dock if it was\nminimized; \u2318\u21e7C copies its title.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "listing and focusing windows (`.windows`), which uses Accessibility access. Stackbar 0.25.0 or later."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel (the windows open now)."
+        },
+        {
+          "label": "Commands",
+          "text": "Switch Windows."
+        },
+        {
+          "label": "Order",
+          "text": "front to back when nothing is typed; with more than one display, each row says which display the window is on."
+        }
+      ],
+      "version": "1.0.0"
     },
     "io.navbytes.stackbar.plugins.workspaces": {
       "changes": [
@@ -1671,6 +1731,14 @@
         }
       }
     },
+    "io.navbytes.stackbar.plugins.menu-search": {
+      "1.0.0": {
+        "panel": {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.menu-search/1.0.0/dark/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.menu-search/1.0.0/light/panel.png"
+        }
+      }
+    },
     "io.navbytes.stackbar.plugins.music": {
       "1.2.0": {
         "menuBar": {
@@ -1914,6 +1982,14 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.window-layouts/1.0.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.window-layouts/1.0.0/light/panel.png"
+        }
+      }
+    },
+    "io.navbytes.stackbar.plugins.window-switcher": {
+      "1.0.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.window-switcher/1.0.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.window-switcher/1.0.0/light/panel.png"
         }
       }
     },
