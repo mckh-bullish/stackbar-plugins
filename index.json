@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-06T03:57:56Z",
+  "generated" : "2026-11-06T04:46:18Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -149,6 +149,31 @@
       "symbol" : "doc.on.clipboard.fill",
       "updated" : "2026-11-06",
       "version" : "1.7.0"
+    },
+    {
+      "accent" : "blue",
+      "bundle" : "Productivity/io.navbytes.stackbar.clipboard-1.8.0.stackbarplugin",
+      "capabilities" : [
+        "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
+      "id" : "io.navbytes.stackbar.clipboard",
+      "minimumStackbar" : "0.26.0",
+      "name" : "Clipboard History",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.clipboard.png",
+      "sha256" : "4c167c19c167caa32dd8ce91486c8216b05b34c2ba855cdfa2b6c9a88a564da6",
+      "summary" : "Everything you copy, searchable and one keystroke from pasting back.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "settings"
+      ],
+      "symbol" : "doc.on.clipboard.fill",
+      "updated" : "2026-11-06",
+      "version" : "1.8.0"
     },
     {
       "accent" : "indigo",
@@ -534,6 +559,33 @@
       "symbol" : "shippingbox.fill",
       "updated" : "2026-11-06",
       "version" : "1.6.0"
+    },
+    {
+      "accent" : "cyan",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.docker-1.7.0.stackbarplugin",
+      "capabilities" : [
+        "Runs docker (not installed)",
+        "Opens your terminal app running a command it names, where you see it run"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
+      "id" : "io.navbytes.stackbar.plugins.docker",
+      "minimumStackbar" : "0.26.0",
+      "name" : "Docker",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.docker.png",
+      "sha256" : "d9f7e8364291b029971fd5bb6df74f08f925b7f9e539ac0a96ed018484bab804",
+      "summary" : "Your containers with live CPU and memory, Compose projects, and start, stop, restart and logs a click away.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "shippingbox.fill",
+      "updated" : "2026-11-06",
+      "version" : "1.7.0"
     },
     {
       "accent" : "amber",
@@ -1488,6 +1540,31 @@
       "version" : "1.6.0"
     },
     {
+      "accent" : "red",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.pomodoro-1.7.0.stackbarplugin",
+      "capabilities" : [
+
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Pomodoro",
+      "id" : "io.navbytes.stackbar.plugins.pomodoro",
+      "minimumStackbar" : "0.26.0",
+      "name" : "Pomodoro",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.pomodoro.png",
+      "sha256" : "b4b27dff1823a0ad34bb8586993ff7e4f0a06bc550f0d6e389a1c4ad155779e1",
+      "summary" : "A focus timer with presets, a progress ring, tags, long breaks and a week of focus in a chart.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "settings",
+        "widget"
+      ],
+      "symbol" : "timer",
+      "updated" : "2026-11-06",
+      "version" : "1.7.0"
+    },
+    {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.ports-1.0.0.stackbarplugin",
       "capabilities" : [
         "Runs /usr/sbin/lsof, /bin/kill"
@@ -1814,6 +1891,32 @@
       "version" : "1.5.0"
     },
     {
+      "accent" : "green",
+      "bundle" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor-1.6.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /bin/ps, /usr/sbin/sysctl, /usr/bin/vm_stat, /usr/sbin/netstat, /bin/df, /bin/kill",
+        "Reads your Mac's temperatures and fan speeds"
+      ],
+      "category" : "Monitoring",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
+      "id" : "io.navbytes.stackbar.plugins.system-monitor",
+      "minimumStackbar" : "0.26.0",
+      "name" : "System Monitor",
+      "publisher" : "navbytes",
+      "screenshot" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor.png",
+      "sha256" : "745f542d5eda5bdb84657103124c5020269b3d1c13ee298c8c5e3e0e474263f9",
+      "summary" : "CPU, memory, disk and network speed in the menu bar, the processes using the most, and alerts when one stays high.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "gauge.with.dots.needle.67percent",
+      "updated" : "2026-11-06",
+      "version" : "1.6.0"
+    },
+    {
       "accent" : "orange",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.timers-1.0.0.stackbarplugin",
       "capabilities" : [
@@ -2085,6 +2188,33 @@
       "symbol" : "character.bubble.fill",
       "updated" : "2026-11-06",
       "version" : "1.5.0"
+    },
+    {
+      "accent" : "teal",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.translate-1.6.0.stackbarplugin",
+      "capabilities" : [
+        "Reads the text you select and which app you're in",
+        "Reads everything you copy, and pastes into the app you're using",
+        "Reads the text in a part of the screen you choose",
+        "Connects to translate.googleapis.com, api-free.deepl.com, api.deepl.com",
+        "Reads the secret DEEPL_API_KEY"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate",
+      "id" : "io.navbytes.stackbar.plugins.translate",
+      "minimumStackbar" : "0.26.0",
+      "name" : "Translate",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.translate.png",
+      "sha256" : "7bf97dd2096e9009a3a94c7065675fa15efa2033affaa303632848dcbf2d8b65",
+      "summary" : "Translate the selected text in place, on your Mac or with Google or DeepL.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "character.bubble.fill",
+      "updated" : "2026-11-06",
+      "version" : "1.6.0"
     },
     {
       "accent" : "indigo",
@@ -3132,6 +3262,33 @@
       "symbol" : "calendar",
       "updated" : "2026-11-06",
       "version" : "1.5.0"
+    },
+    {
+      "accent" : "red",
+      "bundle" : "Productivity/io.navbytes.stackbar.up-next-1.6.0.stackbarplugin",
+      "capabilities" : [
+        "Reads your calendar events",
+        "Adds events to your calendars"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
+      "id" : "io.navbytes.stackbar.up-next",
+      "minimumStackbar" : "0.26.0",
+      "name" : "Up Next",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.up-next.png",
+      "sha256" : "1d7f1ced1ee8b62a76918fc1d89e44498e38b42cd5596b258d9723925a5fc941",
+      "summary" : "Your next meeting in the menu bar, with a countdown and one-click join.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "calendar",
+      "updated" : "2026-11-06",
+      "version" : "1.6.0"
     }
   ],
   "revoked" : [
@@ -3140,5 +3297,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "E+UvkUsRud69i0Pt/UDRHgKnk8w+F3Rr4kd3EfQMTkYh8Ags63tKfB+7paQ+s3bMVdR8hH+vgIKleUSkQs5bCg=="
+  "signature" : "4BtzTmHsEwmAYfQVA7huAOrTZnmDW7lTvklNspy+f8odO05tnEyjvXM1C38aSlMuVK8XA+/5DZCMBIl7DtqUBQ=="
 }

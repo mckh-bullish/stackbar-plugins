@@ -4,6 +4,12 @@
       "changes": [
         {
           "notes": [
+            "Search finds images by the text in them, read on your Mac with Apple's text recognition, and Copy Text in Image (\u2318\u21e7T) copies it."
+          ],
+          "version": "1.8.0"
+        },
+        {
+          "notes": [
             "The menu bar icon is off by default: \u2318\u21e7V and the palette open the history. It comes back while recording is paused, and Settings can keep it on.",
             "Agents can no longer read your clipboard unless you allow it in Stackbar's Settings \u2192 Agents."
           ],
@@ -28,7 +34,7 @@
           "version": "1.4.1"
         }
       ],
-      "description": "Everything you copy, searchable, pinnable and one keystroke from being pasted\nback. \u2318\u21e7V opens it from anywhere: type to filter, \u2191\u2193 and Return (or \u23181 to \u23189)\nto paste into the app you were in, \u2325Return to paste as plain text, \u2318P to pin\nand \u2325\u232b to delete. Formatted text keeps its formatting, and images are kept by\nthe host and pasted back.",
+      "description": "Everything you copy, searchable, pinnable and one keystroke from being pasted\nback. \u2318\u21e7V opens it from anywhere: type to filter, \u2191\u2193 and Return (or \u23181 to \u23189)\nto paste into the app you were in, \u2325Return to paste as plain text, \u2318P to pin\nand \u2325\u232b to delete. Formatted text keeps its formatting, and images are kept by\nthe host and pasted back. The text in a copied image (a screenshot, a\nphoto of a receipt) is read on your Mac, so typing finds the image, and \u2318\u21e7T\ncopies that text.",
       "facts": [
         {
           "label": "Needs",
@@ -40,7 +46,7 @@
         },
         {
           "label": "Settings",
-          "text": "how many items to keep, the order, pasting directly or only copying, showing matching copies in the palette's results, keeping images, plain text by default, how long to keep secrets (not at all, 5 minutes to an hour, or like any copy), apps and text patterns to ignore, and pausing the history."
+          "text": "how many items to keep, the order, pasting directly or only copying, showing matching copies in the palette's results, keeping images, finding images by their text, plain text by default, how long to keep secrets (not at all, 5 minutes to an hour, or like any copy), apps and text patterns to ignore, and pausing the history."
         },
         {
           "label": "Commands",
@@ -49,9 +55,13 @@
         {
           "label": "Agent tools",
           "text": "`recent_clips`, `search_clips` and `copy_clip`."
+        },
+        {
+          "label": "Requires",
+          "text": "Stackbar 0.26.0 or later."
         }
       ],
-      "version": "1.7.0"
+      "version": "1.8.0"
     },
     "io.navbytes.stackbar.plugins.app-switcher": {
       "changes": [
@@ -235,6 +245,12 @@
       "changes": [
         {
           "notes": [
+            "Open Shell on a running container opens your terminal app inside it."
+          ],
+          "version": "1.7.0"
+        },
+        {
+          "notes": [
             "CPU and memory for every running container, and the totals at the top of the panel.",
             "Start, restart or stop a whole Compose project from its section, or from the new Docker Compose Projects command.",
             "Stop All Docker Containers, from the palette or a hotkey."
@@ -260,11 +276,11 @@
           "version": "1.3.1"
         }
       ],
-      "description": "Your containers in the menu bar. The number is how many are running; the\npanel lists them grouped by Compose project, each with its CPU and memory,\nStart, Stop, Restart, Logs, Open (for a published port), Copy ID and Remove,\nand each project with Start all, Restart and Stop.",
+      "description": "Your containers in the menu bar. The number is how many are running; the\npanel lists them grouped by Compose project, each with its CPU and memory,\nStart, Stop, Restart, Open Shell, Logs, Open (for a published port), Copy ID\nand Remove,\nand each project with Start all, Restart and Stop.\n\n- **Open Shell** (\u2318T on a running container) opens your terminal app in\n  `docker exec -it <container>`, with bash when the image has it.",
       "facts": [
         {
           "label": "Needs",
-          "text": "to run `docker`, from Docker Desktop, OrbStack, Colima or Rancher Desktop. No network, files or secrets of its own."
+          "text": "to run `docker`, from Docker Desktop, OrbStack, Colima or Rancher Desktop. No network, files or secrets of its own. Open Shell needs to open your terminal app."
         },
         {
           "label": "Surfaces",
@@ -291,11 +307,15 @@
           "text": "Docker Containers, Docker Compose Projects, Stop All Docker Containers, Docker Logs (the last 200 lines of one container), Remove Stopped Docker Containers."
         },
         {
+          "label": "Requires",
+          "text": "Stackbar 0.26.0 or later."
+        },
+        {
           "label": "Agent tool",
           "text": "`containers` lists every container with its image, state, CPU and memory."
         }
       ],
-      "version": "1.6.0"
+      "version": "1.7.0"
     },
     "io.navbytes.stackbar.plugins.emoji": {
       "changes": [
@@ -697,6 +717,12 @@
       "changes": [
         {
           "notes": [
+            "The end-of-session notification has Start Break (or Start Focus) and 5 More Minutes buttons, unless Auto is on."
+          ],
+          "version": "1.7.0"
+        },
+        {
+          "notes": [
             "A long break every four sessions (or two to six, or off), with dots under the timer for where you are in the round.",
             "The last seven days of focus in a chart under the timer."
           ],
@@ -722,7 +748,7 @@
           "version": "1.3.1"
         }
       ],
-      "description": "A focus timer in the Stackbar look: red for focus, teal for breaks. Pick Focus or Break, a preset (25, 50 or\n90 minutes of focus; 5, 10 or 15 of break), and press play. The countdown and\nthe ring around it move on their own, the menu bar shows the time\nleft (dimmed behind a pause sign while paused), and a chime and a\nnotification mark the end. Today's finished sessions\nand focused minutes sit under the timer, with the last seven days in a chart.",
+      "description": "A focus timer in the Stackbar look: red for focus, teal for breaks. Pick Focus or Break, a preset (25, 50 or\n90 minutes of focus; 5, 10 or 15 of break), and press play. The countdown and\nthe ring around it move on their own, the menu bar shows the time\nleft (dimmed behind a pause sign while paused), and a chime and a\nnotification mark the end, with buttons to start the next session or take five more minutes. Today's finished sessions\nand focused minutes sit under the timer, with the last seven days in a chart.",
       "facts": [
         {
           "label": "Needs",
@@ -758,10 +784,10 @@
         },
         {
           "label": "Requires",
-          "text": "Stackbar 0.14.0 or later."
+          "text": "Stackbar 0.26.0 or later."
         }
       ],
-      "version": "1.6.0"
+      "version": "1.7.0"
     },
     "io.navbytes.stackbar.plugins.ports": {
       "changes": [
@@ -911,6 +937,12 @@
       "changes": [
         {
           "notes": [
+            "Temperatures (CPU, GPU, SSD, battery) and fan speeds in the panel, and CPU temperature as a menu bar choice."
+          ],
+          "version": "1.6.0"
+        },
+        {
+          "notes": [
             "Download and upload speeds in the panel, the widget and (if you pick it) the menu bar.",
             "A notification when CPU or memory stays high for a minute, naming the process behind it, and when the disk is nearly full.",
             "Lighter: it reads `ps` instead of running `top` for two seconds every ten.",
@@ -937,11 +969,11 @@
           "version": "1.2.1"
         }
       ],
-      "description": "CPU, memory and network in the menu bar, with the processes using the most a\nclick away and a notification when something stays high.",
+      "description": "CPU, memory, network and temperature in the menu bar, with the processes\nusing the most a click away and a notification when something stays high.",
       "facts": [
         {
           "label": "Needs",
-          "text": "to run `ps`, `sysctl`, `vm_stat`, `netstat`, `df` and `kill` (all come with macOS). No network, files or secrets."
+          "text": "to run `ps`, `sysctl`, `vm_stat`, `netstat`, `df` and `kill` (all come with macOS), and the Mac's temperature sensors and fans, which Stackbar reads for it. No network, files or secrets."
         },
         {
           "label": "Surfaces",
@@ -953,7 +985,7 @@
         },
         {
           "label": "In the panel",
-          "text": "a CPU chart for the last five minutes, load averages, memory and disk, download and upload speeds with their recent history, and the top eight processes, each with Copy PID and Quit Process."
+          "text": "a CPU chart for the last five minutes, load averages, memory and disk, download and upload speeds with their recent history, CPU, GPU, SSD and battery temperatures and fan speeds (where the Mac reports them), and the top eight processes, each with Copy PID and Quit Process."
         },
         {
           "label": "Alerts",
@@ -961,14 +993,18 @@
         },
         {
           "label": "Settings",
-          "text": "what the menu bar shows (CPU and memory, CPU, memory, or download speed), alerts and the CPU line, and whether processes are sorted by CPU or memory."
+          "text": "what the menu bar shows (CPU and memory, CPU, memory, or download speed, or CPU temperature), alerts and the CPU line, and whether processes are sorted by CPU or memory."
         },
         {
           "label": "Agent tool",
-          "text": "`usage` returns CPU, memory, disk, network and the busiest processes."
+          "text": "`usage` returns CPU, memory, disk, network, temperatures and the busiest processes."
+        },
+        {
+          "label": "Requires",
+          "text": "Stackbar 0.26.0 or later."
         }
       ],
-      "version": "1.5.0"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.plugins.timers": {
       "changes": [
@@ -1113,6 +1149,12 @@
       "changes": [
         {
           "notes": [
+            "Translate Text on Screen: drag over any text, even text in a picture, and the translation is copied."
+          ],
+          "version": "1.6.0"
+        },
+        {
+          "notes": [
             "Translate what you typed: when nothing in the palette matches, Translate offers to translate the text."
           ],
           "version": "1.5.0"
@@ -1138,7 +1180,7 @@
         },
         {
           "label": "Needs",
-          "text": "the selection (`.context`), the clipboard (as a fallback, and to paste), `translate.googleapis.com`, `api-free.deepl.com` and `api.deepl.com`, and the secret `DEEPL_API_KEY`, which is asked for only when you choose DeepL."
+          "text": "the selection (`.context`), the clipboard (as a fallback, and to paste), `translate.googleapis.com`, `api-free.deepl.com` and `api.deepl.com`, and the secret `DEEPL_API_KEY`, which is asked for only when you choose DeepL. Translate Text on Screen reads the screen where you drag (macOS asks for Screen Recording once)."
         },
         {
           "label": "Surfaces",
@@ -1150,10 +1192,14 @@
         },
         {
           "label": "Commands",
-          "text": "Translate Selection, Translate Selection in Google Translate."
+          "text": "Translate Selection, Translate Text on Screen (drag over any text, even in an image or a video; the translation is copied), Translate Selection in Google Translate."
+        },
+        {
+          "label": "Requires",
+          "text": "Stackbar 0.26.0 or later."
         }
       ],
-      "version": "1.5.0"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.plugins.window-switcher": {
       "changes": [
@@ -1519,6 +1565,13 @@
       "changes": [
         {
           "notes": [
+            "Add Calendar Event: type \"Dentist fri 9:30\" in the palette and it goes in your calendar.",
+            "Snooze 5 Min on meeting reminders."
+          ],
+          "version": "1.6.0"
+        },
+        {
+          "notes": [
             "Step through the week: chips under the meeting pick any of the next seven days.",
             "\"Free until 14:30\" in the header while you're between meetings.",
             "Meetings that clash with another are flagged, and the row says which.",
@@ -1545,11 +1598,11 @@
           "version": "1.3.1"
         }
       ],
-      "description": "Your next meeting in the menu bar, with a countdown and one-click join. It\nfinds the video link in the location, URL or notes (Zoom, Meet, Teams, Webex\nand a dozen more), reminds you a few minutes before, and can open the call for\nyou when it starts.",
+      "description": "Your next meeting in the menu bar, with a countdown and one-click join. It\nfinds the video link in the location, URL or notes (Zoom, Meet, Teams, Webex\nand a dozen more), reminds you a few minutes before, and can open the call for\nyou when it starts.\n\n- **Reminders** have Join and Snooze 5 Min buttons.",
       "facts": [
         {
           "label": "Needs",
-          "text": "your calendars in Calendar.app, through the host, which asks for access once. No network."
+          "text": "your calendars in Calendar.app, through the host, which asks for access once, and permission to add events (for Add Calendar Event). No network."
         },
         {
           "label": "Surfaces",
@@ -1561,14 +1614,18 @@
         },
         {
           "label": "Commands",
-          "text": "Join Next Meeting, Copy Next Meeting Link and Today's Meetings. Give them a hotkey or an alias in Stackbar's Settings, or run them from Spotlight, Shortcuts or a `stackbar://` link."
+          "text": "Join Next Meeting, Copy Next Meeting Link, Today's Meetings, Add Calendar Event (\"Lunch with Sam tomorrow 1pm for 45m\", \"Offsite fri\" for all day) and Snooze Meeting Reminder. Give them a hotkey or an alias in Stackbar's Settings, or run them from Spotlight, Shortcuts or a `stackbar://` link."
         },
         {
           "label": "Agent tools",
           "text": "`next_meeting`, `agenda` and `join_next`."
+        },
+        {
+          "label": "Requires",
+          "text": "Stackbar 0.26.0 or later."
         }
       ],
-      "version": "1.5.0"
+      "version": "1.6.0"
     }
   },
   "demos": {
@@ -1590,6 +1647,12 @@
         "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.7.0/light/demo/b07000be5086/panel.png",
         "seconds": 7.2,
         "surface": "panel"
+      },
+      "1.8.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/dark/demo/b07000be5086/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/light/demo/b07000be5086/panel.png",
+        "seconds": 7.2,
+        "surface": "panel"
       }
     },
     "io.navbytes.stackbar.plugins.pomodoro": {
@@ -1608,6 +1671,12 @@
       "1.6.0": {
         "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/dark/demo/136e9e2e0dae/panel.png",
         "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/light/demo/136e9e2e0dae/panel.png",
+        "seconds": 4.0,
+        "surface": "panel"
+      },
+      "1.7.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.0/dark/demo/136e9e2e0dae/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.0/light/demo/136e9e2e0dae/panel.png",
         "seconds": 4.0,
         "surface": "panel"
       }
@@ -1698,6 +1767,16 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.7.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.7.0/light/panel.png"
+        }
+      },
+      "1.8.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/light/panel.png"
         }
       }
     },
@@ -1830,6 +1909,16 @@
         "panel": {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/light/panel.png"
+        }
+      },
+      "1.7.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.7.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.7.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.7.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.7.0/light/panel.png"
         }
       }
     },
@@ -2151,6 +2240,16 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.6.0/light/panel.png"
         }
+      },
+      "1.7.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.ports": {
@@ -2253,6 +2352,16 @@
           "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/dark/panel.png",
           "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.5.0/light/panel.png"
         }
+      },
+      "1.6.0": {
+        "menuBar": {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.6.0/dark/menuBar.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.6.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.6.0/dark/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.6.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.timers": {
@@ -2342,6 +2451,12 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.5.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.5.0/light/panel.png"
+        }
+      },
+      "1.6.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.6.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.6.0/light/panel.png"
         }
       }
     },
@@ -2677,6 +2792,16 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/light/panel.png"
         }
+      },
+      "1.6.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.0/light/panel.png"
+        }
       }
     }
   },
@@ -2746,6 +2871,29 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.7.0/dark/previews/insights/window.png",
           "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.7.0/light/previews/insights/window.png",
+          "name": "insights",
+          "surface": "window",
+          "title": "What you copy, and from where"
+        }
+      ],
+      "1.8.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Everything you copied, one keystroke away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/dark/previews/pinned/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/light/previews/pinned/panel.png",
+          "name": "pinned",
+          "surface": "panel",
+          "title": "Pin what you paste every day"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/dark/previews/insights/window.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/light/previews/insights/window.png",
           "name": "insights",
           "surface": "window",
           "title": "What you copy, and from where"
@@ -2906,6 +3054,29 @@
         {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/dark/previews/widget/widget.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.6.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your stack's health on the desktop"
+        }
+      ],
+      "1.7.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.7.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.7.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every container, grouped by Compose project"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.7.0/dark/previews/trouble/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.7.0/light/previews/trouble/panel.png",
+          "name": "trouble",
+          "surface": "panel",
+          "title": "Catch the container that keeps crashing"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.7.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.7.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "Your stack's health on the desktop"
@@ -3225,6 +3396,29 @@
           "surface": "widget",
           "title": "Your focus timer on the desktop"
         }
+      ],
+      "1.7.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Twenty-five focused minutes, counting down"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.0/dark/previews/break/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.0/light/previews/break/panel.png",
+          "name": "break",
+          "surface": "panel",
+          "title": "A real break between sessions"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.0/dark/previews/widget/widget.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your focus timer on the desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.ports": {
@@ -3338,6 +3532,29 @@
           "surface": "widget",
           "title": "Your Mac's load on the desktop"
         }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.6.0/dark/previews/hero/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.6.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "CPU, memory and disk at a glance"
+        },
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.6.0/dark/previews/memory/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.6.0/light/previews/memory/panel.png",
+          "name": "memory",
+          "surface": "panel",
+          "title": "Find what is eating your memory"
+        },
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.6.0/dark/previews/widget/widget.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.6.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your Mac's load on the desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.timers": {
@@ -3415,6 +3632,15 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.5.0/dark/previews/hero/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.5.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Translate on your Mac, without leaving the app you're in"
+        }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.6.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.6.0/light/previews/hero/panel.png",
           "name": "hero",
           "surface": "panel",
           "title": "Translate on your Mac, without leaving the app you're in"
@@ -3742,6 +3968,29 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/dark/previews/widget/widget.png",
           "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.5.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "What's next, on your desktop"
+        }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your next meeting, one click from joining"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.0/dark/previews/week/window.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.0/light/previews/week/window.png",
+          "name": "week",
+          "surface": "window",
+          "title": "The day and the week's meeting load"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.0/dark/previews/widget/widget.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "What's next, on your desktop"
