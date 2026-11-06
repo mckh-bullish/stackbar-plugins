@@ -66,10 +66,19 @@ jobs:
     needs: changes
     if: needs.changes.outputs.macos == 'true'
     runs-on: macos-26
-    timeout-minutes: 45
+    # Each plugin soaks for a minute, so this grows with the store: 34
+    # plugins took the whole 45 minutes on 11-06 and the job was cancelled
+    # after "check: ok".
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      # A pull request soaks only the plugins it changed; a push to main
+      # soaks them all, so a StackbarKit pin change is soaked there.
       - run: scripts/check.sh
+        env:
+          SOAK_CHANGED_SINCE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
 
   # One check that is green when every job that ran passed and the rest were
   # skipped on purpose. Make this the required status check, not the jobs
