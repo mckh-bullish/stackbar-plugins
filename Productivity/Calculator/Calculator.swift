@@ -11,14 +11,14 @@ final class Calculator: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.calculator",
         name: "Calculator",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "Sums, units, currencies and time zones answered right in the command palette.",
         surfaces: [.panel, .settings],
         // Exchange rates are fetched at launch and every six hours after,
         // unless currency conversion is turned off in Settings.
         triggers: [.launch, .every(.seconds(6 * 3600))],
         capabilities: [.network("api.frankfurter.dev")],
-        minimumStackbar: "0.20.0",
+        minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Calculator",
         accent: .orange,
         symbol: "equal.square.fill"
@@ -90,7 +90,11 @@ final class Calculator: StackbarPlugin {
                     ContentUnavailableView("Type a sum", symbol: "equal.square", message: "Like 12*(3+4), 15% * 80, 3h in min, 100 usd in eur or 5pm london in tokyo.")
                 }
             }
-            .rootSearch(section: "Calculator")
+            // Only text that can have an answer (a number, or `now in
+            // tokyo`) reaches it. A matched pattern also puts the answer
+            // above everything else, so a past answer in the panel, which
+            // the palette finds too, never sits on top of the live one.
+            .rootSearch(section: "Calculator", matching: #"(?is).*(\p{N}| in | to ).*"#)
     }
 
     // MARK: Panel

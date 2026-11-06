@@ -9,7 +9,7 @@ no answer, so it never crowds a normal search. The panel keeps your last ten
 answers.
 
 - **Needs:** network access to `api.frankfurter.dev` for exchange rates.
-  Stackbar 0.20.0 or later.
+  Stackbar 0.21.0 or later.
 - **Settings:** turn currency conversion off, and Calculator makes no
   network requests at all.
 - **Surfaces:** panel, settings.
@@ -22,6 +22,12 @@ answers.
 - **Time zones:** any city in a time zone's name (`tokyo`, `new york`), plus
   common ones like `sf`, `nyc`, `bangalore`, `uk` and abbreviations like
   `pst` and `ist`. Without a starting place, the time is yours.
+
+## What's new in 1.3.0
+
+- The answer is always first in the palette, above a past answer to the
+  same sum that the panel keeps.
+- The palette only asks Calculator about text that can have an answer.
 
 ## What's new in 1.2.0
 
