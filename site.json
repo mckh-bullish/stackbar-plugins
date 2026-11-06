@@ -4,6 +4,12 @@
       "changes": [
         {
           "notes": [
+            "Every copy now has a preview, short ones too, so the palette's list keeps its detail pane and stops jumping as you move through it."
+          ],
+          "version": "1.8.1"
+        },
+        {
+          "notes": [
             "Search finds images by the text in them, read on your Mac with Apple's text recognition, and Copy Text in Image (\u2318\u21e7T) copies it."
           ],
           "version": "1.8.0"
@@ -61,7 +67,7 @@
           "text": "Stackbar 0.26.0 or later."
         }
       ],
-      "version": "1.8.0"
+      "version": "1.8.1"
     },
     "io.navbytes.stackbar.plugins.app-switcher": {
       "changes": [
@@ -1684,6 +1690,12 @@
         "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/light/demo/b07000be5086/panel.png",
         "seconds": 7.2,
         "surface": "panel"
+      },
+      "1.8.1": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/dark/demo/b07000be5086/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/light/demo/b07000be5086/panel.png",
+        "seconds": 7.2,
+        "surface": "panel"
       }
     },
     "io.navbytes.stackbar.plugins.pomodoro": {
@@ -1808,6 +1820,16 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/light/panel.png"
+        }
+      },
+      "1.8.1": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/light/panel.png"
         }
       }
     },
@@ -2941,6 +2963,29 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/dark/previews/insights/window.png",
           "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.0/light/previews/insights/window.png",
+          "name": "insights",
+          "surface": "window",
+          "title": "What you copy, and from where"
+        }
+      ],
+      "1.8.1": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Everything you copied, one keystroke away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/dark/previews/pinned/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/light/previews/pinned/panel.png",
+          "name": "pinned",
+          "surface": "panel",
+          "title": "Pin what you paste every day"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/dark/previews/insights/window.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.8.1/light/previews/insights/window.png",
           "name": "insights",
           "surface": "window",
           "title": "What you copy, and from where"
