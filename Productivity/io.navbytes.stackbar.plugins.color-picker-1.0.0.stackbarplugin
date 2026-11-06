@@ -1,0 +1,34 @@
+{
+  "format" : 1,
+  "manifest" : {
+    "accent" : "pink",
+    "capabilities" : [
+
+    ],
+    "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/ColorPicker",
+    "id" : "io.navbytes.stackbar.plugins.color-picker",
+    "minimumStackbar" : "0.26.0",
+    "name" : "Color Picker",
+    "summary" : "Pick a color from anywhere on screen and copy it as hex, RGB or HSL.",
+    "surfaces" : [
+      "panel",
+      "settings"
+    ],
+    "symbol" : "eyedropper",
+    "triggers" : [
+      {
+        "launch" : {
+
+        }
+      }
+    ],
+    "version" : "1.0.0"
+  },
+  "publisher" : {
+    "name" : "navbytes",
+    "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w="
+  },
+  "signature" : "E+hkCB8spG0n+YStYkjrefrIZUvumaowJXmhvEQtyy+5VB8vjMjwBGbitsdfD3dfBjWS20SI9WLZtSB3mMc+Bg==",
+  "source" : "import StackbarKit\nimport Foundation\n\n/// Picks a color from anywhere on screen with the system magnifier and\n/// copies it as hex, RGB or HSL, as Raycast's Pick Color does. The last\n/// colors picked stay in a list, so a palette you're matching is a few\n/// keys away.\n@main\nfinal class ColorPicker: StackbarPlugin {\n    static let manifest = Manifest(\n        id: \"io.navbytes.stackbar.plugins.color-picker\",\n        name: \"Color Picker\",\n        version: \"1.0.0\",\n        summary: \"Pick a color from anywhere on screen and copy it as hex, RGB or HSL.\",\n        surfaces: [.panel, .settings],\n        triggers: [.launch],\n        capabilities: [],\n        minimumStackbar: \"0.26.0\",\n        homepage: \"https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/ColorPicker\",\n        accent: .pink,\n        symbol: \"eyedropper\"\n    )\n\n    let theme = Theme.pink\n\n    enum Format: String, CaseIterable {\n        case hex = \"Hex\", rgb = \"RGB\", hsl = \"HSL\"\n    }\n\n    struct Picked: Codable, Equatable, Identifiable {\n        var hex: String\n        var at: Date\n        var id: String { hex }\n    }\n\n    /// Newest first, one entry per color.\n    @Stored(\"history\") var history: [Picked] = []\n    @Stored(\"format\") var format = Format.hex.rawValue\n    static let historyLimit = 30\n\n    static func text(_ color: PickedColor, as format: Format) -> String {\n        switch format {\n        case .hex: return color.hex\n        case .rgb: return color.rgb\n        case .hsl: return color.hsl\n        }\n    }\n\n    var chosenFormat: Format { Format(rawValue: format) ?? .hex }\n\n    func remember(_ color: PickedColor) {\n        history = Array(([Picked(hex: color.hex, at: Date())] + history.filter { $0.hex != color.hex }).prefix(Self.historyLimit))\n    }\n\n    /// Shows the magnifier; nil when the person pressed Escape.\n    func pick() async throws -> String? {\n        guard let color = try await Stackbar.pickColor() else { return nil }\n        remember(color)\n        let text = Self.text(color, as: chosenFormat)\n        Stackbar.copy(text)\n        return text\n    }\n\n    func row(_ picked: Picked) -> Row {\n        guard let color = PickedColor(hex: picked.hex) else { return Row(picked.hex) }\n        var row = Row(Self.text(color, as: chosenFormat), subtitle: Format.allCases.filter { $0 != chosenFormat }.map { Self.text(color, as: $0) }.joined(separator: \" · \"), symbol: \"circle.fill\", key: picked.hex)\n            .preview(text: \"\\(color.hex)\\n\\(color.rgb)\\n\\(color.hsl)\", caption: picked.at.formatted(date: .abbreviated, time: .shortened))\n        // The chosen format first, so Return copies it; ⌘1-3 always mean hex, RGB, HSL.\n        let shortcuts: [Format: String] = [.hex: \"cmd+1\", .rgb: \"cmd+2\", .hsl: \"cmd+3\"]\n        for format in [chosenFormat] + Format.allCases.filter({ $0 != chosenFormat }) {\n            row = row.action(\"Copy \\(format.rawValue)\", shortcut: shortcuts[format]) { Stackbar.copy(Self.text(color, as: format)) }\n        }\n        return row.action(\"Remove\", shortcut: \"ctrl+x\", role: .critical) { self.history.removeAll { $0.hex == picked.hex } }\n    }\n\n    // MARK: Commands\n\n    var commands: [Command] {\n        Command(\"pick\", title: \"Pick Color\", subtitle: \"Click anywhere on screen to copy its color\", symbol: \"eyedropper\", keywords: [\"color\", \"colour\", \"eyedropper\", \"hex\", \"picker\"]) { _ in\n            guard let text = try await self.pick() else { return .message(\"No color picked\") }\n            return .message(\"Copied \\(text)\")\n        }\n        Command(\"history\", title: \"Picked Colors\", subtitle: \"The colors you picked, to copy again\", symbol: \"swatchpalette\", keywords: [\"color\", \"colour\", \"history\", \"palette\"])\n            .view { _ in\n                if self.history.isEmpty {\n                    ContentUnavailableView(\"No colors yet\", symbol: \"eyedropper\", message: \"Run Pick Color and click anywhere on screen.\")\n                } else {\n                    List {\n                        ForEach(self.history) { picked in self.row(picked) }\n                    }\n                }\n            }\n    }\n\n    // MARK: Surfaces\n\n    var panel: ViewContent {\n        PanelHeader(\"Color Picker\", subtitle: \"Copies as \\(chosenFormat.rawValue)\", symbol: \"eyedropper\", theme: theme)\n        Button(\"Pick a Color\", symbol: \"eyedropper\") { _ = try await self.pick() }\n        if history.isEmpty {\n            EmptyState(\"Any pixel, one click\", symbol: \"eyedropper\", message: \"Pick a color and it's copied. Picked Colors in the palette keeps the last \\(Self.historyLimit).\", theme: theme)\n        } else {\n            List {\n                Section(\"Recent\") {\n                    ForEach(history.prefix(8)) { picked in self.row(picked) }\n                }\n            }\n        }\n    }\n\n    var settings: ViewContent {\n        Section(\"Copying\") {\n            Picker(\"Copy as\", options: Format.allCases.map(\\.rawValue), selection: format) { self.format = $0 }\n        }\n        Section(\"History\") {\n            Button(\"Clear Picked Colors\", symbol: \"trash\", role: .critical) { self.history = [] }\n        }\n    }\n}\n",
+  "sourceDigest" : "15976315bb7f26e2be9fc85c8a8405841f69c2e100684cd07397f934d91c614f"
+}

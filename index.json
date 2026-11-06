@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-06T04:46:18Z",
+  "generated" : "2026-11-06T04:51:57Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -412,6 +412,51 @@
       "symbol" : "equal.square.fill",
       "updated" : "2026-11-06",
       "version" : "1.2.0"
+    },
+    {
+      "accent" : "pink",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.color-picker-1.0.0.stackbarplugin",
+      "capabilities" : [
+
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/ColorPicker",
+      "id" : "io.navbytes.stackbar.plugins.color-picker",
+      "minimumStackbar" : "0.26.0",
+      "name" : "Color Picker",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.color-picker.png",
+      "sha256" : "d0d4b5e24b73b6bb9ea6a7308abd86468fc8f513fff39538fdd31e750134f0dc",
+      "summary" : "Pick a color from anywhere on screen and copy it as hex, RGB or HSL.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "eyedropper",
+      "updated" : "2026-11-06",
+      "version" : "1.0.0"
+    },
+    {
+      "accent" : "indigo",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.dictionary-1.0.0.stackbarplugin",
+      "capabilities" : [
+
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Dictionary",
+      "id" : "io.navbytes.stackbar.plugins.dictionary",
+      "minimumStackbar" : "0.26.0",
+      "name" : "Dictionary",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.dictionary.png",
+      "sha256" : "5276a84843705b85126322a3db8a3c91b21baa0f8c8fc7adf5cf505f9eebb3f5",
+      "summary" : "Look words up in the Mac's own Dictionary, offline, from the palette.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "character.book.closed",
+      "updated" : "2026-11-06",
+      "version" : "1.0.0"
     },
     {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.docker-1.0.0.stackbarplugin",
@@ -3297,5 +3342,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "4BtzTmHsEwmAYfQVA7huAOrTZnmDW7lTvklNspy+f8odO05tnEyjvXM1C38aSlMuVK8XA+/5DZCMBIl7DtqUBQ=="
+  "signature" : "FrnQz8ApuJ793FS5KX4vJKZflgbONuPFDhLUaMGHnRXEbJHnYvYszINpvMO6XHzA5WrovzM+HwADHCmBHKO3Dg=="
 }

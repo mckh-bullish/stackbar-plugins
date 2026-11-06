@@ -1,0 +1,33 @@
+{
+  "format" : 1,
+  "manifest" : {
+    "accent" : "indigo",
+    "capabilities" : [
+
+    ],
+    "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Dictionary",
+    "id" : "io.navbytes.stackbar.plugins.dictionary",
+    "minimumStackbar" : "0.26.0",
+    "name" : "Dictionary",
+    "summary" : "Look words up in the Mac's own Dictionary, offline, from the palette.",
+    "surfaces" : [
+      "panel"
+    ],
+    "symbol" : "character.book.closed",
+    "triggers" : [
+      {
+        "launch" : {
+
+        }
+      }
+    ],
+    "version" : "1.0.0"
+  },
+  "publisher" : {
+    "name" : "navbytes",
+    "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w="
+  },
+  "signature" : "jEOQkLubkVZ2BLNMSIFN865RFVVL64D9S1d7OWNagvAjUNcVNNqMiSZdm9By40tw2u2gY6zmDv38+ukT6LH8Ag==",
+  "source" : "import StackbarKit\nimport Foundation\n\n/// Looks words up in the Mac's own Dictionary, offline, from the palette:\n/// type \"define serendipity\" and the definition is right there. Words you\n/// looked up stay in a list.\n@main\nfinal class Dictionary: StackbarPlugin {\n    static let manifest = Manifest(\n        id: \"io.navbytes.stackbar.plugins.dictionary\",\n        name: \"Dictionary\",\n        version: \"1.0.0\",\n        summary: \"Look words up in the Mac's own Dictionary, offline, from the palette.\",\n        surfaces: [.panel],\n        triggers: [.launch],\n        capabilities: [],\n        minimumStackbar: \"0.26.0\",\n        homepage: \"https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Dictionary\",\n        accent: .indigo,\n        symbol: \"character.book.closed\"\n    )\n\n    let theme = Theme.indigo\n\n    /// Newest first.\n    @Stored(\"recent\") var recent: [String] = []\n    var found: Definition?\n    var looked = \"\"\n\n    func lookUp(_ text: String) async {\n        let word = text.trimmingCharacters(in: .whitespacesAndNewlines)\n        looked = word\n        guard !word.isEmpty else { found = nil; return }\n        found = (try? await Stackbar.define(String(word.prefix(Definition.maxQuery)))) ?? nil\n    }\n\n    func remember(_ word: String) {\n        recent = Array(([word] + recent.filter { $0.lowercased() != word.lowercased() }).prefix(20))\n    }\n\n    /// The definition's first sentence-ish piece, for a row's subtitle.\n    static func gist(_ text: String) -> String {\n        let flat = text.replacingOccurrences(of: \"\\n\", with: \" \")\n        return flat.count > 140 ? String(flat.prefix(140)) + \"…\" : flat\n    }\n\n    func row(_ definition: Definition) -> Row {\n        Row(definition.word, subtitle: Self.gist(definition.text), symbol: \"character.book.closed\", key: definition.word)\n            .preview(text: definition.text)\n            .action(\"Copy Definition\") { self.remember(definition.word); Stackbar.copy(definition.text) }\n            .action(\"Copy Word\", shortcut: \"cmd+shift+c\") { Stackbar.copy(definition.word) }\n            .action(\"Open in Dictionary\", shortcut: \"cmd+o\") {\n                self.remember(definition.word)\n                let encoded = definition.word.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? definition.word\n                Stackbar.open(\"dict://\\(encoded)\")\n            }\n    }\n\n    // MARK: Commands\n\n    var commands: [Command] {\n        Command(\"define\", title: \"Define Word\", subtitle: \"Look a word up in the Mac's Dictionary\", symbol: \"character.book.closed\", keywords: [\"define\", \"dictionary\", \"meaning\", \"word\", \"thesaurus\"])\n            .view(search: { invocation in await self.lookUp(invocation.text) }) { _ in\n                if let found = self.found {\n                    List { self.row(found) }\n                } else if self.looked.isEmpty {\n                    if self.recent.isEmpty {\n                        ContentUnavailableView(\"Type a word\", symbol: \"character.book.closed\", message: \"Definitions come from the Mac's own Dictionary and work offline.\")\n                    } else {\n                        List {\n                            Section(\"Recent\") {\n                                ForEach(self.recent) { word in\n                                    Row(word, symbol: \"clock.arrow.circlepath\", key: word)\n                                        .navigate(\"Define\", to: \"define\", arguments: [\"text\": word])\n                                }\n                            }\n                        }\n                    }\n                } else {\n                    ContentUnavailableView(\"No definition\", symbol: \"questionmark.circle\", message: \"The Mac's Dictionary has nothing for \\\"\\(self.looked)\\\". Check the spelling, or add dictionaries in the Dictionary app's settings.\")\n                }\n            }\n    }\n\n    // MARK: Panel\n\n    var panel: ViewContent {\n        PanelHeader(\"Dictionary\", subtitle: \"Define Word in the palette\", symbol: \"character.book.closed\", theme: theme)\n        if recent.isEmpty {\n            EmptyState(\"Words, offline\", symbol: \"character.book.closed\", message: \"Open the palette and type Define Word, then the word. Definitions come from the Mac's own Dictionary.\", theme: theme)\n        } else {\n            List {\n                Section(\"Recent\") {\n                    ForEach(recent.prefix(8)) { word in Row(word, symbol: \"clock.arrow.circlepath\", key: word) }\n                }\n            }\n        }\n    }\n}\n",
+  "sourceDigest" : "fa5b22fd43aa0759f2133df544903d147df322bc5cf0b137f1e905cffc04a546"
+}

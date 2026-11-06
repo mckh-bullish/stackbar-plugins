@@ -241,6 +241,37 @@
       ],
       "version": "1.2.0"
     },
+    "io.navbytes.stackbar.plugins.color-picker": {
+      "changes": [
+        {
+          "notes": [
+            "First version: pick, copy as hex, RGB or HSL, and a list of recent colors."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Pick a color from anywhere on screen and copy it. Run **Pick Color** from the palette (or press the button in the panel), click any pixel with the magnifier, and the color is on your clipboard as hex, RGB or HSL.\n\n**Picked Colors** lists the last 30 colors you picked. Return copies a color in your chosen format, and \u23181, \u23182 and \u23183 copy it as hex, RGB or HSL.\n\n## What it needs\n\nNothing. The magnifier is macOS's own, and Stackbar 0.26.0 or later.\n\n## Settings\n\n- **Clear Picked Colors** empties the list.",
+      "facts": [
+        {
+          "label": "Copy as",
+          "text": "hex (`#0A60C8`), RGB (`rgb(10, 96, 200)`) or HSL (`hsl(213, 90%, 41%)`)."
+        }
+      ],
+      "version": "1.0.0"
+    },
+    "io.navbytes.stackbar.plugins.dictionary": {
+      "changes": [
+        {
+          "notes": [
+            "First version: definitions in the palette, copy or open in Dictionary, and recent words."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Look words up in the Mac's own Dictionary without leaving what you're doing. Open the palette, type **Define Word**, then the word, and the definition shows as you type. It works offline.\n\nReturn copies the definition, \u2318\u21e7C copies the word, and \u2318O opens it in the Dictionary app. Words you used stay in a Recent list.\n\n## What it needs\n\nNothing, and Stackbar 0.26.0 or later. It uses the dictionaries turned on in the Dictionary app's settings, so other languages work too.",
+      "facts": [],
+      "version": "1.0.0"
+    },
     "io.navbytes.stackbar.plugins.docker": {
       "changes": [
         {
@@ -1857,6 +1888,22 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.2.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.2.0/light/panel.png"
+        }
+      }
+    },
+    "io.navbytes.stackbar.plugins.color-picker": {
+      "1.0.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.color-picker/1.0.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.color-picker/1.0.0/light/panel.png"
+        }
+      }
+    },
+    "io.navbytes.stackbar.plugins.dictionary": {
+      "1.0.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.dictionary/1.0.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.dictionary/1.0.0/light/panel.png"
         }
       }
     },
