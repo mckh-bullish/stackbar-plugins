@@ -15,7 +15,7 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.8.0",
+        version: "1.8.1",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
@@ -650,7 +650,10 @@ final class Clipboard: StackbarPlugin {
                 let expiry = secretMinutes > 0 && !entry.pinned ? " · gone \(Self.relative(entry.lastCopied.addingTimeInterval(secretMinutes * 60), now: Date(), future: true))" : ""
                 return { $0.preview(text: "Hidden: this looks like a \(secret).", caption: caption.joined(separator: " · ") + expiry) }
             }
-            guard let text = entry.text, text.count > 60 || text.contains("\n") else { return nil }
+            // Every copy gets a preview, short ones too: the palette's list
+            // drops its detail pane for a row without one, so the layout
+            // jumped as the selection moved between short and long copies.
+            guard let text = entry.text else { return nil }
             let lines = text.split(separator: "\n", omittingEmptySubsequences: false).count
             caption.insert("\(text.count) characters" + (lines > 1 ? ", \(lines) lines" : ""), at: 0)
             return { $0.preview(text: String(text.prefix(2000)), caption: caption.joined(separator: " · ")) }

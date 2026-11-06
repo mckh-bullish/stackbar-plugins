@@ -43,6 +43,10 @@ key or card number is masked, kept away from agent tools, and dropped after
 The window shows how much you copy, and from which apps.
 <!-- preview: insights -->
 
+## What's new in 1.8.1
+
+- Every copy now has a preview, short ones too, so the palette's list keeps its detail pane and stops jumping as you move through it.
+
 ## What's new in 1.8.0
 
 - Search finds images by the text in them, read on your Mac with Apple's text recognition, and Copy Text in Image (⌘⇧T) copies it.

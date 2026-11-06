@@ -76,6 +76,9 @@ final class ClipboardTests: XCTestCase {
         XCTAssertTrue(found, "a long copy has its full text as a preview")
         let row = await supervisor.views[.panel]?.rows.first { $0.preview != nil }
         XCTAssertNotNil(row?.preview?.caption)
+        host.system.simulateCopy("hello")
+        let short = await waitUntil(5) { await supervisor.views[.panel]?.rows.contains { $0.title == "hello" && $0.preview?.text == "hello" } == true }
+        XCTAssertTrue(short, "a short copy has a preview too, so the palette's detail pane stays put")
         await supervisor.stop()
     }
 
