@@ -15,7 +15,7 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.10.0",
+        version: "1.11.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
@@ -25,7 +25,7 @@ final class Clipboard: StackbarPlugin {
         // the panel stays on the menu bar icon.
         hotkey: "cmd+shift+v",
         hotkeyCommand: "search",
-        minimumStackbar: "0.27.0",
+        minimumStackbar: "0.31.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
         accent: .blue,
         symbol: "doc.on.clipboard.fill"
@@ -689,9 +689,10 @@ final class Clipboard: StackbarPlugin {
     }
 
     /// `paste` picks the primary action: the panel follows the setting, the
-    /// palette always pastes.
+    /// palette always pastes. The panel's rows stay out of the palette's
+    /// results: only the "in palette" setting puts copies there.
     func row(_ entry: Entry) -> Row {
-        row(entry, paste: pasteDirectly)
+        row(entry, paste: pasteDirectly).hiddenFromPalette()
     }
 
     /// `inPalette` adds what the panel's header buttons do to ⌘K.

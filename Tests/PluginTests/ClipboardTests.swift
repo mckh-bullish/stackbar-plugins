@@ -141,6 +141,11 @@ final class ClipboardTests: XCTestCase {
         let commands = await supervisor.commands
         let search = try XCTUnwrap(commands.first { $0.id == "search" }, "⌘⇧V still opens the history")
         XCTAssertFalse(search.rootSearch, "off by default")
+        host.system.simulateCopy("panel only")
+        _ = await waitUntil(10) { await supervisor.views[.panel]?.rows.contains { $0.title == "panel only" } ?? false }
+        let rows = await supervisor.views[.panel]?.rows ?? []
+        XCTAssertFalse(rows.isEmpty)
+        XCTAssertTrue(rows.allSatisfy { $0.hiddenFromPalette == true }, "the panel's history rows stay out of the palette")
         await supervisor.stop()
     }
 

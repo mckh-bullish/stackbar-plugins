@@ -25,7 +25,7 @@ the menu bar icon, if you turn the icon on.
 - **Commands:** Search Clipboard History, Paste Last Copy as Plain Text,
   Pause Clipboard History, Ignore Next Copy.
 - **Agent tools:** `recent_clips`, `search_clips` and `copy_clip`.
-- **Requires:** Stackbar 0.27.0 or later.
+- **Requires:** Stackbar 0.31.0 or later.
 
 ## Highlights
 
@@ -45,6 +45,10 @@ key or card number is masked, kept away from agent tools, and dropped after
 ### See what you copy
 The window shows how much you copy, and from which apps.
 <!-- preview: insights -->
+
+## What's new in 1.11.0
+
+- With "Show matching copies in the palette's results" off, copies (and their Copy, Pin and Delete actions) no longer show in the palette at all. Before, the palette also listed every row of the history panel.
 
 ## What's new in 1.10.0
 
