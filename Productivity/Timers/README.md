@@ -14,6 +14,10 @@ lengths you use most with one click.
   the countdown.
 - **Note:** `1:30` is a clock time; write `1h30` for an hour and a half.
 
+## What's new in 1.0.1
+
+- A unit written after the number is now respected: "30 seconds" is 30 seconds, "1 hour tea" is an hour, "2 hours 15 min" is two and a quarter hours, and "10minutes" works. "5 pm" with a space is a time, not 5 minutes.
+
 ## What's new in 1.0.0
 
 - First release.

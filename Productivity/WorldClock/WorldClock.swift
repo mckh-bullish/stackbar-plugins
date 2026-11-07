@@ -12,7 +12,7 @@ final class WorldClock: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.world-clock",
         name: "World Clock",
-        version: "1.5.0",
+        version: "1.5.1",
         summary: "The time in the cities you work with, with offsets and working hours.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(30)), .wake],
@@ -167,7 +167,7 @@ final class WorldClock: StackbarPlugin {
         let offset = Double(zone.secondsFromGMT(for: now) - TimeZone.current.secondsFromGMT(for: now)) / 3600
         let start = (workStart - offset).truncatingRemainder(dividingBy: 24)
         let from = start < 0 ? start + 24 : start
-        let to = from + max(0, workEnd - workStart)
+        let to = from + Self.workLength(start: workStart, end: workEnd)
         return to <= 24 ? [from / 24...to / 24] : [from / 24...1, 0...(to - 24) / 24]
     }
 
@@ -205,8 +205,8 @@ final class WorldClock: StackbarPlugin {
             Picker("City", options: validZones.map(\.identifier), selection: menuBarZone) { self.menuBarZone = $0 }
         }
         Section("Working hours") {
-            Picker("Start", options: Array(Self.hours.dropLast()), selection: Self.hours[Int(workStart)], key: "work-start") { self.workStart = Double(Self.hours.firstIndex(of: $0) ?? 9) }
-            Picker("End", options: Array(Self.hours.dropFirst()), selection: Self.hours[min(24, Int(workEnd))], key: "work-end") { self.workEnd = Double(Self.hours.firstIndex(of: $0) ?? 18) }
+            Picker("Start", options: Array(Self.hours.dropLast()), selection: Self.hours[Self.hourIndex(workStart, in: 0...23)], key: "work-start") { self.workStart = Double(Self.hours.firstIndex(of: $0) ?? 9) }
+            Picker("End", options: Array(Self.hours.dropFirst()), selection: Self.hours[Self.hourIndex(workEnd, in: 1...24)], key: "work-end") { self.workEnd = Double(Self.hours.firstIndex(of: $0) ?? 18) }
         }
     }
 
@@ -304,14 +304,36 @@ final class WorldClock: StackbarPlugin {
         return Double(parts.hour ?? 0) + Double(parts.minute ?? 0) / 60
     }
 
+    /// Hours between the start and the end of the working day; an end before
+    /// the start is a night shift that runs past midnight.
+    static func workLength(start: Double, end: Double) -> Double {
+        end >= start ? end - start : end + 24 - start
+    }
+
+    /// A stored hour as an index into `hours`, kept inside `range` so a stored
+    /// value from an edited settings file can't be out of bounds.
+    static func hourIndex(_ value: Double, in range: ClosedRange<Int>) -> Int {
+        guard value.isFinite else { return range.lowerBound }
+        return min(range.upperBound, max(range.lowerBound, Int(value.rounded(.down))))
+    }
+
     func isWorking(_ zone: TimeZone, at date: Date? = nil) -> Bool {
         let date = date ?? now
-        let weekday = { () -> Int in
-            var calendar = Calendar(identifier: .gregorian)
-            calendar.timeZone = zone
-            return calendar.component(.weekday, from: date)
-        }()
-        return (2...6).contains(weekday) && hour(in: zone, at: date) >= workStart && hour(in: zone, at: date) < workEnd
+        let atHour = hour(in: zone, at: date)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        var weekday = calendar.component(.weekday, from: date)
+        let working: Bool
+        if workStart <= workEnd {
+            working = atHour >= workStart && atHour < workEnd
+        } else if atHour >= workStart {
+            working = true
+        } else {
+            // The small hours belong to the shift that began the day before.
+            working = atHour < workEnd
+            weekday = weekday == 1 ? 7 : weekday - 1
+        }
+        return working && (2...6).contains(weekday)
     }
 
     private func subtitle(for zone: TimeZone, at date: Date? = nil) -> String {

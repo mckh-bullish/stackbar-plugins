@@ -26,7 +26,14 @@ echo "Hello ${1:-world}"
 - **Needs:** the ~/Script Commands folder, running grep (to read the
   `@raycast.` lines) and those interpreters. Stackbar 0.22.0 or later.
 - **Surfaces:** panel (your scripts).
-- **Commands:** one for each script, and Reload Script Commands.
+- **Commands:** one for each script, Script Commands (the list), and Reload Script Commands.
+
+## What's new in 1.1.0
+
+- A folder with an unreadable file or subfolder no longer stops the script list from refreshing.
+- A slow or failed scan keeps your last list of commands instead of emptying it.
+- Script Commands opens a list of your scripts and rescans the folder as it opens, so a new script shows without waiting for the timer.
+- Skips .git, node_modules and similar folders, and rescans every 5 minutes (Reload Script Commands does it at once).
 
 ## What's new in 1.0.0
 

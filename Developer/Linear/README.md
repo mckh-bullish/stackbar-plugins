@@ -22,6 +22,13 @@ groups everything assigned to you by state, ordered by priority.
   default team for new issues.
 - **Agent tool:** `assigned` lists your open issues with their branch names.
 
+## What's new in 1.5.1
+
+- Assigned issues load past the first 100 (up to 400).
+- Typing in My Linear Issues, Inbox and the status, priority and comment commands no longer asks Linear again on every keystroke.
+- A failed lookup says why instead of "No issue", and a failed mark-as-read shows a message.
+- Inbox items show their age again.
+
 ## What's new in 1.5.0
 
 - Your Linear inbox in the panel and the palette, with a notification when something new arrives and a bell in the menu bar while it's unread.

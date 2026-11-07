@@ -10,7 +10,7 @@ final class StayAwake: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.stay-awake",
         name: "Stay Awake",
-        version: "1.5.0",
+        version: "1.5.1",
         summary: "Keeps your Mac awake for a while, until a time, while an app runs or on a schedule.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
@@ -102,6 +102,13 @@ final class StayAwake: StackbarPlugin {
     var heldReason: String?
     var lastTick: Date?
     var lastError: String?
+    /// Whether `lastError` came from reading the system status, which a later
+    /// good read clears (the others clear when keeping awake works again).
+    var statusFailed = false
+    /// Awake seconds not yet written to `awakeByDay`: the stored value is
+    /// rewritten whole, so it is flushed once a minute and when sleep is allowed.
+    var pendingAwake: [String: Double] = [:]
+    var lastFlush: Date?
     /// A duration or time typed in the panel that didn't parse, shown under the field.
     var inputError: String?
     /// A schedule time typed in Settings that didn't parse, shown there.
@@ -127,8 +134,13 @@ final class StayAwake: StackbarPlugin {
     func refresh() async throws {
         do {
             status = try await Stackbar.systemStatus()
+            if statusFailed {
+                lastError = nil
+                statusFailed = false
+            }
         } catch {
             lastError = "\(error)"
+            statusFailed = true
         }
         endSessionIfDone()
         sampleNetwork()
@@ -205,8 +217,8 @@ final class StayAwake: StackbarPlugin {
     func apply(now: Date = Date()) async {
         if let lastTick, held != nil {
             let day = Self.day(now)
-            awakeByDay[day, default: 0] += min(now.timeIntervalSince(lastTick), 60)
-            if awakeByDay.count > 14 { awakeByDay = awakeByDay.filter { $0.key >= Self.day(now.addingTimeInterval(-13 * 86400)) } }
+            pendingAwake[day, default: 0] += min(now.timeIntervalSince(lastTick), 60)
+            if now.timeIntervalSince(lastFlush ?? .distantPast) >= 60 { flushAwake(now: now) }
         }
         lastTick = now
         if held != nil, let level = status.batteryLevel, now.timeIntervalSince(lastSample ?? .distantPast) >= 60 {
@@ -224,9 +236,28 @@ final class StayAwake: StackbarPlugin {
             }
             held = wanted
             lastError = nil
+            statusFailed = false
+            if wanted == nil { flushAwake(now: now) }
         } catch {
             lastError = "\(error)"
+            statusFailed = false
         }
+    }
+
+    /// Writes the pending awake time to storage and drops days past two weeks.
+    func flushAwake(now: Date) {
+        lastFlush = now
+        guard !pendingAwake.isEmpty else { return }
+        var totals = awakeByDay
+        for (day, seconds) in pendingAwake { totals[day, default: 0] += seconds }
+        pendingAwake = [:]
+        if totals.count > 14 { totals = totals.filter { $0.key >= Self.day(now.addingTimeInterval(-13 * 86400)) } }
+        awakeByDay = totals
+    }
+
+    /// Seconds awake by day, including what hasn't been stored yet.
+    var awakeTotals: [String: Double] {
+        pendingAwake.reduce(into: awakeByDay) { $0[$1.key, default: 0] += $1.value }
     }
 
     func start(_ mode: Mode) async {
@@ -277,7 +308,15 @@ final class StayAwake: StackbarPlugin {
     }
 
     /// `"90"`, `"90m"`, `"2h"`, `"1h30"` or `"1:30"` as seconds.
+    /// Ten years in seconds: no session is longer, and Int can hold it.
+    static let longestSession = 315_360_000.0
+
     static func duration(_ text: String) -> Double? {
+        guard let seconds = rawDuration(text), seconds.isFinite else { return nil }
+        return min(seconds, longestSession)
+    }
+
+    static func rawDuration(_ text: String) -> Double? {
         let text = text.lowercased().replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "min", with: "m")
         if let minutes = Double(text.hasSuffix("m") ? String(text.dropLast()) : text), minutes > 0 { return minutes * 60 }
         let parts = text.split(whereSeparator: { $0 == "h" || $0 == ":" }).map(String.init)
@@ -304,7 +343,8 @@ final class StayAwake: StackbarPlugin {
     }
 
     static func clock(_ seconds: Double) -> String {
-        let total = max(0, Int(seconds.rounded(.up)))
+        // An unbounded Double (a typed "1e20") would trap converting to Int.
+        let total = seconds.isFinite ? Int(min(max(0, seconds.rounded(.up)), Self.longestSession)) : 0
         let hours = total / 3600
         let minutes = (total % 3600) / 60
         if hours > 0 { return "\(hours)h \(minutes)m" }
@@ -523,8 +563,9 @@ final class StayAwake: StackbarPlugin {
             }
         }
         let week = hoursAwake(days: 7)
-        if awakeByDay.values.contains(where: { $0 > 0 }) {
-            Card("This week", detail: "today \(Self.clock(awakeByDay[Self.day(Date())] ?? 0)) · average \(Self.clock(week.values.reduce(0, +) / 7 * 3600))", spacing: Space.s) {
+        let totals = awakeTotals
+        if totals.values.contains(where: { $0 > 0 }) {
+            Card("This week", detail: "today \(Self.clock(totals[Self.day(Date())] ?? 0)) · average \(Self.clock(week.values.reduce(0, +) / 7 * 3600))", spacing: Space.s) {
                 Chart(values: week.values, kind: .bar, labels: week.labels, unit: "h", highlight: 6).foreground(theme.solidPaint)
             }
         }
@@ -546,8 +587,9 @@ final class StayAwake: StackbarPlugin {
     /// short weekday names (or day numbers past a week).
     func hoursAwake(days: Int, now: Date = Date()) -> (values: [Double], labels: [String]) {
         let calendar = Calendar.current
+        let totals = awakeTotals
         let dates = (0..<days).reversed().map { now.addingTimeInterval(Double(-$0) * 86400) }
-        let values = dates.map { ((awakeByDay[Self.day($0)] ?? 0) / 360).rounded() / 10 }
+        let values = dates.map { ((totals[Self.day($0)] ?? 0) / 360).rounded() / 10 }
         let labels = dates.map { date in
             days <= 7 ? calendar.shortWeekdaySymbols[calendar.component(.weekday, from: date) - 1] : String(calendar.component(.day, from: date))
         }
@@ -630,7 +672,7 @@ final class StayAwake: StackbarPlugin {
                 dial(size: 64, lineWidth: 5)
                 VStack(spacing: Space.xxs) {
                     Text("Sleeps normally").typography(.title)
-                    Text("Today \(Self.clock(awakeByDay[Self.day(Date())] ?? 0)) awake").role(.secondary).typography(.caption)
+                    Text("Today \(Self.clock(awakeTotals[Self.day(Date())] ?? 0)) awake").role(.secondary).typography(.caption)
                     Button("Keep Awake", symbol: "cup.and.saucer.fill", key: "widget-start") { await self.start(.indefinitely) }
                 }
                 .frame(fillWidth: true, alignment: .leading)
@@ -698,7 +740,8 @@ final class StayAwake: StackbarPlugin {
             return "Staying awake: \(reason)" + (self.remaining.map { ", \(Self.clock($0)) left" } ?? "")
         }
         AgentTool("keep_awake", description: "Keep the Mac awake, for a number of minutes or until stopped", parameters: [ToolParameter("minutes", .number, description: "Minutes; leave out to keep awake until stopped", required: false)]) { arguments in
-            if let minutes = arguments.number("minutes"), minutes > 0 {
+            if let asked = arguments.number("minutes"), asked > 0 {
+                let minutes = min(asked, Self.longestSession / 60)
                 await self.start(.until(Date().addingTimeInterval(minutes * 60)))
                 return "Keeping the Mac awake for \(Self.clock(minutes * 60))."
             }

@@ -58,4 +58,18 @@ final class PomodoroTests: XCTestCase {
         XCTAssertTrue(now.hasPrefix("Idle. Next: Break, 10 min"), now)
         await supervisor.stop()
     }
+
+    func testAStartCommandAsksBeforeReplacingASessionUnderWay() async throws {
+        let host = Host(self)
+        try await host.services.storage.set("session", #"{"mode":"Focus","minutes":25,"tag":"Deep Work","remaining":600}"#, for: id)
+        let supervisor = try await host.start("Pomodoro")
+        func status() async -> String { await supervisor.callTool("status").text }
+        _ = await supervisor.runCommand("start-break", arguments: ["minutes": "10"], source: .palette)
+        var now = await status()
+        XCTAssertTrue(now.hasPrefix("Paused on Deep Work, 10:00 left"), "the first run only warns: \(now)")
+        _ = await supervisor.runCommand("start-break", arguments: ["minutes": "10"], source: .palette)
+        now = await status()
+        XCTAssertTrue(now.hasPrefix("On a break"), "run again, it replaces the session: \(now)")
+        await supervisor.stop()
+    }
 }

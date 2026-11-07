@@ -20,7 +20,7 @@ final class Snippets: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.snippets",
         name: "Snippets",
-        version: "1.5.0",
+        version: "1.5.1",
         summary: "Paste text by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -73,8 +73,25 @@ final class Snippets: StackbarPlugin {
         var template: Template? { try? Template(text) }
     }
 
-    @Stored("snippets") var snippets: [Snippet] = [] {
-        didSet { registerKeywords() }
+    /// The snippets, read from storage once and written back when they
+    /// change (reading a `@Stored` array decodes all of it, and a render reads
+    /// the snippets for every row).
+    private var cached: [Snippet]?
+    /// Snippets by name and by keyword, in order, for `{snippet name=}`.
+    private var cachedIndex: [String: [(id: UUID, text: String)]]?
+    var snippets: [Snippet] {
+        get {
+            if let cached { return cached }
+            let loaded = Stackbar.storage.value("snippets", as: [Snippet].self) ?? []
+            cached = loaded
+            return loaded
+        }
+        set {
+            cached = newValue
+            cachedIndex = nil
+            Stackbar.storage.set("snippets", newValue)
+            registerKeywords()
+        }
     }
     /// The tag the panel filters by; nil shows them all.
     @Stored("panelTag") var panelTag: String? = nil
@@ -106,15 +123,21 @@ final class Snippets: StackbarPlugin {
         let expansions = expansions
         guard expansions != registered else { return }
         registered = expansions
-        Task {
+        // One request at a time, in the order they were made: the host
+        // answers each in its own task, so an older list could land last.
+        let previous = registration
+        registration = Task {
+            await previous?.value
             do {
-                self.expansion = try await Stackbar.setExpansions(expansions)
+                let status = try await Stackbar.setExpansions(expansions)
+                if self.registered == expansions { self.expansion = status }
             } catch {
                 // Tried again on the next change or launch.
-                self.registered = nil
+                if self.registered == expansions { self.registered = nil }
             }
         }
     }
+    private var registration: Task<Void, Never>?
 
     /// The create and edit form's errors, kept between its renders.
     struct Draft {
@@ -127,6 +150,29 @@ final class Snippets: StackbarPlugin {
 
     /// What `{snippet name="…"}` can name: every snippet by name, and by
     /// keyword too.
+    /// The text `{snippet name=}` finds for a name, without building the library.
+    func included(named name: String, excluding id: UUID?) -> String? {
+        let index: [String: [(id: UUID, text: String)]]
+        if let cachedIndex {
+            index = cachedIndex
+        } else {
+            var built: [String: [(id: UUID, text: String)]] = [:]
+            for snippet in snippets {
+                if let keyword = snippet.keyword, !keyword.isEmpty { built[keyword, default: []].append((snippet.id, snippet.text)) }
+                built[snippet.name, default: []].append((snippet.id, snippet.text))
+            }
+            cachedIndex = built
+            index = built
+        }
+        return index[name]?.last { $0.id != id }?.text
+    }
+
+    /// The library a template renders against: empty unless it includes a
+    /// snippet, so rendering a row doesn't walk every snippet.
+    func environmentLibrary(for snippet: Snippet, template: Template) -> [String: String] {
+        Self.included(by: template).isEmpty ? [:] : library(excluding: snippet.id)
+    }
+
     func library(excluding id: UUID? = nil) -> [String: String] {
         var library: [String: String] = [:]
         for snippet in snippets where snippet.id != id {
@@ -145,14 +191,13 @@ final class Snippets: StackbarPlugin {
     func uses(_ name: String, in snippet: Snippet) -> Bool {
         guard let template = snippet.template else { return false }
         if template.uses(name) { return true }
-        let library = library(excluding: snippet.id)
-        return Self.included(by: template).contains { (library[$0].flatMap { try? Template($0) })?.uses(name) ?? false }
+        return Self.included(by: template).contains { (included(named: $0, excluding: snippet.id).flatMap { try? Template($0) })?.uses(name) ?? false }
     }
 
     /// Renders a snippet with what the user typed, copied and selected.
     func render(_ snippet: Snippet, arguments: [String: String], context: InvocationContext?) async throws -> Template.Rendered {
         let template = try Template(snippet.text)
-        var environment = Template.Environment(selection: context?.selectedText, snippets: library(excluding: snippet.id))
+        var environment = Template.Environment(selection: context?.selectedText, snippets: environmentLibrary(for: snippet, template: template))
         if uses("clipboard", in: snippet) { environment.clipboard = try await Stackbar.clipboard()?.text }
         if environment.selection == nil, context == nil, uses("selection", in: snippet) { environment.selection = try await Stackbar.context().selectedText }
         return try template.render(arguments, in: environment)
@@ -163,7 +208,7 @@ final class Snippets: StackbarPlugin {
     func preview(_ snippet: Snippet) -> String {
         guard let template = snippet.template else { return snippet.text }
         let values = Dictionary(arguments(of: snippet).map { ($0.name, $0.defaultValue ?? $0.options?.first ?? "‹\($0.name)›") }, uniquingKeysWith: { first, _ in first })
-        let environment = Template.Environment(clipboard: "‹clipboard›", selection: "‹selection›", snippets: library(excluding: snippet.id))
+        let environment = Template.Environment(clipboard: "‹clipboard›", selection: "‹selection›", snippets: environmentLibrary(for: snippet, template: template))
         return (try? template.render(values, in: environment).text) ?? snippet.text
     }
 
@@ -172,9 +217,8 @@ final class Snippets: StackbarPlugin {
     func arguments(of snippet: Snippet) -> [ArgumentSpec] {
         guard let template = snippet.template else { return [] }
         var arguments = template.arguments
-        let library = library(excluding: snippet.id)
         for name in Self.included(by: template) {
-            for argument in (library[name].flatMap { try? Template($0) })?.arguments ?? [] where !arguments.contains(where: { $0.name == argument.name }) {
+            for argument in (included(named: name, excluding: snippet.id).flatMap { try? Template($0) })?.arguments ?? [] where !arguments.contains(where: { $0.name == argument.name }) {
                 arguments.append(argument)
             }
         }
@@ -316,14 +360,17 @@ final class Snippets: StackbarPlugin {
         }
         guard draft.nameError == nil, draft.textError == nil, draft.keywordError == nil else { return }
         let tags = (values.string("tags") ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-        if let id, let index = snippets.firstIndex(where: { $0.id == id }) {
-            snippets[index].name = name
-            snippets[index].text = text
-            snippets[index].keyword = keyword.isEmpty ? nil : keyword
-            snippets[index].tags = tags
+        // One change, one save.
+        var all = snippets
+        if let id, let index = all.firstIndex(where: { $0.id == id }) {
+            all[index].name = name
+            all[index].text = text
+            all[index].keyword = keyword.isEmpty ? nil : keyword
+            all[index].tags = tags
         } else {
-            snippets.append(Snippet(id: UUID(), name: name, text: text, keyword: keyword.isEmpty ? nil : keyword, tags: tags))
+            all.append(Snippet(id: UUID(), name: name, text: text, keyword: keyword.isEmpty ? nil : keyword, tags: tags))
         }
+        snippets = all
     }
 
     /// Why a snippet's text can't be saved, or nil.
@@ -401,9 +448,11 @@ final class Snippets: StackbarPlugin {
         var duplicates = 0
         var problems: [String] = []
         var droppedKeywords: [String] = []
+        // Collected here and saved once, not once per item.
+        var all = snippets
         for item in items {
             let text = Self.modernized(item.text)
-            if snippets.contains(where: { $0.name == item.name && ($0.text == text || $0.text == item.text) }) {
+            if all.contains(where: { $0.name == item.name && ($0.text == text || $0.text == item.text) }) {
                 duplicates += 1
                 continue
             }
@@ -412,13 +461,14 @@ final class Snippets: StackbarPlugin {
                 continue
             }
             var keyword = item.keyword.flatMap { $0.isEmpty ? nil : $0 }
-            if let candidate = keyword, Self.problem(withKeyword: candidate) != nil || snippets.contains(where: { $0.keyword == candidate }) {
+            if let candidate = keyword, Self.problem(withKeyword: candidate) != nil || all.contains(where: { $0.keyword == candidate }) {
                 droppedKeywords.append(candidate)
                 keyword = nil
             }
-            snippets.append(Snippet(id: UUID(), name: item.name, text: text, keyword: keyword, tags: item.tags ?? []))
+            all.append(Snippet(id: UUID(), name: item.name, text: text, keyword: keyword, tags: item.tags ?? []))
             imported += 1
         }
+        if imported > 0 { snippets = all }
         var summary = "Imported \(imported)"
         if duplicates > 0 { summary += ", skipped \(duplicates) duplicate\(duplicates == 1 ? "" : "s")" }
         if !problems.isEmpty { summary += ", skipped \(problems.count) that didn't parse (\(problems.prefix(3).joined(separator: "; ")))" }

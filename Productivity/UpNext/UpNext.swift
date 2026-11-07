@@ -14,7 +14,7 @@ final class UpNext: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.up-next",
         name: "Up Next",
-        version: "1.6.0",
+        version: "1.6.1",
         summary: "Your next meeting in the menu bar, with a countdown and one-click join.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(30)), .wake],
@@ -87,7 +87,9 @@ final class UpNext: StackbarPlugin {
     static func links(in text: String) -> [String] {
         var result: [String] = []
         var rest = Substring(text)
-        while let start = rest.range(of: "https://", options: .caseInsensitive) ?? rest.range(of: "http://", options: .caseInsensitive) {
+        // Whichever scheme comes first, so a plain http link isn't skipped
+        // because an https one follows it.
+        while let start = [rest.range(of: "https://", options: .caseInsensitive), rest.range(of: "http://", options: .caseInsensitive)].compactMap({ $0 }).min(by: { $0.lowerBound < $1.lowerBound }) {
             let tail = rest[start.lowerBound...]
             let end = tail.firstIndex(where: { $0.isWhitespace || "<>\"'()[]{}".contains($0) }) ?? tail.endIndex
             var url = String(tail[..<end])
@@ -116,7 +118,12 @@ final class UpNext: StackbarPlugin {
     /// Show the next meeting in the menu bar only this many hours ahead (0: any time today).
     @Stored("menuBarHours") var menuBarHours = 0.0
 
-    var events: [CalendarEvent] = []
+    var events: [CalendarEvent] = [] {
+        didSet { eventsVersion += 1 }
+    }
+    private var eventsVersion = 0
+    /// What `visible` last computed, and what it was computed from.
+    private var visibleCache: (key: VisibleKey, events: [CalendarEvent])?
     var calendars: [String] = []
     var lastError: String?
     var loaded = false
@@ -144,15 +151,30 @@ final class UpNext: StackbarPlugin {
         remindAndJoin(now: now)
     }
 
-    /// The events the settings let through.
+    private struct VisibleKey: Equatable {
+        var version: Int
+        var hidden: [String]
+        var allDay: Bool
+        var declined: Bool
+        var links: Bool
+        var people: Bool
+    }
+
+    /// The events the settings let through. A render asks for this dozens of
+    /// times (every row and day chip), and each setting read decodes its JSON,
+    /// so the answer is kept until the events or a setting changes.
     var visible: [CalendarEvent] {
-        events.filter { event in
-            !hiddenCalendars.contains(event.calendar)
-                && (showAllDay || !event.isAllDay)
-                && (showDeclined || event.participation != .declined)
-                && (!onlyWithLinks || event.isAllDay || Self.meetingLink(for: event) != nil)
-                && (!onlyWithPeople || event.isAllDay || event.attendees > 1)
+        let key = VisibleKey(version: eventsVersion, hidden: hiddenCalendars, allDay: showAllDay, declined: showDeclined, links: onlyWithLinks, people: onlyWithPeople)
+        if let visibleCache, visibleCache.key == key { return visibleCache.events }
+        let result = events.filter { event in
+            !key.hidden.contains(event.calendar)
+                && (key.allDay || !event.isAllDay)
+                && (key.declined || event.participation != .declined)
+                && (!key.links || event.isAllDay || Self.meetingLink(for: event) != nil)
+                && (!key.people || event.isAllDay || event.attendees > 1)
         }
+        visibleCache = (key, result)
+        return result
     }
 
     /// Timed events that haven't ended, soonest first.
@@ -204,10 +226,13 @@ final class UpNext: StackbarPlugin {
                 Stackbar.open(link.url)
             }
         }
-        if reminded.count > 200 { reminded = Set(reminded.suffix(50)) }
-        if joined.count > 200 { joined = Set(joined.suffix(50)) }
-        if alerted.count > 200 { alerted = Set(alerted.suffix(50)) }
-        if nudged.count > 200 { nudged = Set(nudged.suffix(50)) }
+        // Only events still in the fetched week can come round again, so
+        // forget the rest (a Set has no order to keep "the latest" by).
+        let current = Set(events.map(\.id))
+        if reminded.count > 200 { reminded.formIntersection(current) }
+        if joined.count > 200 { joined.formIntersection(current) }
+        if alerted.count > 200 { alerted.formIntersection(current) }
+        if nudged.count > 200 { nudged.formIntersection(current) }
     }
 
     // MARK: Snooze and quick add

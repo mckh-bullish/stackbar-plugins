@@ -11,7 +11,7 @@ final class MenuSearch: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.menu-search",
         name: "Menu Search",
-        version: "1.0.0",
+        version: "1.0.1",
         summary: "Search the menus of the app you're in and choose an item without the mouse.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -36,13 +36,16 @@ final class MenuSearch: StackbarPlugin {
     /// read is old: walking a big app's menus takes a moment, so typing
     /// reuses it.
     func load(force: Bool) async {
-        if !force, menus != nil, let readAt, Date().timeIntervalSince(readAt) < 30 { return }
+        // A failed read is remembered too (for a shorter while), so a broken
+        // state doesn't repeat the walk on every keystroke.
+        if !force, let readAt, Date().timeIntervalSince(readAt) < (menus != nil ? 30 : 5) { return }
         do {
             menus = try await Stackbar.menuItems()
             readAt = Date()
             problem = nil
         } catch {
             menus = nil
+            readAt = Date()
             problem = "Can't read the menus: \(error)"
         }
     }

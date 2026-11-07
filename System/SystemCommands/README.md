@@ -15,6 +15,10 @@ Give any of them an alias or a hotkey in Settings › Commands.
   Dark Mode, Hide Other Apps, Eject All Disks, Empty Trash, Quit Other Apps,
   Log Out, Restart, Shut Down.
 
+## What's new in 1.0.1
+
+- Restart, Shut Down, Log Out, Empty Trash and Quit Other Apps in the panel forget their first click after 10 seconds, so a click out of habit later can't run one on its own.
+
 ## What's new in 1.0.0
 
 - First release.

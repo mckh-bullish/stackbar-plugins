@@ -30,6 +30,11 @@ red at 90%.
 
 Ported from vee-plugins' `litellm-cost`.
 
+## What's new in 1.4.1
+
+- A failed half-year history request no longer fails the whole refresh or repeats every 2 minutes.
+- The usage charts open faster.
+
 ## What's new in 1.4.0
 
 - A LiteLLM Spend command in the palette shows today, 7 and 30 days, and the budget.

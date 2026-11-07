@@ -117,4 +117,18 @@ final class StayAwakeTests: XCTestCase {
         _ = try await session.runCommand("allow-sleep")
         XCTAssertTrue(host.system.keptAwake.isEmpty)
     }
+
+    func testAnAbsurdDurationDoesNotCrashTheHelper() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("StayAwake")
+        let kept = await supervisor.callTool("keep_awake", arguments: ["minutes": .number(1e20)])
+        XCTAssertFalse(kept.isError, kept.text)
+        let status = await supervisor.callTool("awake_status")
+        XCTAssertTrue(status.text.contains("Staying awake"), "the helper is still answering: \(status.text)")
+        await supervisor.stop()
+
+        let session = try await host.session("StayAwake")
+        guard case .message = try await session.runCommand("keep-awake", arguments: ["for": "1e20"]) else { return XCTFail("a huge typed duration is capped, not a crash") }
+        _ = try await session.runCommand("allow-sleep")
+    }
 }

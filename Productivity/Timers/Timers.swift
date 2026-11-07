@@ -10,7 +10,7 @@ final class Timers: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.timers",
         name: "Timers",
-        version: "1.0.0",
+        version: "1.0.1",
         summary: "Countdown timers from the palette, several at once, the soonest in the menu bar.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .every(.seconds(1)), .wake],
@@ -71,10 +71,12 @@ final class Timers: StackbarPlugin {
     /// `"90"` (minutes), `"90s"`, `"10m"`, `"2h"`, `"1h30"` or `"1:30"` as
     /// seconds; nil for anything else.
     static func duration(_ text: String) -> Double? {
-        let text = text.lowercased().replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "mins", with: "m").replacingOccurrences(of: "min", with: "m")
-            .replacingOccurrences(of: "secs", with: "s").replacingOccurrences(of: "sec", with: "s")
-            .replacingOccurrences(of: "hours", with: "h").replacingOccurrences(of: "hour", with: "h").replacingOccurrences(of: "hr", with: "h")
+        // Unit words after a number become their letter ("10minutes" is "10m"),
+        // whole words only, so "min" inside "minutes" isn't cut short.
+        var text = text.lowercased().replacingOccurrences(of: " ", with: "")
+        for (pattern, unit) in [("(hours|hour|hrs|hr)", "h"), ("(minutes|minute|mins|min)", "m"), ("(seconds|second|secs|sec)", "s")] {
+            text = text.replacingOccurrences(of: "(?<=[0-9.])" + pattern + "(?![a-z])", with: unit, options: .regularExpression)
+        }
         guard !text.isEmpty else { return nil }
         if text.hasSuffix("s"), !text.contains("m"), !text.contains("h"), let seconds = Double(text.dropLast()), seconds > 0 { return seconds }
         if let minutes = Double(text.hasSuffix("m") ? String(text.dropLast()) : text), minutes > 0 { return minutes * 60 }
@@ -135,6 +137,31 @@ final class Timers: StackbarPlugin {
     static func parse(_ text: String, now: Date) -> (end: Date, name: String, length: String)? {
         let words = text.split(separator: " ").map(String.init)
         for (index, word) in words.enumerated() {
+            // "5 pm": the number and its meridiem are one time.
+            if index + 1 < words.count, ["am", "pm"].contains(words[index + 1].lowercased()), let end = clockTime(word + words[index + 1], after: now) {
+                let rest = words.enumerated().filter { $0.offset != index && $0.offset != index + 1 }.map(\.element).joined(separator: " ")
+                return (end, rest.isEmpty ? "Alarm" : rest, word + words[index + 1])
+            }
+            // "30 seconds", "1 hour 30 minutes": a number and the unit word
+            // after it, which `duration` would otherwise read as minutes.
+            if let first = measured(words, at: index) {
+                var total = duration(first.token) ?? 0
+                var used = Set(index..<(index + first.count))
+                var tokens = first.token
+                var rank = first.rank
+                var next = index + first.count
+                while next < words.count, let more = measured(words, at: next), more.rank < rank, let extra = duration(more.token) {
+                    total += extra
+                    used.formUnion(next..<(next + more.count))
+                    tokens += more.token
+                    rank = more.rank
+                    next += more.count
+                }
+                if total > 0 {
+                    let rest = words.enumerated().filter { !used.contains($0.offset) }.map(\.element).joined(separator: " ")
+                    return (now.addingTimeInterval(total), rest, tokens)
+                }
+            }
             let rest = words.enumerated().filter { $0.offset != index }.map(\.element).joined(separator: " ")
             if clockTime(word, after: now) == nil, let seconds = duration(word) {
                 return (now.addingTimeInterval(seconds), rest, word)
@@ -142,6 +169,26 @@ final class Timers: StackbarPlugin {
             if let end = clockTime(word, after: now) {
                 return (end, rest.isEmpty ? "Alarm" : rest, word)
             }
+        }
+        return nil
+    }
+
+    private static let units: [String: (letter: String, rank: Int)] = [
+        "h": ("h", 3), "hr": ("h", 3), "hrs": ("h", 3), "hour": ("h", 3), "hours": ("h", 3),
+        "m": ("m", 2), "min": ("m", 2), "mins": ("m", 2), "minute": ("m", 2), "minutes": ("m", 2),
+        "s": ("s", 1), "sec": ("s", 1), "secs": ("s", 1), "second": ("s", 1), "seconds": ("s", 1),
+    ]
+
+    /// A number with its unit, glued ("10min") or in the next word ("10 min"),
+    /// as one token ("10m"), with the words it took. Nil for anything else.
+    static func measured(_ words: [String], at index: Int) -> (token: String, rank: Int, count: Int)? {
+        let word = words[index].lowercased()
+        if let split = word.firstIndex(where: { !($0.isNumber || $0 == ".") }), split != word.startIndex {
+            guard Double(word[..<split]) != nil, let unit = units[String(word[split...])] else { return nil }
+            return (String(word[..<split]) + unit.letter, unit.rank, 1)
+        }
+        if Double(word) != nil, index + 1 < words.count, let unit = units[words[index + 1].lowercased()] {
+            return (word + unit.letter, unit.rank, 2)
         }
         return nil
     }

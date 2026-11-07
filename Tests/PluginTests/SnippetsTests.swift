@@ -195,4 +195,19 @@ final class SnippetsTests: XCTestCase {
         await session.stop()
     }
 
+    func testImportingManySnippetsKeepsEachOneAndItsKeyword() async throws {
+        let host = host()
+        let session = try await host.session("Snippets")
+        let items = (0..<300).map { #"{"name": "Snippet \#($0)", "text": "Body \#($0)\#($0 == 0 ? "" : " {snippet name=\\\"Snippet 0\\\"}")", "keyword": ";s\#($0)"}"# }
+        host.system.simulate(chosenFile: ChosenFile(name: "many.json", data: Data(("[" + items.joined(separator: ",") + "]").utf8)))
+        guard case .message(let summary?) = try await session.runCommand("import") else { return XCTFail("import") }
+        XCTAssertTrue(summary.hasPrefix("Imported 300"), summary)
+        let all = await snippets(session)
+        XCTAssertEqual(all.count, 300)
+        let last = try await command(session, titled: "Snippet 299")
+        XCTAssertTrue(last.keywords.contains(";s299"))
+        let result = try await session.runCommand(last.id)
+        XCTAssertEqual(result, .paste("Body 299 Body 0", cursorFromEnd: 0), "one level of inclusion")
+        await session.stop()
+    }
 }

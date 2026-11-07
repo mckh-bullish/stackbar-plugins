@@ -13,6 +13,10 @@ are left out.
 - **Surfaces:** panel (what you opened lately).
 - **Commands:** Search Files, which also feeds the palette's results.
 
+## What's new in 1.0.1
+
+- A Spotlight error no longer lingers when you clear the search back to a short query.
+
 ## What's new in 1.0.0
 
 - First release: the palette's file search, now a plugin.

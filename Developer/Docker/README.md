@@ -33,6 +33,12 @@ and each project with Start all, Restart and Stop.
 - **Agent tool:** `containers` lists every container with its image, state,
   CPU and memory.
 
+## What's new in 1.7.1
+
+- The logs window stops refreshing on its own two minutes after you open it or press Refresh, instead of polling for the rest of the session.
+- While Docker is down, it checks once a minute instead of every 15 seconds.
+- The Containers and Compose commands reuse a list read a few seconds ago while you type.
+
 ## What's new in 1.7.0
 
 - Open Shell on a running container opens your terminal app inside it.

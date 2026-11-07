@@ -15,7 +15,7 @@ final class SystemMonitor: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.system-monitor",
         name: "System Monitor",
-        version: "1.6.0",
+        version: "1.6.1",
         summary: "CPU, memory, disk and network speed in the menu bar, the processes using the most, and alerts when one stays high.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(10)), .wake],
@@ -187,7 +187,7 @@ final class SystemMonitor: StackbarPlugin {
 
     /// Notifies once when CPU or memory stays high for a minute, or the
     /// disk is nearly full, naming what is behind it. Quiet for 30 minutes
-    /// after, and again once things calm down and climb back.
+    /// after (six hours for the disk), then the next spell notifies again.
     func checkAlerts() {
         guard alertsOn, let sample else { return }
         let busy = cpuHistory.count >= Self.sustained && cpuHistory.suffix(Self.sustained).allSatisfy { $0 >= cpuThreshold }
@@ -204,11 +204,10 @@ final class SystemMonitor: StackbarPlugin {
     }
 
     func alert(_ name: String, when condition: Bool, title: String, body: String?, cooldown: TimeInterval = 1800) {
-        guard condition else {
-            // Calm again: the next spell may notify straight away.
-            if let last = alerted[name], Date().timeIntervalSince(last) > 60 { alerted[name] = nil }
-            return
-        }
+        // The cooldown counts from the last alert whatever the readings do
+        // in between, so a reading that flaps around its threshold can't
+        // notify again before it is over.
+        guard condition else { return }
         if let last = alerted[name], Date().timeIntervalSince(last) < cooldown { return }
         alerted[name] = Date()
         Stackbar.notify(title, body: body)

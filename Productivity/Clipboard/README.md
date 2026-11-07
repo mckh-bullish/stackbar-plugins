@@ -46,6 +46,13 @@ key or card number is masked, kept away from agent tools, and dropped after
 The window shows how much you copy, and from which apps.
 <!-- preview: insights -->
 
+## What's new in 1.9.1
+
+- Pinned items now count against the storage limit, so pinning many large copies can no longer stop new copies from being saved. Pins past their share are unpinned, and pinning more than fits says so.
+- A text-reading hiccup on an image is retried instead of marking it as having no text, and saving copies, text reading and the day counts write less often.
+- Long copies are counted once instead of on every redraw.
+- When older pins are unpinned to keep the history within its storage, a notice says how many and why.
+
 ## What's new in 1.9.0
 
 - ⌘⇧V opens your history in the command palette, with the preview beside it and every action, Pause and Ignore Next Copy included, under ⌘K. The popup stays on the menu bar icon.

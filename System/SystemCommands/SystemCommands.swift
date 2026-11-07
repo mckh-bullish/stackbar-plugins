@@ -10,7 +10,7 @@ final class SystemCommands: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.system-commands",
         name: "System Commands",
-        version: "1.0.0",
+        version: "1.0.1",
         summary: "Lock, sleep, restart, empty the Trash or switch to dark mode from the palette.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -53,6 +53,21 @@ final class SystemCommands: StackbarPlugin {
     /// The destructive command clicked once in the panel, waiting for a
     /// second click.
     var armed: String?
+    private var armedAt = Date.distantPast
+    /// How long the second click stays good: a click much later starts over.
+    static let armWindow: TimeInterval = 10
+
+    /// The armed command, if its window hasn't passed.
+    var armedNow: String? {
+        armed.flatMap { Date().timeIntervalSince(armedAt) < Self.armWindow ? $0 : nil }
+    }
+
+    /// The row reads its window at every render (the panel renders again
+    /// when it opens), so a click much later is a first click again.
+    func arm(_ id: String) {
+        armed = id
+        armedAt = Date()
+    }
 
     func perform(_ item: Item) async throws {
         try await Stackbar.system(item.action)
@@ -93,16 +108,18 @@ final class SystemCommands: StackbarPlugin {
         }
         Card("Asks first", spacing: 0, padding: Space.s) {
             ForEach(Self.items.filter(\.action.isDestructive)) { item in
-                if armed == item.id {
+                if armedNow == item.id {
                     Row("Click again to \(item.action.title.lowercased())", subtitle: item.subtitle, symbol: item.symbol, key: item.id)
                         .action(item.action.title, role: .critical) {
+                            // A stale confirmation counts as a first click.
+                            guard self.armedNow == item.id else { return self.arm(item.id) }
                             self.armed = nil
                             try await self.perform(item)
                         }
                         .action("Cancel") { self.armed = nil }
                 } else {
                     Row(item.action.title, subtitle: item.subtitle, symbol: item.symbol, key: item.id)
-                        .action(item.action.title) { self.armed = item.id }
+                        .action(item.action.title) { self.arm(item.id) }
                 }
             }
         }

@@ -14,7 +14,7 @@ final class LiteLLM: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.litellm",
         name: "LiteLLM",
-        version: "1.4.0",
+        version: "1.4.1",
         summary: "Tokens, spend, budget and model mix from your LiteLLM proxy, with charts.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
@@ -117,6 +117,8 @@ final class LiteLLM: StackbarPlugin {
 
     var problem: String?
     var proxy: String?
+    /// When the last history fetch failed, to back off before trying again.
+    var historyFailed: Date?
 
     // MARK: - Fetching
 
@@ -140,10 +142,18 @@ final class LiteLLM: StackbarPlugin {
             merge(recent.days)
             models = recent.models
             todayDetail = recent.today
-            if historyFetched.map({ Date().timeIntervalSince($0) > 6 * 3600 }) ?? true {
-                let history = try await fetchDays(base: base, key: key, from: Self.day(-182), to: Self.day(-31))
-                merge(history.days)
-                historyFetched = Date()
+            // The half-year history is a bonus: if it fails, the 30-day numbers
+            // still count, and it waits half an hour before the next try.
+            if historyFetched.map({ Date().timeIntervalSince($0) > 6 * 3600 }) ?? true,
+               historyFailed.map({ Date().timeIntervalSince($0) > 30 * 60 }) ?? true {
+                do {
+                    let history = try await fetchDays(base: base, key: key, from: Self.day(-182), to: Self.day(-31))
+                    merge(history.days)
+                    historyFetched = Date()
+                    historyFailed = nil
+                } catch {
+                    historyFailed = Date()
+                }
             }
             lastSuccess = Date()
             problem = nil
@@ -482,8 +492,10 @@ final class LiteLLM: StackbarPlugin {
 
     /// Totals over days ago, 0 being today.
     func total(_ ago: ClosedRange<Int>) -> Day {
-        ago.reduce(into: Day(tokens: 0, spend: 0)) { sum, offset in
-            let day = days[Self.day(-offset)] ?? Day(tokens: 0, spend: 0)
+        // One read of the stored days: each read decodes the whole dictionary.
+        let stored = days
+        return ago.reduce(into: Day(tokens: 0, spend: 0)) { sum, offset in
+            let day = stored[Self.day(-offset)] ?? Day(tokens: 0, spend: 0)
             sum.tokens += day.tokens
             sum.spend += day.spend
             sum.requests += day.requests
@@ -492,13 +504,15 @@ final class LiteLLM: StackbarPlugin {
     }
 
     func activeDays(_ ago: ClosedRange<Int>) -> Int {
-        ago.filter { (days[Self.day(-$0)]?.tokens ?? 0) > 0 }.count
+        let stored = days
+        return ago.filter { (stored[Self.day(-$0)]?.tokens ?? 0) > 0 }.count
     }
 
     /// The last `count` days, oldest first.
     func series(days count: Int, measure: Measure) -> [Double] {
-        (0..<count).reversed().map { offset in
-            let day = days[Self.day(-offset)]
+        let stored = days
+        return (0..<count).reversed().map { offset in
+            let day = stored[Self.day(-offset)]
             return measure == .tokens ? day?.tokens ?? 0 : day?.spend ?? 0
         }
     }
@@ -556,10 +570,12 @@ final class LiteLLM: StackbarPlugin {
     // MARK: - Formatting
 
     static func day(_ offset: Int) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Calendar.current.date(byAdding: .day, value: offset, to: Date()) ?? Date())
+        // Components rather than a DateFormatter: this runs hundreds of times a render.
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = Calendar.current.timeZone
+        let date = calendar.date(byAdding: .day, value: offset, to: Date()) ?? Date()
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 
     static func compact(_ value: Double) -> String {

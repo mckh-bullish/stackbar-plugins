@@ -12,7 +12,7 @@ final class Pomodoro: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.pomodoro",
         name: "Pomodoro",
-        version: "1.7.0",
+        version: "1.7.1",
         summary: "A focus timer with presets, a progress ring, tags, long breaks and a week of focus in a chart.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(1)), .wake],
@@ -123,6 +123,15 @@ final class Pomodoro: StackbarPlugin {
 
     /// How far into a session a tap has to be before it asks first.
     static let protectedAfter: TimeInterval = 60
+    /// How long a start command that would replace a session waits to be repeated.
+    static let replaceWindow: TimeInterval = 30
+
+    struct ReplaceRequest: Equatable {
+        var kind: Mode
+        var minutes: Int?
+        var name: String
+    }
+    private var replaceRequest: (request: ReplaceRequest, at: Date)?
 
     func refresh() async throws {
         now = Date()
@@ -182,11 +191,17 @@ final class Pomodoro: StackbarPlugin {
         }
     }
 
-    /// The last seven days, oldest first, today last.
-    var week: [(label: String, minutes: Int)] {
+    /// Made once: building a DateFormatter on every render is expensive.
+    private static let weekdayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale.current
         formatter.setLocalizedDateFormatFromTemplate("EEE")
+        return formatter
+    }()
+
+    /// The last seven days, oldest first, today last.
+    var week: [(label: String, minutes: Int)] {
+        let formatter = Self.weekdayFormatter
         return (0..<7).map { back in
             let date = Calendar.current.date(byAdding: .day, value: back - 6, to: now) ?? now
             return (label: formatter.string(from: date), minutes: days[key(for: date)]?.minutes ?? 0)
@@ -431,6 +446,16 @@ final class Pomodoro: StackbarPlugin {
             return .message(statusLine)
         }
         now = Date()
+        // Taps ask before throwing away a session under way; a command can't
+        // ask, so it says so and replaces the session when it is run again.
+        if session != nil, progress >= Self.protectedAfter {
+            let request = ReplaceRequest(kind: kind, minutes: minutes, name: name)
+            guard let armed = replaceRequest, armed.request == request, now.timeIntervalSince(armed.at) < Self.replaceWindow else {
+                replaceRequest = (request, now)
+                return .message("\(statusLine). Run this again within \(Int(Self.replaceWindow)) seconds to replace it.")
+            }
+        }
+        replaceRequest = nil
         pending = nil
         mode = kind
         if !name.isEmpty { tag = name }

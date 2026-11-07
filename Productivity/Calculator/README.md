@@ -23,6 +23,13 @@ answers.
   common ones like `sf`, `nyc`, `bangalore`, `uk` and abbreviations like
   `pst` and `ist`. Without a starting place, the time is yours.
 
+## What's new in 1.4.0
+
+- A decimal comma works: 2,5*2 is 5 and 1,5 km in m is 1500 m. A comma is a thousands separator only when it can be one (1,000 and 1,234.56 as before), and on a Mac that writes decimal commas it is always the decimal mark.
+- If the exchange rates can't be fetched (offline at launch, say), it tries again after 30 seconds, 2, 10 and 30 minutes, and on wake, instead of waiting six hours.
+- Time-zone answers no longer rebuild a date formatter and a pattern on every keystroke.
+- Indian digit grouping works: 1,00,000 and 12,34,567 are read as lakhs and crores. A lone . or , is no longer a number.
+
 ## What's new in 1.3.0
 
 - The answer is always first in the palette, above a past answer to the

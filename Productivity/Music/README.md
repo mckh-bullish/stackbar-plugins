@@ -17,6 +17,12 @@ pause; right-click for the panel with the track, Previous, Next and volume.
   Current Track.
 - **Agent tool:** `now_playing` describes the current track.
 
+## What's new in 1.4.1
+
+- With neither Music nor Spotify open, it checks every 30 seconds instead of every 5, and goes back to 5 as soon as a player is running or you click.
+- Dragging the volume slider sends a few values and the last one instead of one per step, so the volume no longer lags or snaps back.
+- A slow cover lookup no longer holds up play, pause and skip, and a failed one is retried after a minute.
+
 ## What's new in 1.4.0
 
 - The desktop widget has Play/Pause and Next buttons. Needs Stackbar 0.21.0.

@@ -39,6 +39,10 @@ app even when it isn't running.
 Letters with no app pass straight through, so Right ⌘ C still copies. Hold
 Right ⌘ on its own to see the whole letter map.
 
+## What's new in 1.2.1
+
+- Checks the key layer once a minute instead of every 20 seconds while idle; launching and quitting apps still update it at once.
+
 ## What's new in 1.2.0
 
 - The menu bar icon is off by default, since the switcher lives on a held key. It comes back by itself when the key stops working, and Settings can keep it on.

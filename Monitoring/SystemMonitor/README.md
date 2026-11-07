@@ -47,6 +47,10 @@ the same thing it does in Activity Monitor.
 A widget shows your Mac's load without opening anything.
 <!-- preview: widget -->
 
+## What's new in 1.6.1
+
+- A reading that flaps around a threshold no longer notifies again within the 30 minutes (six hours for the disk) after an alert.
+
 ## What's new in 1.6.0
 
 - Temperatures (CPU, GPU, SSD, battery) and fan speeds in the panel, and CPU temperature as a menu bar choice.

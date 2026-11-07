@@ -10,7 +10,7 @@ final class WindowSwitcher: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.window-switcher",
         name: "Window Switcher",
-        version: "1.0.0",
+        version: "1.0.1",
         summary: "Jump to any open window by typing part of its app or title in the palette.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -28,7 +28,15 @@ final class WindowSwitcher: StackbarPlugin {
     var problem: String?
     var results: [WindowInfo] = []
 
-    func load() async {
+    var readAt: Date?
+
+    /// Reads the windows when the view opens (nothing typed yet) or the last
+    /// read is a few seconds old: listing them over Accessibility waits on
+    /// every unresponsive app, so typing reuses the snapshot. A failed read
+    /// counts too, so a broken state doesn't retry on every keystroke.
+    func load(force: Bool = true) async {
+        if !force, let readAt, Date().timeIntervalSince(readAt) < 3 { return }
+        readAt = Date()
         do {
             snapshot = try await Stackbar.windows()
             problem = nil
@@ -111,7 +119,7 @@ final class WindowSwitcher: StackbarPlugin {
     var commands: [Command] {
         Command("switch", title: "Switch Windows", subtitle: "Bring any open window to the front", symbol: "macwindow.on.rectangle", keywords: ["window", "switch", "focus", "tab"])
             .view(search: { invocation in
-                await self.load()
+                await self.load(force: invocation.text.isEmpty)
                 self.results = Self.matches(invocation.text, in: self.snapshot.windows)
             }) { _ in
                 if let problem = self.problem {

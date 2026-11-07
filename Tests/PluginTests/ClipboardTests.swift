@@ -108,4 +108,34 @@ final class ClipboardTests: XCTestCase {
         XCTAssertEqual(host.system.pasted.last, .text(token))
         await supervisor.stop()
     }
+
+    func testPinsCannotPushTheStoredHistoryPastTheQuota() async throws {
+        let host = Host(self)
+        let id = "io.navbytes.stackbar.clipboard"
+        // Six pinned 100,000-character copies: 600 KB, more than pins may use.
+        let big = String(repeating: "x", count: 100_000)
+        let pinned = (0..<6).map { index in
+            #"{"id":"pin\#(index)","kind":"text","text":"\#(big)","files":[],"firstCopied":0,"lastCopied":\#(100 - index),"count":1,"pinned":true}"#
+        }
+        try await host.services.storage.set("history", "[" + pinned.joined(separator: ",") + "]", for: id)
+        let supervisor = try await host.start("Clipboard")
+        let before = await supervisor.settledCount
+        host.system.simulateCopy("something new")
+        _ = await waitUntil(5) { await supervisor.settledCount > before }
+        let saved = await waitUntil(10) {
+            await self.history(host, id).contains { $0["text"] as? String == "something new" }
+        }
+        XCTAssertTrue(saved)
+        let stored = await history(host, id)
+        let stillPinned = stored.filter { $0["pinned"] as? Bool == true }
+        XCTAssertLessThanOrEqual(stillPinned.count, 4, "pins past their budget are unpinned")
+        let size = await host.services.storage.snapshot(for: id)["history"]?.utf8.count ?? 0
+        XCTAssertLessThan(size, 1024 * 1024, "the host would refuse the write otherwise")
+        await supervisor.stop()
+    }
+
+    private func history(_ host: Host, _ id: String) async -> [[String: Any]] {
+        let json = await host.services.storage.snapshot(for: id)["history"] ?? "[]"
+        return (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [[String: Any]] ?? []
+    }
 }

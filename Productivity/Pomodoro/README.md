@@ -27,6 +27,11 @@ and focused minutes sit under the timer, with the last seven days in a chart.
   and the last seven days.
 - **Requires:** Stackbar 0.26.0 or later.
 
+## What's new in 1.7.1
+
+- Start a Focus Session and Take a Break no longer throw away a session that is more than a minute in without asking: the first run says so, and running it again within 30 seconds replaces the session.
+- The week chart no longer rebuilds its date formatter on every redraw.
+
 ## What's new in 1.7.0
 
 - The end-of-session notification has Start Break (or Start Focus) and 5 More Minutes buttons, unless Auto is on.

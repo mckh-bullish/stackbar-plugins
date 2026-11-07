@@ -12,6 +12,10 @@ heaviest processes, by CPU or memory.
 - **Leaves alone:** other users' processes, and loginwindow, WindowServer,
   launchd and Stackbar itself, which would log you out or freeze the screen.
 
+## What's new in 1.1.0
+
+- The panel's process list now refreshes every minute, and has a Refresh button, instead of showing what was running at launch.
+
 ## What's new in 1.0.0
 
 - First release.

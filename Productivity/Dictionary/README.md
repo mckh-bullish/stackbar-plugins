@@ -6,7 +6,12 @@ Return copies the definition, ⌘⇧C copies the word, and ⌘O opens it in the 
 
 ## What it needs
 
-Nothing, and Stackbar 0.26.0 or later. It uses the dictionaries turned on in the Dictionary app's settings, so other languages work too.
+Stackbar 0.26.0 or later, and permission to open `dict://` links (that is how ⌘O opens the Dictionary app). It uses the dictionaries turned on in the Dictionary app's settings, so other languages work too.
+
+## What's new in 1.1.0
+
+- Open in Dictionary (⌘O) works: it now declares the dict:// link it opens, which Stackbar shows on the install sheet. If something is refused you see why.
+- A look-up that fails shows the error instead of telling you to check the spelling.
 
 ## What's new in 1.0.0
 

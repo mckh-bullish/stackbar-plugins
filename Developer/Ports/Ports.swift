@@ -11,7 +11,7 @@ final class Ports: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.ports",
         name: "Ports",
-        version: "1.4.0",
+        version: "1.4.1",
         summary: "Which process is listening on which port, and a way to stop it.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .every(.seconds(30))],
@@ -76,8 +76,16 @@ final class Ports: StackbarPlugin {
         }
     }
 
+    /// Scans in a row that found the same listeners. After a few, the
+    /// timer slows from every 30 seconds to every two minutes: a system-wide
+    /// `lsof` costs real CPU, and the plugin can't tell whether the panel is
+    /// open. Any change, or any scan you ask for, brings the pace back.
+    var unchangedScans = 0
+    static let idleScans = 4
+
     func refresh() async throws {
         notice = nil
+        if Stackbar.refreshReason == .interval, unchangedScans >= Self.idleScans, let at = loadedAt, Date().timeIntervalSince(at) < 110 { return }
         await load()
     }
 
@@ -89,10 +97,13 @@ final class Ports: StackbarPlugin {
             // lsof exits 1 when nothing matches.
             guard result.succeeded || (result.status == 1 && result.errorText.isEmpty) else {
                 problem = "lsof failed (\(result.status)): \(result.errorText.prefix(200))"
+                unchangedScans = 0
                 loaded = true
                 return
             }
-            listeners = Self.parse(result.text)
+            let fresh = Self.parse(result.text)
+            unchangedScans = fresh == listeners && loaded ? unchangedScans + 1 : 0
+            listeners = fresh
             loadedAt = Date()
             problem = nil
         } catch {

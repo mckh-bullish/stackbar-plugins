@@ -24,7 +24,7 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.8.0",
+        version: "1.8.1",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
@@ -292,6 +292,9 @@ final class PRCockpit: StackbarPlugin {
     @Stored("recentDays") var recentDays = 0
     var inbox: [InboxItem] = []
     var inboxError: String?
+    /// Whether the inbox has loaded once, so an empty one still has a
+    /// "before" to compare a new mention against.
+    var inboxLoaded = false
     var recentlyClosed: [PullRequest] = []
     var issues: [Issue] = []
     var issuesError: String?
@@ -303,6 +306,17 @@ final class PRCockpit: StackbarPlugin {
     @Stored("cloneWith") var cloneWith = "SSH"
     var repoResults: [Repo] = []
     var reposError: String?
+    /// When the repository list was last requested, success or not.
+    var reposAttempted: Date?
+    /// GitHub repository searches already made, by query, so typing back over
+    /// the same text asks nothing; and why the last one failed.
+    var repoSearches: [String: (items: [Repo], at: Date)] = [:]
+    /// A cached search answers for this long.
+    static let repoSearchTTL: TimeInterval = 300
+    /// The token and server the repository list was last requested with: a
+    /// change retries at once instead of waiting out the pause.
+    var reposCredentials: String?
+    var repoSearchError: String?
     var formError: String?
     var created: String?
 
@@ -323,6 +337,11 @@ final class PRCockpit: StackbarPlugin {
         }
         return enterpriseServer != nil
     }
+
+    /// Seconds a refresh request may take. The plugin handles one message at a
+    /// time, so a slow GitHub holds up every click behind the refresh; a
+    /// short limit keeps that wait short, and the next refresh tries again.
+    static let refreshTimeout = 20.0
 
     func refresh() async throws {
         defer { loaded = true }
@@ -359,7 +378,7 @@ final class PRCockpit: StackbarPlugin {
             let body = try JSONEncoder().encode(["query": query])
             let response = try await Stackbar.http(HTTPRequest(url: graphqlURL, method: "POST", headers: [
                 "Authorization": "Bearer \(token)", "Content-Type": "application/json", "Accept": "application/json",
-            ], body: body))
+            ], body: body, timeout: Self.refreshTimeout))
             guard (200..<300).contains(response.status) else {
                 throw HostError(response.status == 401 ? "GitHub rejected the token (401); set a new GITHUB_TOKEN" : "GitHub answered \(response.status): \(String(decoding: response.body.prefix(200), as: UTF8.self))")
             }
@@ -395,7 +414,7 @@ final class PRCockpit: StackbarPlugin {
         do {
             let response = try await Stackbar.http(HTTPRequest(url: apiBase + "/notifications?per_page=40", headers: [
                 "Authorization": "Bearer \(token)", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28",
-            ]))
+            ], timeout: Self.refreshTimeout))
             guard (200..<300).contains(response.status) else {
                 throw HostError(response.status == 403 || response.status == 404
                     ? "GitHub won't share notifications with this token. The inbox needs a classic token with the notifications scope."
@@ -404,13 +423,14 @@ final class PRCockpit: StackbarPlugin {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let items = try decoder.decode([InboxItem].self, from: response.body)
-            if notifyChanges, !inbox.isEmpty || inboxError != nil {
+            if notifyChanges, inboxLoaded {
                 let known = Set(inbox.map(\.id))
                 for item in items where item.unread && !known.contains(item.id) && (item.reason == "mention" || item.reason == "team_mention") {
                     Stackbar.notify("Mentioned: \(item.subject.title)", body: item.repository.full_name, actions: [NotificationAction("Open", url: item.webURL)])
                 }
             }
             inbox = items.sorted { $0.updated_at > $1.updated_at }
+            inboxLoaded = true
             inboxError = nil
         } catch {
             inboxError = "\(error)"
@@ -484,7 +504,10 @@ final class PRCockpit: StackbarPlugin {
             }
         }
         let tracked = Set((newMine + closed).map(\.id))
-        announced = announced.filter { tracked.contains(String($0.key.split(separator: " ").first ?? "")) }
+        // Each assignment to a stored property rewrites the plugin's whole
+        // file, so only assign what changed.
+        let keptAnnounced = announced.filter { tracked.contains(String($0.key.split(separator: " ").first ?? "")) }
+        if keptAnnounced != announced { announced = keptAnnounced }
         everRequested.formUnion(review.map(\.id))
         recentlyClosed = closed.sorted { $0.updatedAt > $1.updatedAt }
         toReview = review.sorted { $0.updatedAt > $1.updatedAt }
@@ -495,9 +518,11 @@ final class PRCockpit: StackbarPlugin {
             // First run: what is already there isn't news.
             seen = Dictionary((toReview + mine).map { ($0.url, $0.updatedAt) }, uniquingKeysWith: { first, _ in first })
         } else {
-            seen = seen.filter { current.contains($0.key) }
+            let kept = seen.filter { current.contains($0.key) }
+            if kept != seen { seen = kept }
         }
-        snoozed = snoozed.filter { current.contains($0.key) }
+        let keptSnoozed = snoozed.filter { current.contains($0.key) }
+        if keptSnoozed != snoozed { snoozed = keptSnoozed }
         history = Array((history + [Double(review.count)]).suffix(48))
         updatedAt = Date()
     }
@@ -528,6 +553,13 @@ final class PRCockpit: StackbarPlugin {
 
     func markSeen(_ pr: PullRequest) { seen[pr.url] = pr.updatedAt }
 
+    /// Every listed pull request as seen, in one write instead of one each.
+    func markAllSeen() {
+        var marked = seen
+        for pr in toReview + mine { marked[pr.url] = pr.updatedAt }
+        seen = marked
+    }
+
     /// Records `state` as the last one announced about `pr`'s `topic`, and
     /// says whether it is a change from what was announced before.
     func announce(_ pr: PullRequest, _ topic: String, as state: String) -> Bool {
@@ -550,7 +582,7 @@ final class PRCockpit: StackbarPlugin {
         return decoder
     }()
 
-    func rest(_ path: String, method: String = "GET", body: Data? = nil) async throws -> Data {
+    func rest(_ path: String, method: String = "GET", body: Data? = nil, timeout: Double = 30) async throws -> Data {
         guard try await loadEnterpriseServer() else { throw HostError("Enter your GitHub Enterprise server as GITHUB_ENTERPRISE_URL") }
         guard let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else {
             throw HostError("Add a GitHub token (GITHUB_TOKEN) first")
@@ -560,7 +592,7 @@ final class PRCockpit: StackbarPlugin {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
             "Content-Type": "application/json",
-        ], body: body))
+        ], body: body, timeout: timeout))
         switch response.status {
         case 200..<300: return response.body
         case 401: throw HostError("GitHub rejected the token (401); set a new GITHUB_TOKEN")
@@ -573,13 +605,30 @@ final class PRCockpit: StackbarPlugin {
         }
     }
 
-    /// Open issues assigned to you, telling you about new ones.
-    func loadIssues() async {
+    /// When the assigned issues were last fetched, for `loadIssues(maxAge:)`.
+    var issuesFetched: Date?
+
+    /// Open issues assigned to you, telling you about new ones. With a
+    /// `maxAge`, a list fetched more recently than that is kept: the palette
+    /// view calls this on every keystroke and filters the list locally.
+    func loadIssues(maxAge: TimeInterval = 0) async {
+        // While the last fetch failed, wait 30 s between tries instead of
+        // retrying on every keystroke.
+        if maxAge > 0, let at = issuesFetched, Date().timeIntervalSince(at) < (issuesError == nil ? maxAge : max(maxAge, 30)) { return }
+        issuesFetched = Date()
         do {
             // Every assigned issue, not only recent ones: an old one that
             // changes must not look newly assigned. `shownIssues` filters by age.
-            let data = try await rest("/issues?filter=assigned&state=open&per_page=50&sort=updated")
-            let fresh = try Self.restDecoder.decode([Issue].self, from: data).filter { $0.pull_request == nil }
+            // The endpoint lists pull requests too, so read up to three pages
+            // of 100 and drop them.
+            var all: [Issue] = []
+            for page in 1...3 {
+                let data = try await rest("/issues?filter=assigned&state=open&per_page=100&page=\(page)&sort=updated", timeout: Self.refreshTimeout)
+                let batch = try Self.restDecoder.decode([Issue].self, from: data)
+                all += batch.filter { $0.pull_request == nil }
+                if batch.count < 100 { break }
+            }
+            let fresh = all
             if notifyChanges, issuesLoaded {
                 let known = Set(issues.map(\.id))
                 let added = fresh.filter { !known.contains($0.id) }
@@ -601,6 +650,14 @@ final class PRCockpit: StackbarPlugin {
     /// first; three pages of 100 at most. Kept for six hours.
     func loadRepos(force: Bool = false) async {
         if !force, !repos.isEmpty, let at = reposLoaded, Date().timeIntervalSince(at) < 6 * 3600 { return }
+        // An empty account or an unreachable GitHub never fills the cache;
+        // the palette asks on every keystroke, so wait between tries, unless
+        // the token or server changed since the last one.
+        let token = (try? await Stackbar.secret("GITHUB_TOKEN")) ?? ""
+        let credentials = token + "|" + apiBase
+        if !force, credentials == reposCredentials, let at = reposAttempted, Date().timeIntervalSince(at) < 15 { return }
+        reposCredentials = credentials
+        reposAttempted = Date()
         do {
             var all: [Repo] = []
             for page in 1...3 {
@@ -622,11 +679,28 @@ final class PRCockpit: StackbarPlugin {
         let query = text.trimmingCharacters(in: .whitespaces)
         guard query.count >= 3, matchingRepos(query).count < 5 else {
             repoResults = []
+            repoSearchError = nil
+            return
+        }
+        if let known = repoSearches[query], Date().timeIntervalSince(known.at) < Self.repoSearchTTL {
+            repoResults = known.items
+            repoSearchError = nil
             return
         }
         struct Reply: Decodable { let items: [Repo] }
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? query
-        repoResults = (try? Self.restDecoder.decode(Reply.self, from: try await rest("/search/repositories?q=\(encoded)&per_page=10")).items) ?? []
+        do {
+            let items = try Self.restDecoder.decode(Reply.self, from: try await rest("/search/repositories?q=\(encoded)&per_page=10")).items
+            if repoSearches.count >= 50 { repoSearches.removeAll() }
+            repoSearches[query] = (items, Date())
+            repoResults = items
+            repoSearchError = nil
+        } catch {
+            // Not cached, so the next keystroke may succeed; but say why
+            // nothing came back instead of looking like "no such repository".
+            repoResults = []
+            repoSearchError = "GitHub search failed: \(error)"
+        }
     }
 
     func matchingRepos(_ text: String) -> [Repo] {
@@ -801,7 +875,7 @@ final class PRCockpit: StackbarPlugin {
             } else {
                 PanelHeader(headline, subtitle: "\(shownMine.count) of yours open" + (updatedAt.map { " · updated \($0.formatted(date: .omitted, time: .shortened))" } ?? ""), symbol: "arrow.triangle.pull", theme: theme) {
                     if (shownReview + shownMine).contains(where: isNew) {
-                        IconButton("checkmark.circle", label: "Mark all as seen", theme: theme, prominence: .tinted) { (self.toReview + self.mine).forEach(self.markSeen) }
+                        IconButton("checkmark.circle", label: "Mark all as seen", theme: theme, prominence: .tinted) { self.markAllSeen() }
                     }
                 }
                 HeroCard(theme: theme, look: .glow) {
@@ -1032,6 +1106,8 @@ final class PRCockpit: StackbarPlugin {
 
     var searchResults: [PullRequest] = []
     var searchError: String?
+    /// The text `searchResults` answers, so the same text isn't asked twice.
+    var searchedText: String?
 
     var commands: [Command] {
         Command("search", title: "Search Pull Requests", subtitle: "Yours and to review; type to search GitHub", symbol: "magnifyingglass", keywords: ["github", "pr", "pull request"])
@@ -1066,11 +1142,14 @@ final class PRCockpit: StackbarPlugin {
                     List(searchable: true) {
                         ForEach(self.orderedRepos) { repo in self.repoRow(repo) }
                         ForEach(self.repoResults.filter { result in !self.repos.contains { $0.id == result.id } }) { repo in self.repoRow(repo) }
+                        if let problem = self.repoSearchError {
+                            Row("Couldn't search GitHub", subtitle: problem, symbol: "exclamationmark.triangle", key: "repo-search-error")
+                        }
                     }
                 }
             }
         Command("issues", title: "My GitHub Issues", subtitle: "Open issues assigned to you", symbol: "smallcircle.filled.circle", keywords: ["github", "issue", "assigned", "gh"])
-            .view(search: { _ in await self.loadIssues() }) { _ in
+            .view(search: { _ in await self.loadIssues(maxAge: 30) }) { _ in
                 if let problem = self.issuesError {
                     ContentUnavailableView("Can't reach GitHub", symbol: "exclamationmark.triangle", message: problem)
                 } else if self.shownIssues.isEmpty {
@@ -1108,8 +1187,15 @@ final class PRCockpit: StackbarPlugin {
         guard text.count > 2 else {
             searchResults = []
             searchError = nil
+            searchedText = nil
             return
         }
+        // The host sends the newest text once this returns, so a short wait
+        // folds a burst of keystrokes into one request; the same text again
+        // (a reopen, a refresh) keeps its results.
+        if text == searchedText, searchError == nil { return }
+        try? await Task.sleep(for: .milliseconds(250))
+        searchedText = text
         guard try await loadEnterpriseServer() else {
             searchError = "Enter your GitHub Enterprise server as GITHUB_ENTERPRISE_URL."
             return

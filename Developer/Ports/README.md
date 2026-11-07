@@ -18,6 +18,10 @@ whatever holds it is asked to stop.
 Processes owned by another user, like system services, can't be stopped
 from here.
 
+## What's new in 1.4.1
+
+- Ports slows its scan from every 30 seconds to every two minutes while nothing has changed, and returns to 30 seconds when a port opens or closes.
+
 ## What's new in 1.4.0
 
 - Type a port number like 3000 or :8080 in the palette to see what is listening on it.

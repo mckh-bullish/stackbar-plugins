@@ -10,7 +10,7 @@ final class FileSearch: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.file-search",
         name: "File Search",
-        version: "1.0.0",
+        version: "1.0.1",
         summary: "Find files and folders by name from the command palette, most recently used first.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -42,6 +42,7 @@ final class FileSearch: StackbarPlugin {
         let text = text.trimmingCharacters(in: .whitespaces)
         guard text.count >= Self.minimumLength else {
             results = []
+            problem = nil
             return
         }
         do {

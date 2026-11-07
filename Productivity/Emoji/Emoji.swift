@@ -10,7 +10,7 @@ final class Emoji: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.emoji",
         name: "Emoji",
-        version: "1.1.0",
+        version: "1.1.1",
         summary: "Search every emoji by name in a grid, and paste it where you were typing.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -39,7 +39,21 @@ final class Emoji: StackbarPlugin {
         var emoji: String
         var name: String
         var group: String
+        /// The name's words, lowercased, split once instead of on every keystroke.
+        var parts: [String]
         var id: String { emoji }
+
+        init(emoji: String, name: String, group: String) {
+            self.emoji = emoji
+            self.name = name
+            self.group = group
+            parts = Emoji.words(in: name)
+        }
+    }
+
+    /// Words are runs of letters and digits: "left-facing fist" is "left", "facing", "fist".
+    nonisolated static func words(in text: String) -> [String] {
+        text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
     }
 
     static let groupSymbols: [String: String] = ["Smileys & Emotion": "face.smiling", "People & Body": "hand.wave", "Animals & Nature": "pawprint", "Food & Drink": "fork.knife", "Travel & Places": "car", "Activities": "soccerball", "Objects": "lightbulb", "Symbols": "heart", "Flags": "flag"]
@@ -59,6 +73,10 @@ final class Emoji: StackbarPlugin {
         return items
     }()
 
+    static let byEmoji: [String: Item] = Dictionary(all.map { ($0.emoji, $0) }, uniquingKeysWith: { first, _ in first })
+
+    static let byGroup: [String: [Item]] = Dictionary(grouping: all, by: \.group)
+
     static let groups: [String] = {
         var seen: [String] = []
         for item in all where !seen.contains(item.group) { seen.append(item.group) }
@@ -70,11 +88,12 @@ final class Emoji: StackbarPlugin {
     /// Every typed word must start a word of the name ("thu up" finds
     /// thumbs up); the most used come first, then Unicode's order.
     static func matches(_ query: String, in items: [Item] = all, uses: [String: Int] = [:]) -> [Item] {
-        let words = query.lowercased().split(whereSeparator: { $0 == " " || $0 == ":" }).map(String.init)
-        guard !words.isEmpty else { return items }
+        // Split like the names are, so "left-facing" and "heart-eyes" match.
+        let words = Self.words(in: query)
+        // Nothing typed lists everything; only separators (":", "-") match nothing.
+        guard !words.isEmpty else { return query.allSatisfy(\.isWhitespace) ? items : [] }
         let found = items.filter { item in
-            let parts = item.name.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
-            return words.allSatisfy { word in parts.contains { $0.hasPrefix(word) } }
+            words.allSatisfy { word in item.parts.contains { $0.hasPrefix(word) } }
         }
         return found.enumerated().sorted { lhs, rhs in
             let left = uses[lhs.element.emoji] ?? 0
@@ -85,8 +104,7 @@ final class Emoji: StackbarPlugin {
 
     /// The most used, at most `limit`.
     var frequent: [Item] {
-        let byEmoji = Dictionary(Self.all.map { ($0.emoji, $0) }, uniquingKeysWith: { first, _ in first })
-        return uses.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }.prefix(24).compactMap { byEmoji[$0.key] }
+        uses.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }.prefix(24).compactMap { Self.byEmoji[$0.key] }
     }
 
     func picked(_ item: Item) {
@@ -104,12 +122,13 @@ final class Emoji: StackbarPlugin {
             .view { invocation in
                 let text = invocation.text.trimmingCharacters(in: .whitespaces)
                 if text.isEmpty {
+                    let frequent = self.frequent
                     List {
-                        if !self.frequent.isEmpty {
-                            Section("Frequently Used") { self.grid(self.frequent, prefix: "f") }
+                        if !frequent.isEmpty {
+                            Section("Frequently Used") { self.grid(frequent, prefix: "f") }
                         }
                         ForEach(Self.groups) { group in
-                            Section(group) { self.grid(Self.all.filter { $0.group == group }, prefix: "") }
+                            Section(group) { self.grid(Self.byGroup[group] ?? [], prefix: "") }
                         }
                     }
                 } else {
@@ -159,6 +178,7 @@ final class Emoji: StackbarPlugin {
 
     var panel: ViewContent {
         PanelHeader("Emoji", subtitle: notice ?? "Click to copy, or Search Emoji in the palette", symbol: "face.smiling", theme: theme)
+        let frequent = self.frequent
         let shown = frequent.isEmpty ? Array(Self.all.prefix(32)) : frequent
         Card(frequent.isEmpty ? "Smileys" : "Frequently used", spacing: Space.xs, padding: Space.s) {
             Grid(columns: Self.columns, spacing: Space.xs) {

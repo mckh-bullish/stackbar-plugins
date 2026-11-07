@@ -36,6 +36,11 @@ Add `Tokyo` or `Asia/Tokyo`, and pick which city the menu bar shows.
 A widget keeps your cities on the desktop.
 <!-- preview: widget -->
 
+## What's new in 1.5.1
+
+- Night-shift working hours (like 22:00 to 06:00) now work.
+- Settings no longer crashes on an out-of-range stored hour.
+
 ## What's new in 1.5.0
 
 - Type a city like Tokyo in the palette to see its time right away.

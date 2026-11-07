@@ -19,7 +19,7 @@ final class Translate: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.translate",
         name: "Translate",
-        version: "1.6.0",
+        version: "1.6.1",
         summary: "Translate the selected text in place, on your Mac or with Google or DeepL.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -129,6 +129,8 @@ final class Translate: StackbarPlugin {
     /// Translates on the Mac, with nothing sent anywhere, when Apple's
     /// Translation has this language pair downloaded. Nil means it can't
     /// (another OS, an unknown source language, or the pair isn't installed).
+    /// If the pair is installed but the translation fails, that throws: the
+    /// text is not sent to Google behind the user's back.
     func onDevice(_ text: String, to language: Language) async throws -> (text: String, detected: String?)? {
         #if canImport(Translation)
         let recognizer = NLLanguageRecognizer()
@@ -170,8 +172,10 @@ final class Translate: StackbarPlugin {
             let result = try await deepL(text, to: language)
             return (result.text, result.detected, "DeepL")
         }
-        // Apple's translation can fail for reasons of its own; Google is the fallback.
-        if let local = try? await onDevice(text, to: language) { return (local.text, local.detected, "your Mac") }
+        // Google only takes over when the Mac can't do this pair at all; a
+        // failure of the installed pair is shown, since Settings promises the
+        // text stays on the Mac in that case.
+        if let local = try await onDevice(text, to: language) { return (local.text, local.detected, "your Mac") }
         let result = try await google(text, to: language)
         return (result.text, result.detected, "Google Translate")
     }
@@ -220,8 +224,22 @@ final class Translate: StackbarPlugin {
             language = Self.language(second)
             translated = try await run(text, to: language)
         }
+        // Google and DeepL take the first 5,000 characters; say so.
+        cutAt = translated.by == "your Mac" || text.count <= Self.maxCharacters ? nil : text.count
         result = (text, translated.text, translated.detected, language.name, translated.by)
     }
+
+    /// The length of the text when only its first `maxCharacters` were translated.
+    var cutAt: Int?
+
+    /// "123 characters translated by Google Translate", and what was left out.
+    func caption(_ result: (source: String, text: String, detected: String?, target: String, by: String)) -> String {
+        if let cutAt { return "The first \(Self.maxCharacters) of \(cutAt) characters translated by \(result.by); the rest was not sent" }
+        return "\(result.source.count) characters translated by \(result.by)"
+    }
+
+    /// The typed text the search last saw, so an older keystroke doesn't translate.
+    private var latestTyped: String?
 
     // MARK: Commands
 
@@ -263,6 +281,13 @@ final class Translate: StackbarPlugin {
                     return
                 }
                 if self.inPlace {
+                    // Typed text is translated once the typing pauses, not
+                    // sent to a network engine for every keystroke.
+                    if !invocation.text.isEmpty {
+                        self.latestTyped = text
+                        try? await Task.sleep(for: .milliseconds(350))
+                        if self.latestTyped != text || Task.isCancelled { return }
+                    }
                     do { try await self.translate(text, to: invocation["to"]) } catch { self.problem = "\(error)" }
                 } else {
                     self.result = (text, "", nil, invocation["to"] ?? self.target, "")
@@ -279,7 +304,7 @@ final class Translate: StackbarPlugin {
             if inPlace {
                 List {
                     Row(result.text, subtitle: "\(result.detected.map { "From \($0) " } ?? "")into \(result.target)", symbol: "character.bubble", key: "translation")
-                        .preview(text: result.text, caption: "\(result.source.count) characters translated by \(result.by)")
+                        .preview(text: result.text, caption: caption(result))
                         .action("Paste") {
                             try await Stackbar.paste(.text(result.text), restoringClipboard: true)
                         }
@@ -400,7 +425,7 @@ final class Translate: StackbarPlugin {
                 self.problem = nil
             }
             if engine == "Automatic" {
-                Text("Translates on your Mac when the language pair is downloaded (System Settings > General > Language & Region > Translation Languages), so nothing leaves it. Otherwise the text goes to Google Translate, with no account or key.").style(.caption)
+                Text("Translates on your Mac when the language pair is downloaded (System Settings > General > Language & Region > Translation Languages), so nothing leaves it. If the pair isn't downloaded, the text goes to Google Translate instead, with no account or key. If a downloaded pair fails, you see the error and nothing is sent. Texts over 5,000 characters are cut there, and the result says so.").style(.caption)
             } else if useDeepL {
                 Text("DeepL needs an API key: the free plan at deepl.com/pro-api covers 500,000 characters a month. Stackbar asks for it the first time and keeps it in your Keychain.").style(.caption)
                 Picker("Formality", options: ["Default", "Formal", "Informal"], selection: formality, style: .segmented) { self.formality = $0 }

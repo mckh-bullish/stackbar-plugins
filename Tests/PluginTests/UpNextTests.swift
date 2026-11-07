@@ -117,4 +117,15 @@ final class UpNextTests: XCTestCase {
         }
         await supervisor.stop()
     }
+
+    func testAPlainHttpLinkBeforeAnHttpsOneIsFound() async throws {
+        let now = Date()
+        let host = Host(self, system: SimulatedSystem(events: [
+            CalendarEvent(id: "a", title: "Planning", start: now.addingTimeInterval(600), end: now.addingTimeInterval(2400), notes: "Join http://acme.zoom.us/j/987654321 (agenda: https://example.com/agenda)", calendar: "Work", participation: .accepted, attendees: 3),
+        ]))
+        let supervisor = try await host.start("UpNext")
+        let next = await supervisor.callTool("next_meeting")
+        XCTAssertTrue(next.text.contains("http://acme.zoom.us/j/987654321"), next.text)
+        await supervisor.stop()
+    }
 }

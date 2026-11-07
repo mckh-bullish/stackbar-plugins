@@ -14,7 +14,7 @@ final class Jira: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.jira",
         name: "Jira",
-        version: "1.5.0",
+        version: "1.5.1",
         summary: "Your assigned Jira issues: change status, assign, comment and watch, with alerts and new issues from the palette.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(5), .wake],
@@ -121,11 +121,18 @@ final class Jira: StackbarPlugin {
     var me: String?
     /// Workflow transitions of an issue, by key, for the status command.
     var transitions: [String: [Transition]] = [:]
+    /// When each issue's transitions were loaded: a workflow changed by
+    /// someone else shows up again after `transitionsTTL`.
+    var transitionsLoadedAt: [String: Date] = [:]
+    static let transitionsTTL: TimeInterval = 60
     var actionProblem: String?
     var commentDone: String?
     var assigned: [Issue] = []
     /// The issue an issue key typed at the palette's root names.
     var keyed: [String: Issue] = [:]
+    /// When each key that wasn't found (or failed to load) was last asked for.
+    var keyMisses: [String: Date] = [:]
+    var keyProblem: String?
     var found: [Issue] = []
     /// Why the last search failed, shown instead of an empty list.
     var searchProblem: String?
@@ -217,17 +224,54 @@ final class Jira: StackbarPlugin {
         return try JSONDecoder().decode(Reply.self, from: data).issues
     }
 
+    /// Up to `cap` issues for `jql`, a page of 50 at a time. Cloud pages by
+    /// token, Data Center by offset.
+    func searchAll(jql: String, cap: Int = 200) async throws -> [Issue] {
+        struct Page: Decodable {
+            let issues: [Issue]
+            let nextPageToken: String?
+            let total: Int?
+        }
+        var all: [Issue] = []
+        var token: String?
+        while all.count < cap {
+            var body: [String: Any] = ["jql": jql, "fields": Self.fields, "maxResults": min(50, cap - all.count)]
+            if isDataCenter { body["startAt"] = all.count } else if let token { body["nextPageToken"] = token }
+            let page = try JSONDecoder().decode(Page.self, from: try await api(isDataCenter ? "/search" : "/search/jql", method: "POST", body: body))
+            all += page.issues
+            if page.issues.isEmpty { break }
+            if isDataCenter {
+                if let total = page.total, all.count >= total { break }
+                if page.total == nil, page.issues.count < 50 { break }
+            } else {
+                guard let next = page.nextPageToken, !next.isEmpty else { break }
+                token = next
+            }
+        }
+        return all
+    }
+
+    /// When `refresh` last ran, so the palette view, which asks on every
+    /// keystroke, can keep a recent list.
+    var refreshed: Date?
+
+    func refresh(maxAge: TimeInterval) async throws {
+        if problem == nil, loaded, let at = refreshed, Date().timeIntervalSince(at) < maxAge { return }
+        try await refresh()
+    }
+
     func refresh() async throws {
+        refreshed = Date()
         guard !needsSetup else {
             problem = "Set your Jira site and email in Settings"
             loaded = true
             return
         }
         do {
-            assigned = try await search(jql: jql)
+            assigned = try await searchAll(jql: jql)
             noticeNewAssignments()
             // Only a stat, so a site that rejects this query keeps the rest of the panel.
-            doneThisWeek = (try? await search(jql: Self.doneJQL, limit: 50)) ?? []
+            doneThisWeek = (try? await searchAll(jql: Self.doneJQL)) ?? []
             if projects.isEmpty { try await loadProjects() }
             problem = nil
         } catch {
@@ -272,7 +316,23 @@ final class Jira: StackbarPlugin {
             keyed[key] = mine
             return
         }
-        if let issue = try? await search(jql: "key = \"\(key)\"", limit: 1).first { keyed[key] = issue }
+        // A key that wasn't found, or a lookup that failed, isn't asked again
+        // for a minute: the root search sends every keystroke.
+        if let at = keyMisses[key], Date().timeIntervalSince(at) < 60 { return }
+        do {
+            if let issue = try await search(jql: "key = \"\(key)\"", limit: 1).first {
+                if keyed.count >= 100 { keyed.removeAll() }
+                keyed[key] = issue
+                keyProblem = nil
+            } else {
+                keyMisses[key] = Date()
+                keyProblem = nil
+            }
+        } catch {
+            keyMisses[key] = Date()
+            keyProblem = "Couldn't look up \(key): \(error)"
+        }
+        if keyMisses.count >= 100 { keyMisses = keyMisses.filter { Date().timeIntervalSince($0.value) < 60 } }
     }
 
     // MARK: Alerts
@@ -312,10 +372,20 @@ final class Jira: StackbarPlugin {
         return id
     }
 
+    /// Whether `text` is a whole issue key (`ABC-123`) and not the start of one.
+    static func isKey(_ text: String) -> Bool {
+        text.range(of: #"^[A-Za-z][A-Za-z0-9_]*-\d+$"#, options: .regularExpression) != nil
+    }
+
     func loadTransitions(_ key: String) async {
         struct Reply: Decodable { let transitions: [Transition] }
+        // The view asks on every keystroke: partial keys always fail, and a
+        // workflow already loaded stays until a move changes it, or a minute.
+        guard Self.isKey(key) else { return }
+        if transitions[key] != nil, let at = transitionsLoadedAt[key], Date().timeIntervalSince(at) < Self.transitionsTTL { return }
         do {
             transitions[key] = try JSONDecoder().decode(Reply.self, from: try await api("/issue/\(key)/transitions")).transitions
+            transitionsLoadedAt[key] = Date()
             actionProblem = nil
         } catch {
             actionProblem = "\(error)"
@@ -327,6 +397,7 @@ final class Jira: StackbarPlugin {
             _ = try await api("/issue/\(key)/transitions", method: "POST", body: ["transition": ["id": transition.id]])
             Stackbar.hud("\(key) moved to \(transition.to?.name ?? transition.name)")
             transitions[key] = nil
+            transitionsLoadedAt[key] = nil
             try await refresh()
         } catch {
             Stackbar.hud("\(error)", isError: true)
@@ -495,11 +566,15 @@ final class Jira: StackbarPlugin {
     func setSite(_ value: String) async {
         site = Self.host(of: value) ?? value
         projects = []
+        me = nil
+        seenReady = false
         try? await refresh()
     }
 
     func setEmail(_ value: String) async {
         email = value.trimmingCharacters(in: .whitespaces)
+        me = nil
+        seenReady = false
         try? await refresh()
     }
 
@@ -525,11 +600,13 @@ final class Jira: StackbarPlugin {
         Section("Issues") {
             TextField("JQL for the panel", text: jql, key: "jql") { value in
                 self.jql = value.trimmingCharacters(in: .whitespaces).isEmpty ? Self.defaultJQL : value
+                self.seenReady = false
                 try await self.refresh()
             }
             if jql != Self.defaultJQL {
                 Button("Reset to Open Issues Assigned to Me", symbol: "arrow.uturn.backward") {
                     self.jql = Self.defaultJQL
+                    self.seenReady = false
                     try await self.refresh()
                 }
             }
@@ -546,7 +623,7 @@ final class Jira: StackbarPlugin {
 
     var commands: [Command] {
         Command("my-issues", title: "My Jira Issues", symbol: "square.stack.3d.up", keywords: ["jira", "issue", "ticket", "assigned"])
-            .view(search: { _ in try await self.refresh() }) { _ in
+            .view(search: { _ in try await self.refresh(maxAge: 30) }) { _ in
                 if let problem = self.problem {
                     ContentUnavailableView("Can't reach Jira", symbol: "exclamationmark.triangle", message: problem)
                 } else {
@@ -568,7 +645,12 @@ final class Jira: StackbarPlugin {
         // An issue key typed at the palette's root opens that issue.
         Command("issue", title: "Jira Issue by Key", symbol: "square.stack.3d.up", keywords: ["jira"])
             .view(search: { invocation in await self.lookUp(key: invocation.text) }) { invocation in
-                List(self.keyed[invocation.text.trimmingCharacters(in: .whitespaces).uppercased()].map { [$0] } ?? []) { issue in self.row(issue) }
+                let issue = self.keyed[invocation.text.trimmingCharacters(in: .whitespaces).uppercased()]
+                if issue == nil, let problem = self.keyProblem {
+                    ContentUnavailableView("Can't look that up", symbol: "exclamationmark.triangle", message: problem)
+                } else {
+                    List(issue.map { [$0] } ?? []) { issue in self.row(issue) }
+                }
             }
             .rootSearch(section: "Jira", matching: #"[A-Za-z][A-Za-z0-9_]*-\d+"#)
             .stackbarOnly()
@@ -578,7 +660,7 @@ final class Jira: StackbarPlugin {
                 if let key = invocation["key"]?.uppercased() { await self.loadTransitions(key) }
             }) { invocation in
                 let key = invocation["key"]?.uppercased() ?? ""
-                if key.isEmpty {
+                if key.isEmpty || !Self.isKey(key) {
                     ContentUnavailableView("Which issue?", symbol: "square.stack.3d.up", message: "Type its key, like ABC-123.")
                 } else if let problem = self.actionProblem, self.transitions[key] == nil {
                     ContentUnavailableView("Can't load \(key)'s workflow", symbol: "exclamationmark.triangle", message: problem)

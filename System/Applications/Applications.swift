@@ -9,7 +9,7 @@ final class Applications: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.applications",
         name: "Applications",
-        version: "1.2.0",
+        version: "1.2.1",
         summary: "Open any app or System Settings pane from the command palette by typing a few letters.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -35,17 +35,23 @@ final class Applications: StackbarPlugin {
     var problem: String?
     var results: [InstalledApp] = []
     /// How often each app or pane was opened from here, by id.
+    var failedAt: Date?
     @Stored("opens") var opens: [String: Int] = [:]
 
     /// The list from the host, at most every few minutes: a new app shows
     /// up the next time the palette asks after that.
     func load(force: Bool = false) async throws {
         if !force, let loadedAt, Date().timeIntervalSince(loadedAt) < 120 { return }
+        // A failed listing waits a few seconds before the next try, so a
+        // broken host call isn't repeated on every keystroke.
+        if !force, let failedAt, Date().timeIntervalSince(failedAt) < 10 { return }
         do {
             apps = try await Stackbar.installedApps()
             loadedAt = Date()
+            failedAt = nil
             problem = nil
         } catch {
+            failedAt = Date()
             problem = "Can't list your apps: \(error)"
         }
     }

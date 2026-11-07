@@ -13,6 +13,12 @@ instead. The panel keeps your frequent ones a click from the clipboard.
 - **Data:** Unicode's Emoji 15.1 list and English names, without skin-tone
   variants. Nothing leaves your Mac.
 
+## What's new in 1.1.1
+
+- Hyphenated names are found: left-facing, heart-eyes, upside-down, star-struck.
+- Typing only a colon or a dash no longer lists the whole table as if it were a result.
+- Searching and browsing do less work on every keystroke and redraw.
+
 ## What's new in 1.1.0
 
 - Type a colon and a name, like :tada, in the palette to find an emoji without opening Emoji first.

@@ -7,7 +7,7 @@ import Foundation
 /// ⌘⇧V opens it from anywhere. Type to filter, ↑↓ and Return (or ⌘1...⌘9)
 /// to paste into the app you were in, ⌥Return to paste as plain text, ⌘P to
 /// pin, ⌥⌫ to delete. Formatted text keeps its formatting. Pinned items stay
-/// at the top and are never trimmed. Passwords are skipped: the host never hands out items an app
+/// at the top and are never trimmed by age, only by the storage they may use. Passwords are skipped: the host never hands out items an app
 /// marks as concealed or transient, and items from password managers (or any
 /// app you add) are ignored. Images are kept by the host and pasted back.
 @main
@@ -15,7 +15,7 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.9.0",
+        version: "1.9.1",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
@@ -152,7 +152,7 @@ final class Clipboard: StackbarPlugin {
             }
         }
 
-        var bytes: Int { (text?.utf8.count ?? 0) + files.reduce(0) { $0 + $1.utf8.count } + 200 }
+        var bytes: Int { (text?.utf8.count ?? 0) + (recognized?.utf8.count ?? 0) + files.reduce(0) { $0 + $1.utf8.count } + 200 }
     }
 
     enum Order: String, CaseIterable, Codable {
@@ -216,6 +216,10 @@ final class Clipboard: StackbarPlugin {
     /// The plugin's 1 MB of storage, less room for settings.
     static let storageBudget = 850_000
     static let maxEntryCharacters = 100_000
+    /// Pins may use at most this much of it; the rest is for the history, so
+    /// pinning can never push the stored history past the host's quota (the
+    /// host refuses every write over it, and the plugin isn't told).
+    static let pinnedBudget = 425_000
 
     @Stored("limit") var limit = 200.0
     @Stored("order") var order = Order.recent
@@ -237,6 +241,24 @@ final class Clipboard: StackbarPlugin {
     @Stored("secretMinutes") var secretMinutes = 15.0
     /// Copies recorded per day (yyyy-MM-dd), for the last 30 days.
     @Stored("copiesByDay") var copiesByDay: [String: Int] = [:]
+
+    /// Copies per day not yet written: the count is saved on the minute tick,
+    /// not with every copy, which already saves the history.
+    private var pendingDays: [String: Int]?
+    /// Characters and lines per entry, counted once (an entry's text never changes).
+    private var textStats: [String: (characters: Int, lines: Int)] = [:]
+    /// OCR failures per image that were not "busy", so a transient error is retried.
+    private var recognitionFailures: [String: Int] = [:]
+
+    var days: [String: Int] { pendingDays ?? copiesByDay }
+
+    func stats(_ entry: Entry) -> (characters: Int, lines: Int) {
+        if let known = textStats[entry.id] { return known }
+        let text = entry.text ?? ""
+        let counted = (text.count, text.reduce(1) { $1.isNewline ? $0 + 1 : $0 })
+        textStats[entry.id] = counted
+        return counted
+    }
 
     /// The history, read from storage once and written back when it changes
     /// (a `@Stored` array would be decoded on every render).
@@ -269,6 +291,7 @@ final class Clipboard: StackbarPlugin {
         expireSecrets()
         try await capture()
         await readImageTexts()
+        flushDays()
     }
 
     func capture() async throws {
@@ -329,24 +352,41 @@ final class Clipboard: StackbarPlugin {
     /// with each entry; an image with none keeps "" so it isn't read again.
     func readImageTexts() async {
         guard readImageText else { return }
+        var read: [String: String] = [:]
         for entry in entries.filter({ $0.kind == .image && $0.recognized == nil && $0.imageID != nil }).prefix(5) {
             do {
-                let read = try await Stackbar.recognizeText(imageID: entry.imageID ?? "")
-                let text = read.lines.filter { $0.confidence >= 0.3 }.map(\.text).joined(separator: "\n")
-                update(entry.id) { $0.recognized = String(text.prefix(Self.maxEntryCharacters)) }
+                let result = try await Stackbar.recognizeText(imageID: entry.imageID ?? "")
+                let text = result.lines.filter { $0.confidence >= 0.3 }.map(\.text).joined(separator: "\n")
+                read[entry.id] = String(text.prefix(Self.maxEntryCharacters))
             } catch {
-                // Busy: try again later. Gone or unreadable: stop.
-                if "\(error)".contains("too many") { return }
-                update(entry.id) { $0.recognized = "" }
+                // Busy: try again later. Anything else is retried twice more
+                // before the image is taken to have no readable text.
+                if "\(error)".contains("too many") { break }
+                let failures = recognitionFailures[entry.id, default: 0] + 1
+                recognitionFailures[entry.id] = failures
+                if failures >= 3 { read[entry.id] = "" }
             }
         }
+        // One save for the whole batch.
+        guard !read.isEmpty else { return }
+        var history = entries
+        for index in history.indices {
+            if let text = read[history[index].id] { history[index].recognized = text }
+        }
+        entries = trimmed(history)
     }
 
     func countCopy(on date: Date) {
-        var days = copiesByDay
+        var days = self.days
         days[Self.day(date), default: 0] += 1
         let oldest = Self.day(date.addingTimeInterval(-29 * 86400))
-        copiesByDay = days.filter { $0.key >= oldest }
+        pendingDays = days.filter { $0.key >= oldest }
+    }
+
+    func flushDays() {
+        guard let pending = pendingDays else { return }
+        pendingDays = nil
+        copiesByDay = pending
     }
 
     static func day(_ date: Date) -> String {
@@ -355,21 +395,59 @@ final class Clipboard: StackbarPlugin {
     }
 
     /// Drops the oldest unpinned items past the limit or the storage budget.
+    /// Pins count against the budget too: the newest pins keep their place up
+    /// to `pinnedBudget`, and an older pin past it is unpinned (so it ages out
+    /// like any copy) rather than letting the history outgrow the host's quota.
     func trimmed(_ history: [Entry]) -> [Entry] {
+        var history = history
+        var pinnedBytes = 0
+        var autoUnpinned = 0
+        for index in history.indices where history[index].pinned {
+            pinnedBytes += history[index].bytes
+            if pinnedBytes > Self.pinnedBudget {
+                pinnedBytes -= history[index].bytes
+                history[index].pinned = false
+                autoUnpinned += 1
+            }
+        }
+        if autoUnpinned > 0 {
+            // Said once: the pin is gone after this, so it can't repeat.
+            lastError = "\(autoUnpinned) older pin\(autoUnpinned == 1 ? " was" : "s were") unpinned: pinned items are limited in size so the history stays within its storage."
+        }
         var kept: [Entry] = []
         var unpinned = 0
-        var bytes = 0
+        var bytes = pinnedBytes
         for entry in history {
-            bytes += entry.bytes
             if entry.pinned {
                 kept.append(entry)
                 continue
             }
+            bytes += entry.bytes
             guard unpinned < Int(limit), bytes <= Self.storageBudget else { continue }
             unpinned += 1
             kept.append(entry)
         }
+        if textStats.count > kept.count {
+            let ids = Set(kept.map(\.id))
+            textStats = textStats.filter { ids.contains($0.key) }
+        }
         return kept
+    }
+
+    /// Pins or unpins; refuses a pin that would not fit in the pinned budget.
+    func togglePin(_ id: String) {
+        var history = entries
+        guard let index = history.firstIndex(where: { $0.id == id }) else { return }
+        if !history[index].pinned {
+            let pinnedBytes = history.filter(\.pinned).reduce(0) { $0 + $1.bytes }
+            guard pinnedBytes + history[index].bytes <= Self.pinnedBudget else {
+                lastError = "Too much is pinned already to pin this too. Unpin something first."
+                return
+            }
+        }
+        history[index].pinned.toggle()
+        lastError = nil
+        entries = history
     }
 
     func matchesIgnoredPattern(_ text: String) -> Bool {
@@ -522,7 +600,7 @@ final class Clipboard: StackbarPlugin {
             Card("Insights") {
                 let calendar = Calendar.current
                 let dates = (0..<14).reversed().map { Date().addingTimeInterval(Double(-$0) * 86400) }
-                Chart("Copies, last 14 days", values: dates.map { Double(copiesByDay[Self.day($0)] ?? 0) }, kind: .bar, labels: dates.map { String(calendar.component(.day, from: $0)) }, highlight: 13)
+                Chart("Copies, last 14 days", values: dates.map { Double(days[Self.day($0)] ?? 0) }, kind: .bar, labels: dates.map { String(calendar.component(.day, from: $0)) }, highlight: 13)
                 let byApp = Dictionary(grouping: all, by: { $0.appName ?? "Unknown" }).mapValues { $0.reduce(0) { $0 + $1.count } }.sorted { $0.value > $1.value }
                 let top = byApp.prefix(5)
                 let rest = byApp.dropFirst(5).reduce(0) { $0 + $1.value }
@@ -615,7 +693,7 @@ final class Clipboard: StackbarPlugin {
 
     /// `inPalette` adds what the panel's header buttons do to ⌘K.
     func row(_ entry: Entry, paste pasteDirectly: Bool, inPalette: Bool = false) -> Row {
-        let source = [entry.appName, Self.relative(entry.lastCopied), entry.count > 1 ? "×\(entry.count)" : nil, entry.kind == .text && entry.secret == nil ? "\(entry.text?.count ?? 0) chars" : nil]
+        let source = [entry.appName, Self.relative(entry.lastCopied), entry.count > 1 ? "×\(entry.count)" : nil, entry.kind == .text && entry.secret == nil ? "\(stats(entry).characters) chars" : nil]
             .compactMap { $0 }.joined(separator: " · ")
         var row = Row(entry.title, subtitle: source, symbol: entry.pinned ? "pin.fill" : entry.symbol, key: entry.id).appIcon(entry.appID)
         if let preview = preview(entry) { row = preview(row) }
@@ -624,7 +702,7 @@ final class Clipboard: StackbarPlugin {
             row = row.action(pasteDirectly ? "Paste as plain text" : "Copy as plain text", shortcut: "option+return") { await self.use(entry, paste: self.pasteDirectly, plain: true) }
         }
         row = row.action(pasteDirectly ? "Copy" : "Paste") { await self.use(entry, paste: !self.pasteDirectly) }
-            .action(entry.pinned ? "Unpin" : "Pin", shortcut: "cmd+p") { self.update(entry.id) { $0.pinned.toggle() } }
+            .action(entry.pinned ? "Unpin" : "Pin", shortcut: "cmd+p") { self.togglePin(entry.id) }
         if entry.kind == .image, let text = entry.recognized, !text.isEmpty {
             row = row.action("Copy Text in Image", shortcut: "cmd+shift+t") {
                 self.lastWrite = Date()
@@ -662,8 +740,8 @@ final class Clipboard: StackbarPlugin {
             // drops its detail pane for a row without one, so the layout
             // jumped as the selection moved between short and long copies.
             guard let text = entry.text else { return nil }
-            let lines = text.split(separator: "\n", omittingEmptySubsequences: false).count
-            caption.insert("\(text.count) characters" + (lines > 1 ? ", \(lines) lines" : ""), at: 0)
+            let (characters, lines) = stats(entry)
+            caption.insert("\(characters) characters" + (lines > 1 ? ", \(lines) lines" : ""), at: 0)
             return { $0.preview(text: String(text.prefix(2000)), caption: caption.joined(separator: " · ")) }
         }
     }

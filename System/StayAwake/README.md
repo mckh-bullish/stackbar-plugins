@@ -17,6 +17,12 @@ crashes, so it can't leave the Mac awake by accident.
   run them from Spotlight, Shortcuts or a `stackbar://` link.
 - **Agent tools:** `awake_status`, `keep_awake` and `allow_sleep`.
 
+## What's new in 1.5.1
+
+- A very large duration (like 1e20) no longer crashes the plugin.
+- Awake time is saved once a minute instead of every refresh.
+- A stale error banner clears once the system status reads again.
+
 ## What's new in 1.5.0
 
 - The desktop widget has a button: Keep Awake when the Mac sleeps normally, Stop while it's held awake. Needs Stackbar 0.21.0.

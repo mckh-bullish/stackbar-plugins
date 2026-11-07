@@ -9,11 +9,13 @@ final class Dictionary: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.dictionary",
         name: "Dictionary",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Look words up in the Mac's own Dictionary, offline, from the palette.",
         surfaces: [.panel],
         triggers: [.launch],
-        capabilities: [],
+        // Open in Dictionary opens dict:// links, which the host only opens
+        // for plugins that declare the scheme.
+        capabilities: [.openURLs(schemes: ["dict"])],
         minimumStackbar: "0.26.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Dictionary",
         accent: .indigo,
@@ -26,12 +28,20 @@ final class Dictionary: StackbarPlugin {
     @Stored("recent") var recent: [String] = []
     var found: Definition?
     var looked = ""
+    /// Why the last look-up failed, when it did (rather than finding nothing).
+    var lookupError: String?
 
     func lookUp(_ text: String) async {
         let word = text.trimmingCharacters(in: .whitespacesAndNewlines)
         looked = word
+        lookupError = nil
         guard !word.isEmpty else { found = nil; return }
-        found = (try? await Stackbar.define(String(word.prefix(Definition.maxQuery)))) ?? nil
+        do {
+            found = try await Stackbar.define(String(word.prefix(Definition.maxQuery)))
+        } catch {
+            found = nil
+            lookupError = "\(error)"
+        }
     }
 
     func remember(_ word: String) {
@@ -52,7 +62,8 @@ final class Dictionary: StackbarPlugin {
             .action("Open in Dictionary", shortcut: "cmd+o") {
                 self.remember(definition.word)
                 let encoded = definition.word.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? definition.word
-                Stackbar.open("dict://\(encoded)")
+                // The waiting call, so a refusal is shown instead of nothing happening.
+                try await Stackbar.open("dict://\(encoded)", with: nil)
             }
     }
 
@@ -76,6 +87,8 @@ final class Dictionary: StackbarPlugin {
                             }
                         }
                     }
+                } else if let error = self.lookupError {
+                    ContentUnavailableView("Can't look that up", symbol: "exclamationmark.triangle", message: error)
                 } else {
                     ContentUnavailableView("No definition", symbol: "questionmark.circle", message: "The Mac's Dictionary has nothing for \"\(self.looked)\". Check the spelling, or add dictionaries in the Dictionary app's settings.")
                 }

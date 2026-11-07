@@ -12,6 +12,10 @@ The ones you open most rank higher. Search Applications lists them all.
 - **Looks in:** /Applications (one folder deep), ~/Applications and the
   system's own apps, plus every pane System Settings lists.
 
+## What's new in 1.2.1
+
+- A failed app listing is retried after a few seconds instead of on every keystroke.
+
 ## What's new in 1.2.0
 
 - Matches the way the rest of the palette does, with Stackbar's own matcher,

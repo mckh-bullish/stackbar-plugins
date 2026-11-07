@@ -13,6 +13,10 @@ minimized; ⌘⇧C copies its title.
 - **Order:** front to back when nothing is typed; with more than one
   display, each row says which display the window is on.
 
+## What's new in 1.0.1
+
+- Typing reuses the window list read when the view opened, instead of asking Accessibility again on every key.
+
 ## What's new in 1.0.0
 
 - First release.

@@ -17,10 +17,10 @@ final class ScriptCommands: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.script-commands",
         name: "Script Commands",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Run your own scripts from the palette, in Raycast's Script Commands format.",
         surfaces: [.panel],
-        triggers: [.launch, .every(.seconds(60))],
+        triggers: [.launch, .every(.seconds(300))],
         capabilities: [
             .files(paths: [folder]),
             .run(commands: ["grep"] + interpreters),
@@ -83,13 +83,34 @@ final class ScriptCommands: StackbarPlugin {
         await scan()
     }
 
+    /// Folders that hold other people's code, never scripts of yours: a
+    /// cloned repository or a package install would be read in full.
+    static let skippedFolders = [".git", ".hg", ".svn", "node_modules", ".build", "__pycache__", ".venv", "venv", "Pods", "DerivedData"]
+
+    static var grepArguments: [String] {
+        ["-r", "-I", "-H", "-E"] + skippedFolders.map { "--exclude-dir=\($0)" } + ["^#!|@raycast\\.[a-zA-Z0-9]+ ", "."]
+    }
+
+    /// Whether grep's answer can be used: it exits 1 when nothing matches (an
+    /// empty folder) and 2 when some file or folder was unreadable, even
+    /// though it printed every match it could read.
+    static func usable(status: Int32, timedOut: Bool, hasOutput: Bool) -> Bool {
+        guard !timedOut else { return false }
+        return status == 0 || status == 1 || (status == 2 && hasOutput)
+    }
+
+    private var lastScan = Date.distantPast
+    /// Opening the Script Commands view rescans unless a scan just ran.
+    static let openRescanAfter: TimeInterval = 5
+
     func scan() async {
+        defer { lastScan = Date() }
         do {
             // Every metadata line and every shebang, as ./file:line.
-            let result = try await Stackbar.run("grep", ["-r", "-I", "-H", "-E", "^#!|@raycast\\.[a-zA-Z0-9]+ ", "."], workingDirectory: Self.folder, timeout: .seconds(10))
-            // grep exits 1 when nothing matches: an empty folder.
-            guard result.succeeded || result.status == 1 else {
-                problem = result.errorText.isEmpty ? "grep failed (\(result.status))" : String(result.errorText.prefix(200))
+            let result = try await Stackbar.run("grep", Self.grepArguments, workingDirectory: Self.folder, timeout: .seconds(10))
+            guard Self.usable(status: result.status, timedOut: result.timedOut, hasOutput: !result.stdout.isEmpty) else {
+                // Keep the list from the last good scan.
+                problem = result.timedOut ? "Reading the Script Commands folder took too long." : result.errorText.isEmpty ? "grep failed (\(result.status))" : String(result.errorText.prefix(200))
                 scanned = true
                 return
             }
@@ -100,7 +121,9 @@ final class ScriptCommands: StackbarPlugin {
             problem = text.contains("not a folder") || text.contains("exist") || text.contains("No such")
                 ? "Make a folder named Script Commands in your home folder and put your scripts in it."
                 : text
-            scripts = []
+            // A folder that is gone has no scripts; any other failure (a
+            // timeout, say) keeps the last good list.
+            if text.contains("not a folder") || text.contains("exist") || text.contains("No such") { scripts = [] }
         }
         scanned = true
     }
@@ -232,6 +255,18 @@ final class ScriptCommands: StackbarPlugin {
 
     var commands: [Command] {
         for script in scripts { command(for: script) }
+        Command("scripts", title: "Script Commands", subtitle: "Your scripts; opening this looks for new ones", symbol: "terminal", keywords: ["script", "scripts", "list", "run"])
+            .view(search: { _ in
+                // Opening the view (and each keystroke after) picks up scripts
+                // added since the last scan, without waiting for the timer.
+                if Date().timeIntervalSince(self.lastScan) >= Self.openRescanAfter { await self.scan() }
+            }) { _ in
+                if let problem = self.problem { Banner(problem, theme: .warning) }
+                List(self.scripts, searchable: true) { script in
+                    Row(script.title, subtitle: [script.package, script.name].compactMap { $0 }.joined(separator: " · "), symbol: "terminal", key: script.id)
+                        .badge(script.interpreter ?? "no #!", role: script.interpreter.map { Self.interpreters.contains($0) } == true ? .secondary : .critical)
+                }
+            }
         Command("reload", title: "Reload Script Commands", subtitle: Self.folder, symbol: "arrow.clockwise", keywords: ["script", "reload", "refresh"]) { _ in
             await self.scan()
             if let problem = self.problem { return .failure(problem) }

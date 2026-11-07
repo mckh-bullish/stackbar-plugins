@@ -13,10 +13,10 @@ final class AppSwitcher: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.app-switcher",
         name: "App Switcher",
-        version: "1.2.0",
+        version: "1.2.1",
         summary: "Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide.",
         surfaces: [.menuBar, .panel, .settings],
-        triggers: [.launch, .apps, .every(.seconds(20))],
+        triggers: [.launch, .apps, .every(.seconds(60))],
         capabilities: [.apps, .keyLayer, .openURLs(schemes: ["x-apple.systempreferences"])],
         minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/AppSwitcher",

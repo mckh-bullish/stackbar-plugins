@@ -15,7 +15,7 @@ final class Linear: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.linear",
         name: "Linear",
-        version: "1.5.0",
+        version: "1.5.1",
         summary: "Your assigned Linear issues and inbox: change status and priority, start work, comment, and new issues from the palette.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(5), .wake],
@@ -140,6 +140,10 @@ final class Linear: StackbarPlugin {
     var found: [Issue] = []
     /// The issue an identifier typed at the palette's root names.
     var keyed: [String: Issue] = [:]
+    /// When each identifier that wasn't found (or failed to load) was asked
+    /// for, and why a failed one failed.
+    var lookupMisses: [String: Date] = [:]
+    var lookupProblems: [String: String] = [:]
     @Stored("teams") var teams: [Team] = []
     @Stored("defaultTeam") var defaultTeam = ""
     @Stored("menuBarCount") var menuBarCount = "In progress"
@@ -179,9 +183,53 @@ final class Linear: StackbarPlugin {
         throw HostError(reply.errors?.map(\.message).joined(separator: "; ") ?? "Linear sent no data")
     }
 
-    func refresh() async throws {
+    /// When `refresh` last ran, so the palette views, which ask on every
+    /// keystroke, can keep a recent list.
+    var refreshed: Date?
+
+    func refresh(maxAge: TimeInterval) async throws {
+        if problem == nil, loaded, let at = refreshed, Date().timeIntervalSince(at) < maxAge { return }
+        try await refresh()
+    }
+
+    /// The assigned issues after the first hundred, up to three more pages.
+    func moreAssigned(after cursor: String) async throws -> [Issue] {
         struct Data: Decodable {
-            struct Viewer: Decodable { struct Issues: Decodable { let nodes: [Issue] }; let id: String; let assignedIssues: Issues }
+            struct Viewer: Decodable {
+                struct Issues: Decodable {
+                    struct Page: Decodable { let hasNextPage: Bool; let endCursor: String? }
+                    let nodes: [Issue]
+                    let pageInfo: Page
+                }
+                let assignedIssues: Issues
+            }
+            let viewer: Viewer
+        }
+        var all: [Issue] = []
+        var after = cursor
+        for _ in 0..<3 {
+            let data = try await query("""
+            query($after: String!) { viewer { assignedIssues(first: 100, after: $after, orderBy: updatedAt, filter: { state: { type: { nin: ["completed", "canceled"] } } }) { nodes { \(Self.fields) } pageInfo { hasNextPage endCursor } } } }
+            """, variables: ["after": after], as: Data.self)
+            all += data.viewer.assignedIssues.nodes
+            guard data.viewer.assignedIssues.pageInfo.hasNextPage, let next = data.viewer.assignedIssues.pageInfo.endCursor else { break }
+            after = next
+        }
+        return all
+    }
+
+    func refresh() async throws {
+        refreshed = Date()
+        struct Data: Decodable {
+            struct Viewer: Decodable {
+                struct Issues: Decodable {
+                    struct Page: Decodable { let hasNextPage: Bool; let endCursor: String? }
+                    let nodes: [Issue]
+                    let pageInfo: Page
+                }
+                let id: String
+                let assignedIssues: Issues
+            }
             struct Teams: Decodable { let nodes: [Team] }
             struct Inbox: Decodable { let nodes: [InboxItem] }
             let viewer: Viewer
@@ -190,11 +238,16 @@ final class Linear: StackbarPlugin {
         }
         do {
             let data = try await query("""
-            query { viewer { id assignedIssues(first: 100, orderBy: updatedAt, filter: { state: { type: { nin: ["completed", "canceled"] } } }) { nodes { \(Self.fields) } } } \
+            query { viewer { id assignedIssues(first: 100, orderBy: updatedAt, filter: { state: { type: { nin: ["completed", "canceled"] } } }) { nodes { \(Self.fields) } pageInfo { hasNextPage endCursor } } } \
             teams(first: 50) { nodes { id key name } } \
             notifications(first: 30) { nodes { \(Self.inboxFields) } } }
             """, as: Data.self)
             assigned = data.viewer.assignedIssues.nodes
+            let page = data.viewer.assignedIssues.pageInfo
+            if page.hasNextPage, let cursor = page.endCursor {
+                // The rest is a bonus: a failure here keeps the first hundred.
+                assigned += (try? await moreAssigned(after: cursor)) ?? []
+            }
             viewerID = data.viewer.id
             teams = data.teams.nodes
             // Archived and snoozed entries come back too; unread issue ones are the inbox.
@@ -215,7 +268,7 @@ final class Linear: StackbarPlugin {
         if let identifier = Self.identifier(in: term) {
             await lookUp(identifier: identifier)
             found = keyed[identifier].map { [$0] } ?? []
-            searchProblem = found.isEmpty ? "No issue \(identifier)" : nil
+            searchProblem = found.isEmpty ? (lookupProblems[identifier].map { "Couldn't look up \(identifier): \($0)" } ?? "No issue \(identifier)") : nil
             return
         }
         struct Data: Decodable { struct Issues: Decodable { let nodes: [Issue] }; let issues: Issues }
@@ -272,16 +325,23 @@ final class Linear: StackbarPlugin {
 
     func inboxRow(_ item: InboxItem) -> Row {
         let issue = item.issue
-        let when = ISO8601DateFormatter().date(from: item.createdAt).map { Self.ago($0) } ?? ""
+        let when = Self.date(item.createdAt).map { Self.ago($0) } ?? ""
         var row = Row(issue?.title ?? item.headline, subtitle: [item.headline, issue?.identifier, when].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "), symbol: item.symbol, key: "inbox-\(item.id)")
         if item.readAt == nil { row = row.badge("New", role: .accent) }
         return row
             .action("Open") {
                 if let url = issue?.url { Stackbar.open(url) }
-                try? await self.markRead(item)
+                do { try await self.markRead(item) } catch { Stackbar.hud("Couldn't mark as read: \(error)", isError: true) }
             }
             .action("Mark as Read", shortcut: "cmd+r") { try await self.markRead(item) }
             .action("Copy ID", shortcut: "cmd+shift+c") { if let id = issue?.identifier { Stackbar.copy(id) } }
+    }
+
+    /// Linear's timestamps carry milliseconds (`2026-11-03T10:15:30.123Z`),
+    /// which the default formatter rejects; plain ones are accepted too.
+    static func date(_ text: String) -> Date? {
+        let fractional = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+        return (try? fractional.parse(text)) ?? (try? Date.ISO8601FormatStyle().parse(text))
     }
 
     static func ago(_ date: Date) -> String {
@@ -364,6 +424,7 @@ final class Linear: StackbarPlugin {
     func issue(_ identifier: String?) async -> Issue? {
         guard let identifier = identifier?.trimmingCharacters(in: .whitespaces).uppercased(), !identifier.isEmpty else { return nil }
         if let known = (assigned + found).first(where: { $0.identifier == identifier }) ?? keyed[identifier] { return known }
+        guard Self.isIdentifier(identifier) else { return nil }
         await lookUp(identifier: identifier)
         return keyed[identifier]
     }
@@ -383,9 +444,31 @@ final class Linear: StackbarPlugin {
             return
         }
         struct Data: Decodable { let issue: Issue? }
-        if let issue = try? await query("query($id: String!) { issue(id: $id) { \(Self.fields) } }", variables: ["id": identifier], as: Data.self).issue {
-            keyed[identifier] = issue
+        // An identifier that wasn't found, or a lookup that failed, isn't
+        // asked again for a minute: the views ask on every keystroke.
+        if let at = lookupMisses[identifier], Date().timeIntervalSince(at) < 60 { return }
+        do {
+            if let issue = try await query("query($id: String!) { issue(id: $id) { \(Self.fields) } }", variables: ["id": identifier], as: Data.self).issue {
+                if keyed.count >= 100 { keyed.removeAll() }
+                keyed[identifier] = issue
+                lookupProblems[identifier] = nil
+            } else {
+                lookupMisses[identifier] = Date()
+                lookupProblems[identifier] = nil
+            }
+        } catch {
+            lookupMisses[identifier] = Date()
+            lookupProblems[identifier] = "\(error)"
         }
+        if lookupMisses.count >= 100 {
+            lookupMisses = lookupMisses.filter { Date().timeIntervalSince($0.value) < 60 }
+            lookupProblems = lookupProblems.filter { lookupMisses[$0.key] != nil }
+        }
+    }
+
+    /// Whether `text` is a whole identifier (`ENG-123`), not the start of one.
+    static func isIdentifier(_ text: String) -> Bool {
+        text.range(of: #"^[A-Za-z][A-Za-z0-9]*-\d+$"#, options: .regularExpression) != nil
     }
 
     // MARK: Grouping
@@ -543,7 +626,7 @@ final class Linear: StackbarPlugin {
 
     var commands: [Command] {
         Command("my-issues", title: "My Linear Issues", symbol: "checklist", keywords: ["linear", "issue", "assigned", "ticket"])
-            .view(search: { _ in try await self.refresh() }) { _ in
+            .view(search: { _ in try await self.refresh(maxAge: 30) }) { _ in
                 if let problem = self.problem {
                     ContentUnavailableView("Can't reach Linear", symbol: "exclamationmark.triangle", message: problem)
                 } else {
@@ -563,7 +646,7 @@ final class Linear: StackbarPlugin {
                 }
             }
         Command("inbox", title: "Linear Inbox", symbol: "tray", keywords: ["linear", "notifications", "mentions", "inbox"])
-            .view(search: { _ in try await self.refresh() }) { _ in
+            .view(search: { _ in try await self.refresh(maxAge: 30) }) { _ in
                 if let problem = self.problem, self.inbox.isEmpty {
                     ContentUnavailableView("Can't reach Linear", symbol: "exclamationmark.triangle", message: problem)
                 } else if self.inbox.isEmpty {

@@ -11,12 +11,12 @@ final class Calculator: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.calculator",
         name: "Calculator",
-        version: "1.3.0",
+        version: "1.4.0",
         summary: "Sums, units, currencies and time zones answered right in the command palette.",
         surfaces: [.panel, .settings],
-        // Exchange rates are fetched at launch and every six hours after,
-        // unless currency conversion is turned off in Settings.
-        triggers: [.launch, .every(.seconds(6 * 3600))],
+        // Exchange rates are fetched at launch, on wake and every six hours
+        // after (and retried with a growing pause when a fetch fails), unless currency conversion is turned off in Settings.
+        triggers: [.launch, .every(.seconds(6 * 3600)), .wake],
         capabilities: [.network("api.frankfurter.dev")],
         minimumStackbar: "0.21.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Calculator",
@@ -57,11 +57,36 @@ final class Calculator: StackbarPlugin {
     func refresh() async throws {
         guard currency else { return }
         if let rates, Date().timeIntervalSince(rates.fetched) < 6 * 3600 { return }
+        do {
+            try await fetchRates()
+        } catch {
+            retryRates()
+            throw error
+        }
+    }
+
+    func fetchRates() async throws {
         struct Latest: Decodable { var base: String; var date: String; var rates: [String: Double] }
         let latest: Latest = try await Stackbar.getJSON("https://api.frankfurter.dev/v1/latest?base=EUR")
         var table = latest.rates
         table[latest.base] = 1
         rates = Math.Rates(perEuro: table, date: latest.date, fetched: Date())
+    }
+
+    private var retrying: Task<Void, Never>?
+
+    /// After a failed fetch (offline at launch, say), tries again after 30
+    /// seconds, 2, 10 and 30 minutes instead of waiting for the next six-hour tick.
+    private func retryRates() {
+        guard retrying == nil else { return }
+        retrying = Task {
+            for pause in [30, 120, 600, 1800] {
+                try? await Task.sleep(for: .seconds(pause))
+                guard !Task.isCancelled, self.currency else { break }
+                if (try? await self.fetchRates()) != nil { break }
+            }
+            self.retrying = nil
+        }
     }
 
     func copy(_ answer: Math.Answer) {
@@ -174,6 +199,62 @@ final class Calculator: StackbarPlugin {
             return text
         }
 
+        /// Whether this Mac writes 2,5 for two and a half.
+        static let localeUsesDecimalComma = Locale.current.decimalSeparator == ","
+
+        /// A number as typed, with `.` or `,` as the decimal mark or as
+        /// thousands separators:
+        /// - `1,234.56` and `1.234,56` have both, so the last one is the decimal mark;
+        /// - `1,234,567` is a thousands grouping, and `2,5` or `0,500` cannot be one,
+        ///   so a comma there is a decimal comma;
+        /// - a single separator before exactly three digits (`1,000`) is a
+        ///   thousands separator, unless this Mac's decimal mark is that very
+        ///   character (a German Mac reads `1,000` as 1 and `1.000` as 1000);
+        /// - commas in the Indian style (`1,00,000`, `12,34,567`: a last group
+        ///   of three, earlier groups of two) are thousands grouping too;
+        /// - a lone `.` or `,` is not a number.
+        static func number(_ token: String, decimalComma: Bool) -> Double? {
+            guard !token.isEmpty, token.contains(where: \.isNumber) else { return nil }
+            /// `1,234,567`: one to three digits, then groups of exactly three;
+            /// or, with commas, `12,34,567`: one or two digits, groups of two,
+            /// then a last group of three.
+            func grouped(_ text: Substring, by mark: Character) -> Bool {
+                let parts = text.split(separator: mark, omittingEmptySubsequences: false)
+                guard parts.count >= 2, let first = parts.first, (1...3).contains(first.count), first.first != "0" else { return false }
+                guard parts.allSatisfy({ $0.allSatisfy(\.isASCII) && $0.allSatisfy(\.isNumber) }) else { return false }
+                if parts.dropFirst().allSatisfy({ $0.count == 3 }) { return true }
+                guard mark == ",", parts.count >= 3, first.count <= 2, parts.last?.count == 3 else { return false }
+                return parts.dropFirst().dropLast().allSatisfy { $0.count == 2 }
+            }
+            func clean(_ text: Substring, mark: Character) -> String { text.filter { $0 != mark } }
+            let hasDot = token.contains("."), hasComma = token.contains(",")
+            var normalized: String
+            switch (hasDot, hasComma) {
+            case (false, false):
+                normalized = token
+            case (true, true):
+                guard let dot = token.lastIndex(of: "."), let comma = token.lastIndex(of: ",") else { return nil }
+                let (group, decimal): (Character, Character) = dot > comma ? (",", ".") : (".", ",")
+                let parts = token.split(separator: decimal, omittingEmptySubsequences: false)
+                guard parts.count == 2, grouped(parts[0], by: group) else { return nil }
+                normalized = clean(parts[0], mark: group) + "." + parts[1]
+            default:
+                let mark: Character = hasComma ? "," : "."
+                let parts = token.split(separator: mark, omittingEmptySubsequences: false)
+                let isGrouping = grouped(Substring(token), by: mark)
+                let isLocaleDecimalMark = (mark == ",") == decimalComma
+                if parts.count > 2 {
+                    guard isGrouping else { return nil }
+                    normalized = clean(Substring(token), mark: mark)
+                } else if isGrouping && !isLocaleDecimalMark {
+                    normalized = clean(Substring(token), mark: mark)
+                } else {
+                    normalized = (parts[0].isEmpty ? "0" : String(parts[0])) + (parts[1].isEmpty ? "" : "." + parts[1])
+                }
+            }
+            return Double(normalized)
+        }
+
         /// Recursive descent: + - over * / % over unary minus over ^ over
         /// numbers, parentheses, `pi`, `e` and `sqrt(…)`.
         struct Parser {
@@ -181,8 +262,11 @@ final class Calculator: StackbarPlugin {
             private var index = 0
             private(set) var sawOperator = false
 
-            init(_ text: String) {
+            private let decimalComma: Bool
+
+            init(_ text: String, decimalComma: Bool = Math.localeUsesDecimalComma) {
                 characters = Array(text.lowercased())
+                self.decimalComma = decimalComma
             }
 
             mutating func parse() -> Double? {
@@ -276,8 +360,7 @@ final class Calculator: StackbarPlugin {
                 while index < characters.count, characters[index].isNumber || characters[index] == "." || characters[index] == "," {
                     index += 1
                 }
-                let digits = String(characters[start..<index]).replacingOccurrences(of: ",", with: "")
-                return digits.isEmpty ? nil : Double(digits)
+                return Math.number(String(characters[start..<index]), decimalComma: decimalComma)
             }
         }
 
@@ -528,14 +611,16 @@ final class Calculator: StackbarPlugin {
                 return Answer(expression: expression, result: result, display: "\(result) in \(targetName)")
             }
 
+            /// Compiled once, not on every keystroke.
+            private static let clockPattern = try? NSRegularExpression(pattern: #"^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?(?=\s|$)"#)
+
             /// A clock time at the start of the text, and what follows it:
             /// `5pm`, `5 pm`, `5:30pm`, `17:00`, `noon`, `midnight`.
             static func clockTime(_ text: String) -> ((hour: Int, minute: Int), String)? {
                 for (word, hour) in [("noon", 12), ("midnight", 0)] where text.hasPrefix(word) {
                     return ((hour, 0), String(text.dropFirst(word.count)).trimmingCharacters(in: .whitespaces))
                 }
-                let pattern = #"^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?(?=\s|$)"#
-                guard let regex = try? NSRegularExpression(pattern: pattern),
+                guard let regex = clockPattern,
                       let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
                       let hourRange = Range(match.range(at: 1), in: text), var hour = Int(text[hourRange]) else { return nil }
                 let minute = Range(match.range(at: 2), in: text).flatMap { Int(text[$0]) }
@@ -552,12 +637,16 @@ final class Calculator: StackbarPlugin {
                 return ((hour, minute ?? 0), text[whole.upperBound...].trimmingCharacters(in: .whitespaces))
             }
 
-            static func clock(_ date: Date, in zone: TimeZone) -> String {
+            private static let clockFormatter: DateFormatter = {
                 let formatter = DateFormatter()
                 formatter.locale = Locale(identifier: "en_US_POSIX")
-                formatter.timeZone = zone
                 formatter.dateFormat = "h:mm a"
-                return formatter.string(from: date)
+                return formatter
+            }()
+
+            static func clock(_ date: Date, in zone: TimeZone) -> String {
+                clockFormatter.timeZone = zone
+                return clockFormatter.string(from: date)
             }
 
             static func dayOffset(_ date: Date, from source: TimeZone, to target: TimeZone) -> Int {

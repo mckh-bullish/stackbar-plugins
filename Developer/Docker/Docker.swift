@@ -15,7 +15,7 @@ final class Docker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.docker",
         name: "Docker",
-        version: "1.7.0",
+        version: "1.7.1",
         summary: "Your containers with live CPU and memory, Compose projects, and start, stop, restart and logs a click away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
@@ -163,6 +163,10 @@ final class Docker: StackbarPlugin {
     var logs: [String: String] = [:]
     /// The container whose logs the window shows.
     var watched: String?
+    /// Until when the log tail is refreshed on its own. Opening the logs or
+    /// pressing Refresh extends it; after that the logs wait for a click.
+    var followLogsUntil = Date.distantPast
+    static let followLogsFor: TimeInterval = 120
     var lastSlowCheck = Date.distantPast
 
     @Stored("showStopped") var showStopped = true
@@ -178,11 +182,20 @@ final class Docker: StackbarPlugin {
     var shown: [Container] { showStopped ? containers : running }
 
     func refresh() async throws {
-        // Every 15 s while something runs; once a minute otherwise.
-        if running.isEmpty, loaded, problem == nil, Date().timeIntervalSince(lastSlowCheck) < 55 { return }
+        // Every 15 s while something runs; once a minute otherwise, and also
+        // while Docker is down (each failing `docker ps` is still a process).
+        // A manual refresh always goes through.
+        if loaded, running.isEmpty || problem != nil, Stackbar.refreshReason != .manual, Date().timeIntervalSince(lastSlowCheck) < 55 { return }
         await load()
-        // The window's log tail follows along.
-        if let watched, containers.contains(where: { $0.id == watched }) { await loadLogs(watched) }
+        // The window's log tail follows along, for a couple of minutes after
+        // it was asked for: the plugin can't tell that the window closed.
+        if let watched, Date() < followLogsUntil, containers.contains(where: { $0.id == watched }) { await loadLogs(watched) }
+    }
+
+    /// For views that ask on every keystroke (and filter the list locally): a
+    /// list read in the last few seconds is as good as a new one.
+    func loadIfStale() async {
+        if !loaded || Date().timeIntervalSince(lastSlowCheck) > 5 { await load() }
     }
 
     func load() async {
@@ -459,7 +472,7 @@ final class Docker: StackbarPlugin {
                     HStack(spacing: Space.s) {
                         Text("\(container.name) · last 200 lines").style(.headline)
                         Spacer()
-                        Button("Refresh", symbol: "arrow.clockwise") { await self.loadLogs(id) }
+                        Button("Refresh", symbol: "arrow.clockwise") { self.followLogsUntil = Date().addingTimeInterval(Self.followLogsFor); await self.loadLogs(id) }
                         Button("Copy", symbol: "doc.on.doc") { Stackbar.copy(self.logs[id] ?? "") }
                     }
                     Text(String((logs[id] ?? "Loading…").suffix(40_000))).style(.monospaced)
@@ -474,6 +487,7 @@ final class Docker: StackbarPlugin {
 
     func watch(_ id: String) async {
         watched = id
+        followLogsUntil = Date().addingTimeInterval(Self.followLogsFor)
         await loadLogs(id)
     }
 
@@ -575,7 +589,7 @@ final class Docker: StackbarPlugin {
 
     var commands: [Command] {
         Command("containers", title: "Docker Containers", symbol: "shippingbox", keywords: ["docker", "container", "compose"])
-            .view(search: { _ in await self.load() }) { _ in
+            .view(search: { _ in await self.loadIfStale() }) { _ in
                 if let problem = self.problem {
                     ContentUnavailableView("Docker isn't available", symbol: "shippingbox", message: problem)
                 } else {
@@ -602,7 +616,7 @@ final class Docker: StackbarPlugin {
             }
             .stackbarOnly()
         Command("compose", title: "Docker Compose Projects", symbol: "square.stack.3d.up", keywords: ["docker", "compose", "project", "stack"])
-            .view(search: { _ in await self.load() }) { _ in
+            .view(search: { _ in await self.loadIfStale() }) { _ in
                 if let problem = self.problem {
                     ContentUnavailableView("Docker isn't available", symbol: "shippingbox", message: problem)
                 } else if self.composeProjects.isEmpty {

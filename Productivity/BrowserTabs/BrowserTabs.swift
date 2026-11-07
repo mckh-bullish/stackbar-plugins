@@ -32,7 +32,7 @@ final class BrowserTabs: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.browser-tabs",
         name: "Browser Tabs",
-        version: "1.0.0",
+        version: "1.0.1",
         summary: "Switch to any open tab in Safari, Chrome, Arc, Brave or Edge, and search your bookmarks.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -69,7 +69,15 @@ final class BrowserTabs: StackbarPlugin {
         var index: Int
         var title: String
         var url: String
+        /// Lowercased once, so a keystroke doesn't allocate them again.
+        let lowerTitle: String
+        let lowerURL: String
         var id: String { "\(browser)|\(window)|\(index)" }
+
+        init(browser: String, window: Int, index: Int, title: String, url: String) {
+            (self.browser, self.window, self.index, self.title, self.url) = (browser, window, index, title, url)
+            (lowerTitle, lowerURL) = (title.lowercased(), url.lowercased())
+        }
     }
 
     struct Bookmark: Equatable, Identifiable {
@@ -77,7 +85,15 @@ final class BrowserTabs: StackbarPlugin {
         var url: String
         var folder: String
         var browser: String
+        /// Lowercased once, at load: a profile can hold thousands of bookmarks.
+        let lowerTitle: String
+        let lowerURL: String
         var id: String { "\(browser)|\(folder)|\(url)" }
+
+        init(title: String, url: String, folder: String, browser: String) {
+            (self.title, self.url, self.folder, self.browser) = (title, url, folder, browser)
+            (lowerTitle, lowerURL) = (title.lowercased(), url.lowercased())
+        }
     }
 
     var tabs: [Tab] = []
@@ -85,6 +101,7 @@ final class BrowserTabs: StackbarPlugin {
     var bookmarks: [Bookmark] = []
     var bookmarksReadAt: Date?
     var problems: [String] = []
+    var bookmarkProblems: [String] = []
     var tabResults: [Tab] = []
     var bookmarkResults: [Bookmark] = []
 
@@ -153,11 +170,24 @@ final class BrowserTabs: StackbarPlugin {
         var found: [Tab] = []
         var failed: [String] = []
         let running = Set(((try? await Stackbar.runningApps()) ?? []).map(\.id))
-        for browser in Self.browsers where running.contains(browser.bundleID) {
-            guard let result = try? await Stackbar.run("osascript", ["-e", Self.listScript(browser)], timeout: .seconds(10)) else { continue }
-            if result.succeeded {
-                found += Self.parseTabs(result.text, browser: browser.name)
-            } else if result.errorText.contains("-1743") || result.errorText.contains("Not authorized") {
+        // One script per running browser, side by side: a browser stuck on a
+        // dialog costs its own timeout, not everyone else's as well.
+        let outcomes = await withTaskGroup(of: (Int, String?, String?).self) { group in
+            for (position, browser) in Self.browsers.enumerated() where running.contains(browser.bundleID) {
+                group.addTask {
+                    guard let result = try? await Stackbar.run("osascript", ["-e", Self.listScript(browser)], timeout: .seconds(10)) else { return (position, nil, nil) }
+                    return (position, result.succeeded ? result.text : nil, result.succeeded ? nil : result.errorText)
+                }
+            }
+            var all: [(Int, String?, String?)] = []
+            for await outcome in group { all.append(outcome) }
+            return all.sorted { $0.0 < $1.0 }
+        }
+        for (position, text, errorText) in outcomes {
+            let browser = Self.browsers[position]
+            if let text {
+                found += Self.parseTabs(text, browser: browser.name)
+            } else if let errorText, errorText.contains("-1743") || errorText.contains("Not authorized") {
                 failed.append("Allow Stackbar to control \(browser.name) in System Settings › Privacy & Security › Automation.")
             }
         }
@@ -208,12 +238,20 @@ final class BrowserTabs: StackbarPlugin {
     func loadBookmarks(force: Bool = false) async {
         if !force, let bookmarksReadAt, Date().timeIntervalSince(bookmarksReadAt) < 300 { return }
         var found: [Bookmark] = []
+        var failed: [String] = []
         for browser in Self.browsers {
             guard let profile = browser.profile,
                   let result = try? await Stackbar.run("cat", ["Bookmarks"], workingDirectory: profile, timeout: .seconds(10)),
                   result.succeeded else { continue }
+            // Output past 8 MB is cut and the JSON would not decode, so say so
+            // instead of showing no bookmarks.
+            if result.truncated {
+                failed.append("\(browser.name)'s bookmarks file is too large to read.")
+                continue
+            }
             found += Self.parseBookmarks(result.stdout, browser: browser.name)
         }
+        bookmarkProblems = failed
         var seen = Set<String>()
         bookmarks = found.filter { seen.insert($0.url).inserted }
         bookmarksReadAt = Date()
@@ -226,12 +264,14 @@ final class BrowserTabs: StackbarPlugin {
 
     // MARK: Matching
 
+    /// `title` and `url` give the lowercased text to match, which the items
+    /// keep from when they were read.
     static func matches<Item>(_ query: String, in items: [Item], title: (Item) -> String, url: (Item) -> String) -> [Item] {
         let words = query.lowercased().split(separator: " ").map(String.init)
         guard !words.isEmpty else { return Array(items.prefix(80)) }
         return items.compactMap { item -> (Item, Int)? in
-            let name = title(item).lowercased()
-            let address = url(item).lowercased()
+            let name = title(item)
+            let address = url(item)
             var score = 0
             for word in words {
                 if name.hasPrefix(word) { score += 300 } else if name.contains(word) { score += 200 } else if address.contains(word) { score += 100 } else { return nil }
@@ -270,7 +310,7 @@ final class BrowserTabs: StackbarPlugin {
         Command("tabs", title: "Search Browser Tabs", subtitle: "Switch to any open tab", symbol: "rectangle.stack", keywords: ["tab", "browser", "safari", "chrome", "arc", "switch"])
             .view(search: { invocation in
                 await self.loadTabs(force: invocation.text.isEmpty)
-                self.tabResults = Self.matches(invocation.text, in: self.tabs, title: \.title, url: \.url)
+                self.tabResults = Self.matches(invocation.text, in: self.tabs, title: \.lowerTitle, url: \.lowerURL)
             }) { _ in
                 if self.tabResults.isEmpty {
                     ContentUnavailableView(self.tabs.isEmpty ? "No tabs open" : "No tab matches", symbol: "rectangle.stack", message: self.problems.first ?? "Tabs in Safari, Chrome, Arc, Brave and Edge show up here while they run.")
@@ -283,10 +323,10 @@ final class BrowserTabs: StackbarPlugin {
         Command("bookmarks", title: "Search Bookmarks", subtitle: "From Chrome, Brave, Edge and Vivaldi", symbol: "bookmark", keywords: ["bookmark", "favorite", "browser", "chrome"])
             .view(search: { invocation in
                 await self.loadBookmarks()
-                self.bookmarkResults = Self.matches(invocation.text, in: self.bookmarks, title: \.title, url: \.url)
+                self.bookmarkResults = Self.matches(invocation.text, in: self.bookmarks, title: \.lowerTitle, url: \.lowerURL)
             }) { _ in
                 if self.bookmarkResults.isEmpty {
-                    ContentUnavailableView(self.bookmarks.isEmpty ? "No bookmarks found" : "No bookmark matches", symbol: "bookmark", message: "Bookmarks from Chrome, Brave, Edge and Vivaldi show up here. Safari keeps its bookmarks private.")
+                    ContentUnavailableView(self.bookmarks.isEmpty ? "No bookmarks found" : "No bookmark matches", symbol: "bookmark", message: self.bookmarkProblems.first ?? "Bookmarks from Chrome, Brave, Edge and Vivaldi show up here. Safari keeps its bookmarks private.")
                 } else {
                     List {
                         ForEach(self.bookmarkResults) { bookmark in self.row(bookmark) }

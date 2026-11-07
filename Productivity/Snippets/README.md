@@ -36,6 +36,11 @@ Import Snippets reads:
 
 Duplicates are skipped, and keywords already taken are left off.
 
+## What's new in 1.5.1
+
+- Importing a big snippet file saves once instead of once per snippet, and editing a snippet saves once.
+- Snippet lists open and search faster with many snippets, and keyword changes are sent to Stackbar in order, so a deleted keyword can no longer keep expanding.
+
 ## What's new in 1.5.0
 
 - Import from TextExpander, Espanso and Apple's Text Replacements, with their placeholders and keywords.

@@ -41,6 +41,12 @@ crowded afternoon coming.
 A widget keeps what's next in view without opening anything.
 <!-- preview: widget -->
 
+## What's new in 1.6.1
+
+- Reminders, auto-join and alerts no longer repeat after weeks of uptime.
+- An http:// meeting link that comes before an https:// one is found.
+- The panel renders faster with a busy calendar.
+
 ## What's new in 1.6.0
 
 - Add Calendar Event: type "Dentist fri 9:30" in the palette and it goes in your calendar.

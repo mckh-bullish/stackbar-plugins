@@ -14,6 +14,10 @@ higher for that app.
 - **Leaves out:** the Apple menu, submenu titles and separators. Dimmed
   items show at the bottom and can't be chosen.
 
+## What's new in 1.0.1
+
+- A failed menu read is remembered for a few seconds, so typing no longer repeats the whole menu walk on every key.
+
 ## What's new in 1.0.0
 
 - First release.

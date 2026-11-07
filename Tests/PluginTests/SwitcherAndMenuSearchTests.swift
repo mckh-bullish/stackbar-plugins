@@ -51,4 +51,21 @@ final class SwitcherAndMenuSearchTests: XCTestCase {
         XCTAssertEqual(undo.first?.actions.map(\.title), ["Copy Path"], "a dimmed item can't be chosen")
         await session.stop()
     }
+
+    func testTypingReusesTheWindowListUntilTheViewReopens() async throws {
+        let host = Host(self)
+        let session = try await host.session("WindowSwitcher")
+        let opened = try await session.openView("switch")
+        XCTAssertEqual(opened.root?.rows.count, 4)
+
+        // Windows that vanish while typing don't trigger another read.
+        host.system.simulate(windows: WindowSnapshot())
+        let typed = try await session.updateView(opened.session, query: CommandQuery(text: "saf"))
+        XCTAssertEqual(try XCTUnwrap(typed).rows.count, 3, "the snapshot from opening is reused (three Safari windows)")
+
+        // Clearing the text counts as opening again.
+        let cleared = try await session.updateView(opened.session, query: CommandQuery(text: ""))
+        XCTAssertEqual(cleared?.rows.count, 0)
+        await session.stop()
+    }
 }

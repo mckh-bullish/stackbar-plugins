@@ -11,10 +11,10 @@ final class KillProcess: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.kill-process",
         name: "Kill Process",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Find a process by name, see its CPU and memory, and quit or force quit it.",
         surfaces: [.panel],
-        triggers: [.launch],
+        triggers: [.launch, .every(.seconds(60))],
         capabilities: [.run(commands: ["ps", "kill"])],
         minimumStackbar: "0.22.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/System/KillProcess",
@@ -73,8 +73,10 @@ final class KillProcess: StackbarPlugin {
         }
     }
 
+    /// Every minute, so the panel's list and the numbers beside each
+    /// pid follow along; a scan the palette made a moment ago is reused.
     func refresh() async throws {
-        await load(force: true)
+        await load(force: Stackbar.refreshReason != .interval)
     }
 
     /// `ps -o pid=,%cpu=,rss=,comm=` lines: `48211 182.4 1240000 node`.
@@ -163,7 +165,9 @@ final class KillProcess: StackbarPlugin {
     // MARK: Panel
 
     var panel: ViewContent {
-        PanelHeader("Kill Process", subtitle: "\(processes.count) of your processes · Kill Process in the palette", symbol: "xmark.octagon.fill", theme: theme)
+        PanelHeader("Kill Process", subtitle: "\(processes.count) of your processes · Kill Process in the palette", symbol: "xmark.octagon.fill", theme: theme) {
+            IconButton("arrow.clockwise", label: "Refresh", theme: theme, prominence: .tinted) { await self.load(force: true) }
+        }
         if let problem {
             Banner(problem, theme: .warning)
         }

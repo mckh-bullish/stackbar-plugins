@@ -15,6 +15,12 @@ Edge and Vivaldi keep, and opens one in its browser.
 - **Leaves out:** Safari's bookmarks, which macOS keeps behind Full Disk
   Access, and browser profiles other than the default one.
 
+## What's new in 1.0.1
+
+- Tabs are read from every running browser at the same time, so one slow browser no longer holds up the rest.
+- Bookmark search is lighter on big bookmark sets.
+- A bookmarks file too large to read now says so instead of showing no bookmarks.
+
 ## What's new in 1.0.0
 
 - First release.

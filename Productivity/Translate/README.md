@@ -33,6 +33,12 @@ share its selection, it uses what you last copied.
   Translate Selection in Google Translate.
 - **Requires:** Stackbar 0.26.0 or later.
 
+## What's new in 1.6.1
+
+- If Apple's translation fails for a language pair that is downloaded, you now see the error instead of the text going to Google. Settings says exactly when text leaves your Mac.
+- A text over 5,000 characters now says that only the first 5,000 were translated by Google or DeepL.
+- Typing in the palette translates after a short pause instead of on every keystroke.
+
 ## What's new in 1.6.0
 
 - Translate Text on Screen: drag over any text, even text in a picture, and the translation is copied.
