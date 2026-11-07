@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.pomodoro",
+  "protocol" : 21,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "5ff23901df52ae7c92f4f807315ce213206a5762b342db27902371c2d1fa9a9f",
+  "signature" : "aFqeQPyapcufKpOFl5cyf++phnYRyoUf+U9cIU3/Ctivlg7Yt/FrHwYq7Vvzmn03v5xDXKNslaFe8qqpY2IBDQ==",
+  "size" : 5842648,
+  "sourceDigest" : "01abc1536721a3beca8033d0c27dd22b390f2bde15814d55eda91cedc552a1e5",
+  "stackbarKit" : "09f58a166a9dac093224c0213fbb8fd3d3a14ec4f27a483e7477a0d9a637bd76",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-09f58a166a9dac09/Pomodoro-01abc1536721",
+  "version" : "1.7.1"
+}

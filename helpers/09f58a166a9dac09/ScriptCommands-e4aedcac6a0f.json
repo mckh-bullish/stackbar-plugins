@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.script-commands",
+  "protocol" : 21,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "206bb9cf3d2bbe9125b9fb38fc48350fac602cf22f6c08fc11b4678e760ddea0",
+  "signature" : "YPFmswCj4bXHheXzX52sRFq9nj0mUQ2uoqNxvM9oY5McWZqojdBcV4gYtkqvOgoVswHOIAN+teSuWsZHsrzQAA==",
+  "size" : 5724000,
+  "sourceDigest" : "e4aedcac6a0fe54de19d8c850c7dc0cb42571f0f2a751920f1d688e6c9a29b23",
+  "stackbarKit" : "09f58a166a9dac093224c0213fbb8fd3d3a14ec4f27a483e7477a0d9a637bd76",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-09f58a166a9dac09/ScriptCommands-e4aedcac6a0f",
+  "version" : "1.1.0"
+}

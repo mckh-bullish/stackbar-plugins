@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.window-switcher",
+  "protocol" : 21,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "a6cd85bb6aa760c809c7fb110f1aea62f3de047e659a6d044fa345f999417749",
+  "signature" : "28dlB2FcnMwn/wwKeJBHNd1E1vMUnQwV9VzYC4OwTS3mgFAv0GP0dIcdLUhjVMQfd0pK2PcIhUe0yo3KgNsFDQ==",
+  "size" : 5655440,
+  "sourceDigest" : "224ca7146e85290271101213ff0d51675dff3a7f66e4f3b1514770eb800c9537",
+  "stackbarKit" : "09f58a166a9dac093224c0213fbb8fd3d3a14ec4f27a483e7477a0d9a637bd76",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-09f58a166a9dac09/WindowSwitcher-224ca7146e85",
+  "version" : "1.0.1"
+}

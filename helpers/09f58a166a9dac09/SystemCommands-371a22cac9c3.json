@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.system-commands",
+  "protocol" : 21,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "69d0fee56458e2ed2edf6cc449291d94d31a605fb753f9a1224d6c273d88c608",
+  "signature" : "hRDi7wm2Ol3kNn8ACrAvhKjQnbAIspS1DuZvN0pvw7hGUcB1ldl8j2xoHMFoiI9fqHBKqV01+aUznfQcCqOFAQ==",
+  "size" : 5643760,
+  "sourceDigest" : "371a22cac9c343dde4a83382dff58402eb8b1cff26ecc9662b37eb12fe6d2d00",
+  "stackbarKit" : "09f58a166a9dac093224c0213fbb8fd3d3a14ec4f27a483e7477a0d9a637bd76",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-09f58a166a9dac09/SystemCommands-371a22cac9c3",
+  "version" : "1.0.1"
+}
