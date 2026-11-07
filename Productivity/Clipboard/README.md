@@ -19,7 +19,7 @@ the menu bar icon, if you turn the icon on.
   minutes unless you pin them.
 - **Surfaces:** menu bar, panel, window, settings. Hotkey ⌘⇧V.
 - **Settings:** how many items to keep, the order, pasting directly or only
-  copying, showing matching copies in the palette's results, keeping images, finding images by their text, plain text by default, how long to keep secrets
+  copying, showing matching copies in the palette's results (off by default), keeping images, finding images by their text, plain text by default, how long to keep secrets
   (not at all, 5 minutes to an hour, or like any copy), apps and text patterns
   to ignore, and pausing the history.
 - **Commands:** Search Clipboard History, Paste Last Copy as Plain Text,
@@ -45,6 +45,10 @@ key or card number is masked, kept away from agent tools, and dropped after
 ### See what you copy
 The window shows how much you copy, and from which apps.
 <!-- preview: insights -->
+
+## What's new in 1.10.0
+
+- Copies no longer show in the command palette's main results unless you turn on "Show matching copies in the palette's results" in Settings. Search Clipboard History (⌘⇧V) works as before.
 
 ## What's new in 1.9.1
 

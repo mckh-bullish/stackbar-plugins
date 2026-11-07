@@ -134,6 +134,16 @@ final class ClipboardTests: XCTestCase {
         await supervisor.stop()
     }
 
+    func testCopiesStayOutOfThePaletteResultsUntilTurnedOn() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Clipboard")
+        _ = await waitUntil(10) { await supervisor.commands.contains { $0.id == "search" } }
+        let commands = await supervisor.commands
+        let search = try XCTUnwrap(commands.first { $0.id == "search" }, "⌘⇧V still opens the history")
+        XCTAssertFalse(search.rootSearch, "off by default")
+        await supervisor.stop()
+    }
+
     private func history(_ host: Host, _ id: String) async -> [[String: Any]] {
         let json = await host.services.storage.snapshot(for: id)["history"] ?? "[]"
         return (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [[String: Any]] ?? []

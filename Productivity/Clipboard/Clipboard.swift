@@ -15,7 +15,7 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.9.1",
+        version: "1.10.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
@@ -232,8 +232,11 @@ final class Clipboard: StackbarPlugin {
     /// only shows up while recording is paused or something went wrong.
     @Stored("menuBarIcon") var menuBarIcon = false
     @Stored("plainByDefault") var plainByDefault = false
-    /// Matching copies show in the palette's own results as you type.
-    @Stored("inPalette") var inPalette = true
+    /// Off by default: matching copies show in the palette's own results as
+    /// you type only once you turn this on. Search Clipboard History (⌘⇧V)
+    /// works either way. A new key, so it starts off for everyone, including
+    /// those who had the old on-by-default setting.
+    @Stored("inPaletteResults") var inPalette = false
     /// Regular expressions; a copy whose text matches one is not recorded
     /// (tokens, one-time codes).
     @Stored("ignoredPatterns") var ignoredPatterns: [String] = []
