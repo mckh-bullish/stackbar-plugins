@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-06T15:04:44Z",
+  "generated" : "2026-11-07T00:03:24Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -8,6 +8,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.clipboard-1.1.1.stackbarplugin",
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "capabilityKinds" : [
+        "clipboard"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
@@ -32,6 +35,9 @@
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using"
       ],
+      "capabilityKinds" : [
+        "clipboard"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
       "id" : "io.navbytes.stackbar.clipboard",
@@ -55,6 +61,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.clipboard-1.4.1.stackbarplugin",
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "capabilityKinds" : [
+        "clipboard"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
@@ -81,6 +90,9 @@
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using"
       ],
+      "capabilityKinds" : [
+        "clipboard"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
       "id" : "io.navbytes.stackbar.clipboard",
@@ -105,6 +117,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.clipboard-1.6.0.stackbarplugin",
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "capabilityKinds" : [
+        "clipboard"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
@@ -131,6 +146,9 @@
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using"
       ],
+      "capabilityKinds" : [
+        "clipboard"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
       "id" : "io.navbytes.stackbar.clipboard",
@@ -155,6 +173,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.clipboard-1.8.0.stackbarplugin",
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "capabilityKinds" : [
+        "clipboard"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
@@ -181,6 +202,9 @@
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using"
       ],
+      "capabilityKinds" : [
+        "clipboard"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
       "id" : "io.navbytes.stackbar.clipboard",
@@ -205,6 +229,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.clipboard-1.9.0.stackbarplugin",
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "capabilityKinds" : [
+        "clipboard"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
@@ -233,6 +260,11 @@
         "Listens for a key you hold (like Right ⌘) and the letter you press with it",
         "Opens x-apple.systempreferences: links"
       ],
+      "capabilityKinds" : [
+        "apps",
+        "keyLayer",
+        "openURLs"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/AppSwitcher",
       "id" : "io.navbytes.stackbar.plugins.app-switcher",
@@ -258,6 +290,11 @@
         "Sees which apps are installed and running, and switches to, opens or hides them",
         "Listens for a key you hold (like Right ⌘) and the letter you press with it",
         "Opens x-apple.systempreferences: links"
+      ],
+      "capabilityKinds" : [
+        "apps",
+        "keyLayer",
+        "openURLs"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/AppSwitcher",
@@ -285,6 +322,11 @@
         "Listens for a key you hold (like Right ⌘) and the letter you press with it",
         "Opens x-apple.systempreferences: links"
       ],
+      "capabilityKinds" : [
+        "apps",
+        "keyLayer",
+        "openURLs"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/AppSwitcher",
       "id" : "io.navbytes.stackbar.plugins.app-switcher",
@@ -310,6 +352,10 @@
         "Sees which apps are installed and running, and switches to, opens or hides them",
         "Opens x-apple.systempreferences: links"
       ],
+      "capabilityKinds" : [
+        "apps",
+        "openURLs"
+      ],
       "category" : "System",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/Applications",
       "id" : "io.navbytes.stackbar.plugins.applications",
@@ -332,6 +378,10 @@
       "capabilities" : [
         "Sees which apps are installed and running, and switches to, opens or hides them",
         "Opens x-apple.systempreferences: links"
+      ],
+      "capabilityKinds" : [
+        "apps",
+        "openURLs"
       ],
       "category" : "System",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/Applications",
@@ -356,6 +406,10 @@
         "Sees which apps are installed and running, and switches to, opens or hides them",
         "Opens x-apple.systempreferences: links"
       ],
+      "capabilityKinds" : [
+        "apps",
+        "openURLs"
+      ],
       "category" : "System",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/Applications",
       "id" : "io.navbytes.stackbar.plugins.applications",
@@ -378,6 +432,10 @@
       "capabilities" : [
         "Sees which apps are installed and running, and switches to, opens or hides them",
         "Opens x-apple.systempreferences: links"
+      ],
+      "capabilityKinds" : [
+        "apps",
+        "openURLs"
       ],
       "category" : "System",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/Applications",
@@ -403,6 +461,11 @@
         "Sees which apps are installed and running, and switches to, opens or hides them",
         "Reads and writes ~/Library/Application Support/Google/Chrome/Default, ~/Library/Application Support/BraveSoftware/Brave-Browser/Default, ~/Library/Application Support/Microsoft Edge/Default, ~/Library/Application Support/Vivaldi/Default"
       ],
+      "capabilityKinds" : [
+        "run",
+        "apps",
+        "files"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/BrowserTabs",
       "id" : "io.navbytes.stackbar.plugins.browser-tabs",
@@ -423,6 +486,9 @@
       "accent" : "orange",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.calculator-1.0.0.stackbarplugin",
       "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
 
       ],
       "category" : "Productivity",
@@ -447,6 +513,9 @@
       "capabilities" : [
         "Connects to api.frankfurter.dev"
       ],
+      "capabilityKinds" : [
+        "network"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Calculator",
       "id" : "io.navbytes.stackbar.plugins.calculator",
@@ -468,6 +537,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.calculator-1.2.0.stackbarplugin",
       "capabilities" : [
         "Connects to api.frankfurter.dev"
+      ],
+      "capabilityKinds" : [
+        "network"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Calculator",
@@ -492,6 +564,9 @@
       "capabilities" : [
         "Connects to api.frankfurter.dev"
       ],
+      "capabilityKinds" : [
+        "network"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Calculator",
       "id" : "io.navbytes.stackbar.plugins.calculator",
@@ -513,6 +588,9 @@
       "accent" : "pink",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.color-picker-1.0.0.stackbarplugin",
       "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
 
       ],
       "category" : "Productivity",
@@ -538,6 +616,9 @@
       "capabilities" : [
 
       ],
+      "capabilityKinds" : [
+
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Dictionary",
       "id" : "io.navbytes.stackbar.plugins.dictionary",
@@ -558,6 +639,9 @@
       "bundle" : "Developer/io.navbytes.stackbar.plugins.docker-1.0.0.stackbarplugin",
       "capabilities" : [
         "Runs docker (not installed)"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
@@ -580,6 +664,9 @@
       "bundle" : "Developer/io.navbytes.stackbar.plugins.docker-1.3.0.stackbarplugin",
       "capabilities" : [
         "Runs docker (not installed)"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
@@ -604,6 +691,9 @@
       "bundle" : "Developer/io.navbytes.stackbar.plugins.docker-1.3.1.stackbarplugin",
       "capabilities" : [
         "Runs docker (not installed)"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
@@ -630,6 +720,9 @@
       "capabilities" : [
         "Runs docker (not installed)"
       ],
+      "capabilityKinds" : [
+        "run"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
       "id" : "io.navbytes.stackbar.plugins.docker",
@@ -654,6 +747,9 @@
       "bundle" : "Developer/io.navbytes.stackbar.plugins.docker-1.5.0.stackbarplugin",
       "capabilities" : [
         "Runs docker (not installed)"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
@@ -680,6 +776,9 @@
       "bundle" : "Developer/io.navbytes.stackbar.plugins.docker-1.6.0.stackbarplugin",
       "capabilities" : [
         "Runs docker (not installed)"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
@@ -708,6 +807,10 @@
         "Runs docker (not installed)",
         "Opens your terminal app running a command it names, where you see it run"
       ],
+      "capabilityKinds" : [
+        "run",
+        "terminal"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
       "id" : "io.navbytes.stackbar.plugins.docker",
@@ -734,6 +837,9 @@
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using"
       ],
+      "capabilityKinds" : [
+        "clipboard"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Emoji",
       "id" : "io.navbytes.stackbar.plugins.emoji",
@@ -755,6 +861,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.emoji-1.1.0.stackbarplugin",
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "capabilityKinds" : [
+        "clipboard"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Emoji",
@@ -779,6 +888,10 @@
         "Finds files and folders in your home folder by name, with Spotlight",
         "Opens any link, file or folder, in any app"
       ],
+      "capabilityKinds" : [
+        "fileSearch",
+        "openURLs"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/FileSearch",
       "id" : "io.navbytes.stackbar.plugins.file-search",
@@ -801,6 +914,10 @@
         "Connects to api.github.com",
         "Reads the secret GITHUB_TOKEN"
       ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/GitHub",
       "id" : "io.navbytes.stackbar.plugins.github",
@@ -821,6 +938,9 @@
       "bundle" : "Developer/io.navbytes.stackbar.plugins.homebrew-1.0.0.stackbarplugin",
       "capabilities" : [
         "Runs /opt/homebrew/bin/brew"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew",
@@ -843,6 +963,9 @@
       "bundle" : "Developer/io.navbytes.stackbar.plugins.homebrew-1.3.0.stackbarplugin",
       "capabilities" : [
         "Runs /opt/homebrew/bin/brew"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew",
@@ -867,6 +990,9 @@
       "bundle" : "Developer/io.navbytes.stackbar.plugins.homebrew-1.3.1.stackbarplugin",
       "capabilities" : [
         "Runs /opt/homebrew/bin/brew"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew",
@@ -893,6 +1019,9 @@
       "capabilities" : [
         "Runs /opt/homebrew/bin/brew"
       ],
+      "capabilityKinds" : [
+        "run"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew",
       "id" : "io.navbytes.stackbar.plugins.homebrew",
@@ -917,6 +1046,9 @@
       "bundle" : "Developer/io.navbytes.stackbar.plugins.homebrew-1.5.0.stackbarplugin",
       "capabilities" : [
         "Runs /opt/homebrew/bin/brew"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew",
@@ -943,6 +1075,10 @@
         "Connects to *.atlassian.net",
         "Reads the secret JIRA_API_TOKEN"
       ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
       "id" : "io.navbytes.stackbar.plugins.jira",
@@ -965,6 +1101,10 @@
       "capabilities" : [
         "Connects to *.atlassian.net",
         "Reads the secret JIRA_API_TOKEN"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
@@ -989,6 +1129,10 @@
       "capabilities" : [
         "Connects to *.atlassian.net",
         "Reads the secret JIRA_API_TOKEN"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
@@ -1015,6 +1159,10 @@
         "Connects to *.atlassian.net",
         "Reads the secret JIRA_API_TOKEN"
       ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
       "id" : "io.navbytes.stackbar.plugins.jira",
@@ -1039,6 +1187,10 @@
       "capabilities" : [
         "Connects to *.atlassian.net",
         "Reads the secret JIRA_API_TOKEN"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
@@ -1067,6 +1219,11 @@
         "Reads the secret JIRA_API_TOKEN",
         "Connects to the server you enter as JIRA_SERVER_URL, and no other"
       ],
+      "capabilityKinds" : [
+        "network",
+        "secret",
+        "userServer"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
       "id" : "io.navbytes.stackbar.plugins.jira",
@@ -1092,6 +1249,9 @@
       "capabilities" : [
         "Runs /bin/ps, /bin/kill"
       ],
+      "capabilityKinds" : [
+        "run"
+      ],
       "category" : "System",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/KillProcess",
       "id" : "io.navbytes.stackbar.plugins.kill-process",
@@ -1113,6 +1273,10 @@
       "capabilities" : [
         "Connects to api.linear.app",
         "Reads the secret LINEAR_API_KEY"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
@@ -1137,6 +1301,10 @@
         "Connects to api.linear.app",
         "Reads the secret LINEAR_API_KEY"
       ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
       "id" : "io.navbytes.stackbar.plugins.linear",
@@ -1160,6 +1328,10 @@
       "capabilities" : [
         "Connects to api.linear.app",
         "Reads the secret LINEAR_API_KEY"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
@@ -1186,6 +1358,10 @@
         "Connects to api.linear.app",
         "Reads the secret LINEAR_API_KEY"
       ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
       "id" : "io.navbytes.stackbar.plugins.linear",
@@ -1210,6 +1386,10 @@
       "capabilities" : [
         "Connects to api.linear.app",
         "Reads the secret LINEAR_API_KEY"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
@@ -1237,6 +1417,10 @@
         "Connects to api.linear.app",
         "Reads the secret LINEAR_API_KEY"
       ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
       "id" : "io.navbytes.stackbar.plugins.linear",
@@ -1261,6 +1445,10 @@
       "capabilities" : [
         "Connects to the server you enter as LITELLM_PROXY_URL, and no other",
         "Reads the secret LITELLM_API_KEY"
+      ],
+      "capabilityKinds" : [
+        "userServer",
+        "secret"
       ],
       "category" : "Monitoring",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/LiteLLM",
@@ -1287,6 +1475,10 @@
         "Connects to the server you enter as LITELLM_PROXY_URL, and no other",
         "Reads the secret LITELLM_API_KEY"
       ],
+      "capabilityKinds" : [
+        "userServer",
+        "secret"
+      ],
       "category" : "Monitoring",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/LiteLLM",
       "id" : "io.navbytes.stackbar.plugins.litellm",
@@ -1312,6 +1504,10 @@
       "capabilities" : [
         "Connects to the server you enter as LITELLM_PROXY_URL, and no other",
         "Reads the secret LITELLM_API_KEY"
+      ],
+      "capabilityKinds" : [
+        "userServer",
+        "secret"
       ],
       "category" : "Monitoring",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/LiteLLM",
@@ -1340,6 +1536,10 @@
         "Connects to the server you enter as LITELLM_PROXY_URL, and no other",
         "Reads the secret LITELLM_API_KEY"
       ],
+      "capabilityKinds" : [
+        "userServer",
+        "secret"
+      ],
       "category" : "Monitoring",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/LiteLLM",
       "id" : "io.navbytes.stackbar.plugins.litellm",
@@ -1367,6 +1567,10 @@
         "Connects to the server you enter as LITELLM_PROXY_URL, and no other",
         "Reads the secret LITELLM_API_KEY"
       ],
+      "capabilityKinds" : [
+        "userServer",
+        "secret"
+      ],
       "category" : "Monitoring",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/LiteLLM",
       "id" : "io.navbytes.stackbar.plugins.litellm",
@@ -1393,6 +1597,9 @@
       "capabilities" : [
         "Reads the menus of the app you were in and chooses items from them"
       ],
+      "capabilityKinds" : [
+        "menus"
+      ],
       "category" : "System",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/MenuSearch",
       "id" : "io.navbytes.stackbar.plugins.menu-search",
@@ -1413,6 +1620,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.music-1.0.0.stackbarplugin",
       "capabilities" : [
         "Runs /usr/bin/osascript (can run any program)"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Music",
@@ -1438,6 +1648,10 @@
         "Runs /usr/bin/osascript (can run any program)",
         "Connects to itunes.apple.com, *.mzstatic.com, i.scdn.co"
       ],
+      "capabilityKinds" : [
+        "run",
+        "network"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Music",
       "id" : "io.navbytes.stackbar.plugins.music",
@@ -1462,6 +1676,10 @@
       "capabilities" : [
         "Runs /usr/bin/osascript (can run any program)",
         "Connects to itunes.apple.com, *.mzstatic.com, i.scdn.co"
+      ],
+      "capabilityKinds" : [
+        "run",
+        "network"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Music",
@@ -1489,6 +1707,10 @@
         "Runs /usr/bin/osascript (can run any program)",
         "Connects to itunes.apple.com, *.mzstatic.com, i.scdn.co"
       ],
+      "capabilityKinds" : [
+        "run",
+        "network"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Music",
       "id" : "io.navbytes.stackbar.plugins.music",
@@ -1515,6 +1737,10 @@
         "Runs /usr/bin/osascript (can run any program)",
         "Connects to itunes.apple.com, *.mzstatic.com, i.scdn.co"
       ],
+      "capabilityKinds" : [
+        "run",
+        "network"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Music",
       "id" : "io.navbytes.stackbar.plugins.music",
@@ -1537,6 +1763,9 @@
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.pomodoro-1.0.0.stackbarplugin",
       "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
 
       ],
       "category" : "Productivity",
@@ -1562,6 +1791,9 @@
       "capabilities" : [
 
       ],
+      "capabilityKinds" : [
+
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Pomodoro",
       "id" : "io.navbytes.stackbar.plugins.pomodoro",
@@ -1584,6 +1816,9 @@
       "accent" : "red",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.pomodoro-1.3.1.stackbarplugin",
       "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
 
       ],
       "category" : "Productivity",
@@ -1611,6 +1846,9 @@
       "capabilities" : [
 
       ],
+      "capabilityKinds" : [
+
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Pomodoro",
       "id" : "io.navbytes.stackbar.plugins.pomodoro",
@@ -1634,6 +1872,9 @@
       "accent" : "red",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.pomodoro-1.5.0.stackbarplugin",
       "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
 
       ],
       "category" : "Productivity",
@@ -1661,6 +1902,9 @@
       "capabilities" : [
 
       ],
+      "capabilityKinds" : [
+
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Pomodoro",
       "id" : "io.navbytes.stackbar.plugins.pomodoro",
@@ -1684,6 +1928,9 @@
       "accent" : "red",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.pomodoro-1.7.0.stackbarplugin",
       "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
 
       ],
       "category" : "Productivity",
@@ -1710,6 +1957,9 @@
       "capabilities" : [
         "Runs /usr/sbin/lsof, /bin/kill"
       ],
+      "capabilityKinds" : [
+        "run"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports",
       "id" : "io.navbytes.stackbar.plugins.ports",
@@ -1730,6 +1980,9 @@
       "bundle" : "Developer/io.navbytes.stackbar.plugins.ports-1.2.1.stackbarplugin",
       "capabilities" : [
         "Runs /usr/sbin/lsof, /bin/kill"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports",
@@ -1752,6 +2005,9 @@
       "bundle" : "Developer/io.navbytes.stackbar.plugins.ports-1.2.2.stackbarplugin",
       "capabilities" : [
         "Runs /usr/sbin/lsof, /bin/kill"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports",
@@ -1776,6 +2032,9 @@
       "capabilities" : [
         "Runs /usr/sbin/lsof, /bin/kill"
       ],
+      "capabilityKinds" : [
+        "run"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports",
       "id" : "io.navbytes.stackbar.plugins.ports",
@@ -1798,6 +2057,9 @@
       "bundle" : "Developer/io.navbytes.stackbar.plugins.ports-1.4.0.stackbarplugin",
       "capabilities" : [
         "Runs /usr/sbin/lsof, /bin/kill"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports",
@@ -1824,6 +2086,11 @@
         "Reads and writes ~/Library/Application Support/Code/User/globalStorage, ~/Library/Application Support/Cursor/User/globalStorage, ~/Library/Application Support/Windsurf/User/globalStorage, ~/Library/Application Support/VSCodium/User/globalStorage",
         "Opens vscode:, cursor:, windsurf:, vscodium: links"
       ],
+      "capabilityKinds" : [
+        "run",
+        "files",
+        "openURLs"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/RecentProjects",
       "id" : "io.navbytes.stackbar.plugins.recent-projects",
@@ -1849,6 +2116,12 @@
         "Opens any link, file or folder, in any app",
         "Sees which apps are installed and running, and switches to, opens or hides them"
       ],
+      "capabilityKinds" : [
+        "run",
+        "files",
+        "openURLs",
+        "apps"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/RecentProjects",
       "id" : "io.navbytes.stackbar.plugins.recent-projects",
@@ -1873,6 +2146,10 @@
         "Reads and writes ~/Script Commands",
         "Runs /usr/bin/grep, /bin/bash (can run any program), /bin/zsh (can run any program), /bin/sh (can run any program), /opt/homebrew/bin/python3 (can run any program), /opt/homebrew/bin/node (can run any program), /opt/homebrew/bin/ruby (can run any program), /opt/homebrew/bin/perl (can run any program), php (not installed), /usr/bin/swift (can run any program), /usr/bin/osascript (can run any program)"
       ],
+      "capabilityKinds" : [
+        "files",
+        "run"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/ScriptCommands",
       "id" : "io.navbytes.stackbar.plugins.script-commands",
@@ -1895,6 +2172,9 @@
       "capabilities" : [
         "Locks, sleeps, restarts, shuts down or logs out the Mac, empties the Trash, toggles dark mode, hides or quits other apps and ejects disks"
       ],
+      "capabilityKinds" : [
+        "systemActions"
+      ],
       "category" : "System",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/SystemCommands",
       "id" : "io.navbytes.stackbar.plugins.system-commands",
@@ -1915,6 +2195,9 @@
       "bundle" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor-1.0.0.stackbarplugin",
       "capabilities" : [
         "Runs /usr/bin/top, /usr/bin/vm_stat, /bin/df, /bin/kill"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Monitoring",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
@@ -1939,6 +2222,9 @@
       "capabilities" : [
         "Runs /usr/bin/top, /usr/bin/vm_stat, /bin/df, /bin/kill"
       ],
+      "capabilityKinds" : [
+        "run"
+      ],
       "category" : "Monitoring",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
       "id" : "io.navbytes.stackbar.plugins.system-monitor",
@@ -1962,6 +2248,9 @@
       "bundle" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor-1.2.1.stackbarplugin",
       "capabilities" : [
         "Runs /usr/bin/top, /usr/bin/vm_stat, /bin/df, /bin/kill"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Monitoring",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
@@ -1988,6 +2277,9 @@
       "capabilities" : [
         "Runs /usr/bin/top, /usr/bin/vm_stat, /bin/df, /bin/kill"
       ],
+      "capabilityKinds" : [
+        "run"
+      ],
       "category" : "Monitoring",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
       "id" : "io.navbytes.stackbar.plugins.system-monitor",
@@ -2013,6 +2305,9 @@
       "capabilities" : [
         "Runs /usr/bin/top, /usr/bin/vm_stat, /bin/df, /bin/kill"
       ],
+      "capabilityKinds" : [
+        "run"
+      ],
       "category" : "Monitoring",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
       "id" : "io.navbytes.stackbar.plugins.system-monitor",
@@ -2037,6 +2332,9 @@
       "bundle" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor-1.5.0.stackbarplugin",
       "capabilities" : [
         "Runs /bin/ps, /usr/sbin/sysctl, /usr/bin/vm_stat, /usr/sbin/netstat, /bin/df, /bin/kill"
+      ],
+      "capabilityKinds" : [
+        "run"
       ],
       "category" : "Monitoring",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
@@ -2064,6 +2362,10 @@
         "Runs /bin/ps, /usr/sbin/sysctl, /usr/bin/vm_stat, /usr/sbin/netstat, /bin/df, /bin/kill",
         "Reads your Mac's temperatures and fan speeds"
       ],
+      "capabilityKinds" : [
+        "run",
+        "sensors"
+      ],
       "category" : "Monitoring",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
       "id" : "io.navbytes.stackbar.plugins.system-monitor",
@@ -2089,6 +2391,9 @@
       "capabilities" : [
 
       ],
+      "capabilityKinds" : [
+
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Timers",
       "id" : "io.navbytes.stackbar.plugins.timers",
@@ -2110,6 +2415,9 @@
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.todo-1.0.0.stackbarplugin",
       "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
 
       ],
       "category" : "Productivity",
@@ -2134,6 +2442,9 @@
       "accent" : "orange",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.todo-1.0.1.stackbarplugin",
       "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
 
       ],
       "category" : "Productivity",
@@ -2161,6 +2472,9 @@
       "capabilities" : [
 
       ],
+      "capabilityKinds" : [
+
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Todo",
       "id" : "io.navbytes.stackbar.plugins.todo",
@@ -2186,6 +2500,9 @@
       "capabilities" : [
         "Reads and changes your reminders"
       ],
+      "capabilityKinds" : [
+        "reminders"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Todo",
       "id" : "io.navbytes.stackbar.plugins.todo",
@@ -2210,6 +2527,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.todo-2.1.0.stackbarplugin",
       "capabilities" : [
         "Reads and changes your reminders"
+      ],
+      "capabilityKinds" : [
+        "reminders"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Todo",
@@ -2238,6 +2558,12 @@
         "Connects to api-free.deepl.com, api.deepl.com",
         "Reads the secret DEEPL_API_KEY"
       ],
+      "capabilityKinds" : [
+        "context",
+        "clipboard",
+        "network",
+        "secret"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate",
       "id" : "io.navbytes.stackbar.plugins.translate",
@@ -2261,6 +2587,12 @@
         "Reads everything you copy, and pastes into the app you're using",
         "Connects to translate.googleapis.com, api-free.deepl.com, api.deepl.com",
         "Reads the secret DEEPL_API_KEY"
+      ],
+      "capabilityKinds" : [
+        "context",
+        "clipboard",
+        "network",
+        "secret"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate",
@@ -2286,6 +2618,12 @@
         "Reads everything you copy, and pastes into the app you're using",
         "Connects to translate.googleapis.com, api-free.deepl.com, api.deepl.com",
         "Reads the secret DEEPL_API_KEY"
+      ],
+      "capabilityKinds" : [
+        "context",
+        "clipboard",
+        "network",
+        "secret"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate",
@@ -2313,6 +2651,12 @@
         "Connects to translate.googleapis.com, api-free.deepl.com, api.deepl.com",
         "Reads the secret DEEPL_API_KEY"
       ],
+      "capabilityKinds" : [
+        "context",
+        "clipboard",
+        "network",
+        "secret"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate",
       "id" : "io.navbytes.stackbar.plugins.translate",
@@ -2338,6 +2682,12 @@
         "Reads everything you copy, and pastes into the app you're using",
         "Connects to translate.googleapis.com, api-free.deepl.com, api.deepl.com",
         "Reads the secret DEEPL_API_KEY"
+      ],
+      "capabilityKinds" : [
+        "context",
+        "clipboard",
+        "network",
+        "secret"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate",
@@ -2366,6 +2716,13 @@
         "Connects to translate.googleapis.com, api-free.deepl.com, api.deepl.com",
         "Reads the secret DEEPL_API_KEY"
       ],
+      "capabilityKinds" : [
+        "context",
+        "clipboard",
+        "screenText",
+        "network",
+        "secret"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Translate",
       "id" : "io.navbytes.stackbar.plugins.translate",
@@ -2388,6 +2745,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.window-layouts-1.0.0.stackbarplugin",
       "capabilities" : [
         "Sees which windows you have open and where, moves them, and opens apps"
+      ],
+      "capabilityKinds" : [
+        "windows"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WindowLayouts",
@@ -2412,6 +2772,9 @@
       "capabilities" : [
         "Sees which windows you have open and where, moves them, and opens apps"
       ],
+      "capabilityKinds" : [
+        "windows"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WindowSwitcher",
       "id" : "io.navbytes.stackbar.plugins.window-switcher",
@@ -2433,6 +2796,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.workspaces-1.0.0.stackbarplugin",
       "capabilities" : [
         "Sees which windows you have open and where, moves them, and opens apps"
+      ],
+      "capabilityKinds" : [
+        "windows"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Workspaces",
@@ -2458,6 +2824,9 @@
       "capabilities" : [
         "Sees which windows you have open and where, moves them, and opens apps"
       ],
+      "capabilityKinds" : [
+        "windows"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Workspaces",
       "id" : "io.navbytes.stackbar.plugins.workspaces",
@@ -2482,6 +2851,9 @@
       "capabilities" : [
         "Sees which windows you have open and where, moves them, and opens apps"
       ],
+      "capabilityKinds" : [
+        "windows"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Workspaces",
       "id" : "io.navbytes.stackbar.plugins.workspaces",
@@ -2505,6 +2877,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.workspaces-2.0.0.stackbarplugin",
       "capabilities" : [
         "Sees which windows you have open and where, moves them, and opens apps"
+      ],
+      "capabilityKinds" : [
+        "windows"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Windows",
@@ -2532,6 +2907,9 @@
       "capabilities" : [
 
       ],
+      "capabilityKinds" : [
+
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WorldClock",
       "id" : "io.navbytes.stackbar.plugins.world-clock",
@@ -2553,6 +2931,9 @@
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.world-clock-1.3.0.stackbarplugin",
       "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
 
       ],
       "category" : "Productivity",
@@ -2577,6 +2958,9 @@
       "accent" : "violet",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.world-clock-1.3.1.stackbarplugin",
       "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
 
       ],
       "category" : "Productivity",
@@ -2604,6 +2988,9 @@
       "capabilities" : [
 
       ],
+      "capabilityKinds" : [
+
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WorldClock",
       "id" : "io.navbytes.stackbar.plugins.world-clock",
@@ -2627,6 +3014,9 @@
       "accent" : "violet",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.world-clock-1.5.0.stackbarplugin",
       "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
 
       ],
       "category" : "Productivity",
@@ -2654,6 +3044,10 @@
         "Connects to api.github.com",
         "Reads the secret GITHUB_TOKEN"
       ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
       "id" : "io.navbytes.stackbar.pr-cockpit",
@@ -2678,6 +3072,10 @@
       "capabilities" : [
         "Connects to api.github.com",
         "Reads the secret GITHUB_TOKEN"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
@@ -2704,6 +3102,10 @@
         "Connects to api.github.com",
         "Reads the secret GITHUB_TOKEN"
       ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
       "id" : "io.navbytes.stackbar.pr-cockpit",
@@ -2728,6 +3130,10 @@
       "capabilities" : [
         "Connects to api.github.com",
         "Reads the secret GITHUB_TOKEN"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
@@ -2754,6 +3160,10 @@
       "capabilities" : [
         "Connects to api.github.com",
         "Reads the secret GITHUB_TOKEN"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
@@ -2782,6 +3192,10 @@
         "Connects to api.github.com",
         "Reads the secret GITHUB_TOKEN"
       ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
       "id" : "io.navbytes.stackbar.pr-cockpit",
@@ -2809,6 +3223,10 @@
         "Connects to api.github.com",
         "Reads the secret GITHUB_TOKEN"
       ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
       "id" : "io.navbytes.stackbar.pr-cockpit",
@@ -2835,6 +3253,10 @@
       "capabilities" : [
         "Connects to api.github.com",
         "Reads the secret GITHUB_TOKEN"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
       ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
@@ -2864,6 +3286,11 @@
         "Reads the secret GITHUB_TOKEN",
         "Connects to the server you enter as GITHUB_ENTERPRISE_URL, and no other"
       ],
+      "capabilityKinds" : [
+        "network",
+        "secret",
+        "userServer"
+      ],
       "category" : "Developer",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
       "id" : "io.navbytes.stackbar.pr-cockpit",
@@ -2891,6 +3318,11 @@
         "Reads everything you copy, and pastes into the app you're using",
         "Reads the text you select and which app you're in"
       ],
+      "capabilityKinds" : [
+        "openURLs",
+        "clipboard",
+        "context"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
       "id" : "io.navbytes.stackbar.quicklinks",
@@ -2914,6 +3346,12 @@
         "Reads everything you copy, and pastes into the app you're using",
         "Reads the text you select and which app you're in",
         "Connects to icons.duckduckgo.com"
+      ],
+      "capabilityKinds" : [
+        "openURLs",
+        "clipboard",
+        "context",
+        "network"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
@@ -2939,6 +3377,12 @@
         "Reads everything you copy, and pastes into the app you're using",
         "Reads the text you select and which app you're in",
         "Connects to icons.duckduckgo.com"
+      ],
+      "capabilityKinds" : [
+        "openURLs",
+        "clipboard",
+        "context",
+        "network"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
@@ -2966,6 +3410,12 @@
         "Reads the text you select and which app you're in",
         "Connects to icons.duckduckgo.com"
       ],
+      "capabilityKinds" : [
+        "openURLs",
+        "clipboard",
+        "context",
+        "network"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
       "id" : "io.navbytes.stackbar.quicklinks",
@@ -2992,6 +3442,12 @@
         "Reads the text you select and which app you're in",
         "Connects to icons.duckduckgo.com"
       ],
+      "capabilityKinds" : [
+        "openURLs",
+        "clipboard",
+        "context",
+        "network"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
       "id" : "io.navbytes.stackbar.quicklinks",
@@ -3016,6 +3472,11 @@
         "Reads the text you select and which app you're in",
         "Stores up to 16 MB"
       ],
+      "capabilityKinds" : [
+        "clipboard",
+        "context",
+        "storage"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
       "id" : "io.navbytes.stackbar.snippets",
@@ -3038,6 +3499,11 @@
         "Reads everything you copy, and pastes into the app you're using",
         "Reads the text you select and which app you're in",
         "Stores up to 16 MB"
+      ],
+      "capabilityKinds" : [
+        "clipboard",
+        "context",
+        "storage"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
@@ -3063,6 +3529,11 @@
         "Reads the text you select and which app you're in",
         "Stores up to 16 MB"
       ],
+      "capabilityKinds" : [
+        "clipboard",
+        "context",
+        "storage"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
       "id" : "io.navbytes.stackbar.snippets",
@@ -3087,6 +3558,11 @@
         "Reads everything you copy, and pastes into the app you're using",
         "Reads the text you select and which app you're in",
         "Stores up to 16 MB"
+      ],
+      "capabilityKinds" : [
+        "clipboard",
+        "context",
+        "storage"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
@@ -3114,6 +3590,12 @@
         "Stores up to 16 MB",
         "Replaces keywords it sets up as you type them, in any app (it never sees what you type)"
       ],
+      "capabilityKinds" : [
+        "clipboard",
+        "context",
+        "storage",
+        "textExpansion"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
       "id" : "io.navbytes.stackbar.snippets",
@@ -3140,6 +3622,12 @@
         "Stores up to 16 MB",
         "Replaces keywords it sets up as you type them, in any app (it never sees what you type)"
       ],
+      "capabilityKinds" : [
+        "clipboard",
+        "context",
+        "storage",
+        "textExpansion"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
       "id" : "io.navbytes.stackbar.snippets",
@@ -3161,6 +3649,9 @@
       "bundle" : "System/io.navbytes.stackbar.stay-awake-1.0.1.stackbarplugin",
       "capabilities" : [
         "Keeps the Mac awake, and reads battery and running apps"
+      ],
+      "capabilityKinds" : [
+        "power"
       ],
       "category" : "System",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake",
@@ -3185,6 +3676,9 @@
       "capabilities" : [
         "Keeps the Mac awake, and reads battery and running apps"
       ],
+      "capabilityKinds" : [
+        "power"
+      ],
       "category" : "System",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake",
       "id" : "io.navbytes.stackbar.stay-awake",
@@ -3208,6 +3702,9 @@
       "bundle" : "System/io.navbytes.stackbar.stay-awake-1.3.1.stackbarplugin",
       "capabilities" : [
         "Keeps the Mac awake, and reads battery and running apps"
+      ],
+      "capabilityKinds" : [
+        "power"
       ],
       "category" : "System",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake",
@@ -3234,6 +3731,9 @@
       "capabilities" : [
         "Keeps the Mac awake, and reads battery and running apps"
       ],
+      "capabilityKinds" : [
+        "power"
+      ],
       "category" : "System",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake",
       "id" : "io.navbytes.stackbar.stay-awake",
@@ -3259,6 +3759,9 @@
       "capabilities" : [
         "Keeps the Mac awake, and reads battery and running apps"
       ],
+      "capabilityKinds" : [
+        "power"
+      ],
       "category" : "System",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake",
       "id" : "io.navbytes.stackbar.stay-awake",
@@ -3282,6 +3785,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.up-next-1.0.1.stackbarplugin",
       "capabilities" : [
         "Reads your calendar events"
+      ],
+      "capabilityKinds" : [
+        "calendar"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
@@ -3307,6 +3813,9 @@
       "capabilities" : [
         "Reads your calendar events"
       ],
+      "capabilityKinds" : [
+        "calendar"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
       "id" : "io.navbytes.stackbar.up-next",
@@ -3331,6 +3840,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.up-next-1.3.1.stackbarplugin",
       "capabilities" : [
         "Reads your calendar events"
+      ],
+      "capabilityKinds" : [
+        "calendar"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
@@ -3358,6 +3870,9 @@
       "capabilities" : [
         "Reads your calendar events"
       ],
+      "capabilityKinds" : [
+        "calendar"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
       "id" : "io.navbytes.stackbar.up-next",
@@ -3384,6 +3899,9 @@
       "capabilities" : [
         "Reads your calendar events"
       ],
+      "capabilityKinds" : [
+        "calendar"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
       "id" : "io.navbytes.stackbar.up-next",
@@ -3409,6 +3927,9 @@
       "bundle" : "Productivity/io.navbytes.stackbar.up-next-1.5.0.stackbarplugin",
       "capabilities" : [
         "Reads your calendar events"
+      ],
+      "capabilityKinds" : [
+        "calendar"
       ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
@@ -3437,6 +3958,10 @@
         "Reads your calendar events",
         "Adds events to your calendars"
       ],
+      "capabilityKinds" : [
+        "calendar",
+        "calendarWrite"
+      ],
       "category" : "Productivity",
       "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/UpNext",
       "id" : "io.navbytes.stackbar.up-next",
@@ -3464,5 +3989,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "EEVt9DO8CDOh2W1M5cN4eK9M3IgM8VDx1rJtyYm5HjmQz/4409ELx2XvhuedZdiO4PSVc0FCED2yqgUQ3emZDw=="
+  "signature" : "EnSt8Ue72BV+Qe/Vicu/ZZycLyTIGsV05EQ2T7BnV+PNPqunT61PGyEPSZ3ZsqtgEwxmWB4npC5qeHIzlsZ+CA=="
 }
