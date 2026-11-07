@@ -19,14 +19,15 @@ final class Quicklinks: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.quicklinks",
         name: "Quicklinks",
-        version: "1.5.1",
+        version: "1.6.0",
         summary: "Open links and folders by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
         // Any link or folder, in the app each quicklink names; the clipboard
         // and selection for {clipboard} and {selection}.
         // Site icons come from DuckDuckGo's icon service, which sees the
-        // domain of each web link shown in the launcher (off in Settings).
+        // domain of each web link shown in the launcher (off until you turn
+        // them on in Settings).
         capabilities: [.openURLs(schemes: ["*"]), .clipboard, .context, .network("icons.duckduckgo.com")],
         minimumStackbar: "0.20.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
@@ -81,7 +82,7 @@ final class Quicklinks: StackbarPlugin {
     @Stored("quicklinks") var links: [Link] = []
     /// The tag the panel filters by; nil shows them all.
     @Stored("panelTag") var panelTag: String? = nil
-    @Stored("siteIcons") var siteIcons = true
+    @Stored("siteIcons") var siteIcons = false
     /// How often and how lately each quicklink was opened, by id, so the
     /// ones you use come first.
     @Stored("usage") var usage: [String: Usage] = [:]
@@ -407,6 +408,19 @@ final class Quicklinks: StackbarPlugin {
 
     var commands: [Command] {
         for link in links { command(for: link) }
+        // Until a saved quicklink is a fallback, "Search Google for …" is
+        // offered under the palette's results, as Spotlight and Raycast do.
+        if !links.contains(where: { $0.fallback == true }) {
+            Command("web-search", title: "Search Google", subtitle: "Search the web for what you typed", symbol: "magnifyingglass", keywords: ["web", "google", "search"]) { invocation in
+                let query = (invocation["query"] ?? "").trimmingCharacters(in: .whitespaces)
+                var parts = URLComponents(string: "https://www.google.com/search")
+                parts?.queryItems = [URLQueryItem(name: "q", value: query)]
+                guard !query.isEmpty, let url = parts?.url?.absoluteString else { return .failure("Type something to search for") }
+                return .open(url: url, app: nil)
+            }
+            .argument("query", placeholder: "Query")
+            .fallback()
+        }
         Command("search", title: "Search Quicklinks", subtitle: "Open, edit or copy a quicklink", symbol: "link", keywords: ["quicklink", "bookmark", "url"])
             .argument("tag", placeholder: "Tag", required: false, default: "All", options: ["All"] + allTags)
             .view { invocation in self.searchView(tag: invocation["tag"]) }

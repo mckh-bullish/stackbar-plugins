@@ -14,7 +14,8 @@ answers.
   network requests at all.
 - **Surfaces:** panel, settings.
 - **Commands:** Calculate.
-- **Units:** length, mass, time, data, volume and temperature.
+- **Units:** length, mass, time, data, volume and temperature, including
+  mixed amounts such as `5 ft 10 in to cm` or `1h 30min in min`.
 - **Currencies:** the European Central Bank's reference rates (about 30
   currencies, updated each working day) from Frankfurter, fetched at launch
   and every six hours. `$`, `€`, `£`, `¥`, `₹` and names like `euros` work
@@ -22,6 +23,10 @@ answers.
 - **Time zones:** any city in a time zone's name (`tokyo`, `new york`), plus
   common ones like `sf`, `nyc`, `bangalore`, `uk` and abbreviations like
   `pst` and `ist`. Without a starting place, the time is yours.
+
+## What's new in 1.5.0
+
+- Mixed amounts convert: `5 ft 10 in to cm`, `1h 30min in min`.
 
 ## What's new in 1.4.0
 

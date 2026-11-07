@@ -11,7 +11,7 @@ final class Calculator: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.calculator",
         name: "Calculator",
-        version: "1.4.0",
+        version: "1.5.0",
         summary: "Sums, units, currencies and time zones answered right in the command palette.",
         surfaces: [.panel, .settings],
         // Exchange rates are fetched at launch, on wake and every six hours
@@ -443,7 +443,9 @@ final class Calculator: StackbarPlugin {
             let unitText = left[left.index(after: lastValue)...].trimmingCharacters(in: .whitespaces)
             guard let from = units[unitText], from.category == to.category else { return nil }
             var parser = Parser(amountText)
-            guard let amount = parser.parse(), amount.isFinite else { return nil }
+            guard let amount = parser.parse(), amount.isFinite else {
+                return compound(left, to: to)
+            }
             let value: Double
             if from.category == "temperature" {
                 value = celsius(amount, from: from.symbol).map { fromCelsius($0, to: to.symbol) } ?? .nan
@@ -453,6 +455,29 @@ final class Calculator: StackbarPlugin {
             guard value.isFinite else { return nil }
             let result = format(value)
             return Answer(expression: "\(format(amount)) \(from.symbol) → \(to.symbol)", result: result, display: "\(result) \(to.symbol)")
+        }
+
+        /// A mixed amount such as `5 ft 10 in` or `1h 30min`: each part a
+        /// number and a unit of the target's kind (not temperatures).
+        static func compound(_ left: String, to: Unit) -> Answer? {
+            guard to.category != "temperature" else { return nil }
+            var rest = Substring(left)
+            var total = 0.0
+            var parts: [String] = []
+            while !rest.isEmpty {
+                rest = rest.drop { $0 == " " }
+                let number = rest.prefix { $0.isNumber || $0 == "." }
+                guard !number.isEmpty, let value = Double(number) else { return nil }
+                rest = rest.dropFirst(number.count).drop { $0 == " " }
+                let name = rest.prefix { !$0.isNumber && $0 != " " }
+                guard let unit = units[String(name)], unit.category == to.category else { return nil }
+                rest = rest.dropFirst(name.count)
+                total += value * unit.factor
+                parts.append(format(value) + " " + unit.symbol)
+            }
+            guard parts.count > 1 else { return nil }
+            let result = format(total / to.factor)
+            return Answer(expression: parts.joined(separator: " ") + " → \(to.symbol)", result: result, display: "\(result) \(to.symbol)")
         }
 
         private static func celsius(_ value: Double, from symbol: String) -> Double? {

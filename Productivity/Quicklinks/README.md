@@ -27,6 +27,14 @@ of its own. Links use Raycast's template syntax:
 - Importing a big export saves once instead of once per link.
 - Links to a box on your network open over plain http too: nas:5000, 192.168.x.x, 10.x.x.x, 172.16-31.x.x, 169.254.x.x and [::1].
 
+## What's new in 1.6.0
+
+- **Search Google out of the box.** Until one of your quicklinks is a
+  fallback, "Search Google" is offered under the palette's results for
+  anything you type. Make any search quicklink a fallback to replace it.
+- **Site icons are off until you turn them on** in Settings. They come from
+  DuckDuckGo's icon service, which sees the domain of each web link shown.
+
 ## What's new in 1.5.0
 
 - **Fallbacks:** a search quicklink can be offered under the palette's results
