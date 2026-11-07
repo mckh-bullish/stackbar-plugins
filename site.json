@@ -248,6 +248,12 @@
       "changes": [
         {
           "notes": [
+            "Mixed amounts convert: `5 ft 10 in to cm`, `1h 30min in min`."
+          ],
+          "version": "1.5.0"
+        },
+        {
+          "notes": [
             "A decimal comma works: 2,5*2 is 5 and 1,5 km in m is 1500 m. A comma is a thousands separator only when it can be one (1,000 and 1,234.56 as before), and on a Mac that writes decimal commas it is always the decimal mark.",
             "If the exchange rates can't be fetched (offline at launch, say), it tries again after 30 seconds, 2, 10 and 30 minutes, and on wake, instead of waiting six hours.",
             "Time-zone answers no longer rebuild a date formatter and a pattern on every keystroke.",
@@ -303,7 +309,7 @@
         },
         {
           "label": "Units",
-          "text": "length, mass, time, data, volume and temperature."
+          "text": "length, mass, time, data, volume and temperature, including mixed amounts such as `5 ft 10 in to cm` or `1h 30min in min`."
         },
         {
           "label": "Currencies",
@@ -314,7 +320,7 @@
           "text": "any city in a time zone's name (`tokyo`, `new york`), plus common ones like `sf`, `nyc`, `bangalore`, `uk` and abbreviations like `pst` and `ist`. Without a starting place, the time is yours."
         }
       ],
-      "version": "1.4.0"
+      "version": "1.5.0"
     },
     "io.navbytes.stackbar.plugins.color-picker": {
       "changes": [
@@ -1687,6 +1693,13 @@
         },
         {
           "notes": [
+            "**Search Google out of the box.** Until one of your quicklinks is a fallback, \"Search Google\" is offered under the palette's results for anything you type. Make any search quicklink a fallback to replace it.",
+            "**Site icons are off until you turn them on** in Settings. They come from DuckDuckGo's icon service, which sees the domain of each web link shown."
+          ],
+          "version": "1.6.0"
+        },
+        {
+          "notes": [
             "**Fallbacks:** a search quicklink can be offered under the palette's results for anything you type (\"Use \u201c\u2026\u201d with Google\"). Google, DuckDuckGo, Kagi, Perplexity, Ask Claude and Wikipedia start as fallbacks; switch any quicklink in its form. Needs Stackbar 0.20.0."
           ],
           "version": "1.5.0"
@@ -1731,7 +1744,7 @@
           "text": "Search Quicklinks, Create Quicklink, Browse Quicklink Library, Import Quicklinks, Export Quicklinks (a file Raycast reads too), plus one command per quicklink."
         }
       ],
-      "version": "1.5.1"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.snippets": {
       "changes": [
@@ -2288,6 +2301,12 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.4.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.4.0/light/panel.png"
+        }
+      },
+      "1.5.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.5.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.5.0/light/panel.png"
         }
       }
     },
@@ -3295,6 +3314,12 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.5.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.5.1/light/panel.png"
         }
+      },
+      "1.6.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.6.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.6.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.snippets": {
@@ -3784,6 +3809,15 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.4.0/dark/previews/hero/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.4.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Answers as you type"
+        }
+      ],
+      "1.5.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.5.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.5.0/light/previews/hero/panel.png",
           "name": "hero",
           "surface": "panel",
           "title": "Answers as you type"
@@ -4904,6 +4938,15 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.5.1/dark/previews/hero/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.5.1/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your searches, sites and folders by name"
+        }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.6.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.6.0/light/previews/hero/panel.png",
           "name": "hero",
           "surface": "panel",
           "title": "Your searches, sites and folders by name"

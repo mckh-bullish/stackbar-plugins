@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-07T10:19:25Z",
+  "generated" : "2026-11-07T15:13:29Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -752,6 +752,32 @@
       "symbol" : "equal.square.fill",
       "updated" : "2026-11-07",
       "version" : "1.4.0"
+    },
+    {
+      "accent" : "orange",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.calculator-1.5.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to api.frankfurter.dev"
+      ],
+      "capabilityKinds" : [
+        "network"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Calculator",
+      "id" : "io.navbytes.stackbar.plugins.calculator",
+      "minimumStackbar" : "0.21.0",
+      "name" : "Calculator",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.calculator.png",
+      "sha256" : "051ea42dac262a62b3fb445274668e404f33634310c16f6573becbe05f94acf2",
+      "summary" : "Sums, units, currencies and time zones answered right in the command palette.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "equal.square.fill",
+      "updated" : "2026-11-07",
+      "version" : "1.5.0"
     },
     {
       "accent" : "pink",
@@ -4259,6 +4285,38 @@
       "version" : "1.5.1"
     },
     {
+      "accent" : "cyan",
+      "bundle" : "Productivity/io.navbytes.stackbar.quicklinks-1.6.0.stackbarplugin",
+      "capabilities" : [
+        "Opens any link, file or folder, in any app",
+        "Reads everything you copy, and pastes into the app you're using",
+        "Reads the text you select and which app you're in",
+        "Connects to icons.duckduckgo.com"
+      ],
+      "capabilityKinds" : [
+        "openURLs",
+        "clipboard",
+        "context",
+        "network"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
+      "id" : "io.navbytes.stackbar.quicklinks",
+      "minimumStackbar" : "0.20.0",
+      "name" : "Quicklinks",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.quicklinks.png",
+      "sha256" : "7999ba31253518b10c3e1fb6c25c3d2ee5dfd7af573ebf0788e0c01d3260436b",
+      "summary" : "Open links and folders by name, with placeholders filled in.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "link",
+      "updated" : "2026-11-07",
+      "version" : "1.6.0"
+    },
+    {
       "bundle" : "Productivity/io.navbytes.stackbar.snippets-1.0.1.stackbarplugin",
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using",
@@ -4873,5 +4931,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "wLKX+AjJqWKlAbibM+98phu1kplkXN2sy6hAfG1V18i4V27dYYHNdFwif5LtGZLdyuPDfGG5v01BpK/ar1JhCA=="
+  "signature" : "Em6qogUWd4w61tjh6IGeNPDURySIzz5s7sl7eDuRrd44c6Y1iax0ruGn6Xe44ZmBi7AebbuWhAYfgFKBj4NwAg=="
 }
