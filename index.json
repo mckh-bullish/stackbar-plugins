@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-07T09:01:40Z",
+  "generated" : "2026-11-07T10:19:25Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -279,6 +279,34 @@
       "symbol" : "doc.on.clipboard.fill",
       "updated" : "2026-11-07",
       "version" : "1.9.1"
+    },
+    {
+      "accent" : "blue",
+      "bundle" : "Productivity/io.navbytes.stackbar.clipboard-1.11.0.stackbarplugin",
+      "capabilities" : [
+        "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "capabilityKinds" : [
+        "clipboard"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
+      "id" : "io.navbytes.stackbar.clipboard",
+      "minimumStackbar" : "0.31.0",
+      "name" : "Clipboard History",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.clipboard.png",
+      "sha256" : "d9409385340392dee37a0ac14f6b4ae349b425ab9f738759508511277365adca",
+      "summary" : "Everything you copy, searchable and one keystroke from pasting back.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "settings"
+      ],
+      "symbol" : "doc.on.clipboard.fill",
+      "updated" : "2026-11-07",
+      "version" : "1.11.0"
     },
     {
       "accent" : "indigo",
@@ -4845,5 +4873,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "wlgKSqW2pyrevImQ9z+xSZZEz3VWGS+0Q9ZUssJfjztY6EbHd60cfSkdSoqMCZLZcaMrGyYlKKjBga47tIgWCA=="
+  "signature" : "wLKX+AjJqWKlAbibM+98phu1kplkXN2sy6hAfG1V18i4V27dYYHNdFwif5LtGZLdyuPDfGG5v01BpK/ar1JhCA=="
 }

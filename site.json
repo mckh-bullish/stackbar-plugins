@@ -4,6 +4,18 @@
       "changes": [
         {
           "notes": [
+            "With \"Show matching copies in the palette's results\" off, copies (and their Copy, Pin and Delete actions) no longer show in the palette at all. Before, the palette also listed every row of the history panel."
+          ],
+          "version": "1.11.0"
+        },
+        {
+          "notes": [
+            "Copies no longer show in the command palette's main results unless you turn on \"Show matching copies in the palette's results\" in Settings. Search Clipboard History (\u2318\u21e7V) works as before."
+          ],
+          "version": "1.10.0"
+        },
+        {
+          "notes": [
             "Pinned items now count against the storage limit, so pinning many large copies can no longer stop new copies from being saved. Pins past their share are unpinned, and pinning more than fits says so.",
             "A text-reading hiccup on an image is retried instead of marking it as having no text, and saving copies, text reading and the day counts write less often.",
             "Long copies are counted once instead of on every redraw.",
@@ -67,7 +79,7 @@
         },
         {
           "label": "Settings",
-          "text": "how many items to keep, the order, pasting directly or only copying, showing matching copies in the palette's results, keeping images, finding images by their text, plain text by default, how long to keep secrets (not at all, 5 minutes to an hour, or like any copy), apps and text patterns to ignore, and pausing the history."
+          "text": "how many items to keep, the order, pasting directly or only copying, showing matching copies in the palette's results (off by default), keeping images, finding images by their text, plain text by default, how long to keep secrets (not at all, 5 minutes to an hour, or like any copy), apps and text patterns to ignore, and pausing the history."
         },
         {
           "label": "Commands",
@@ -79,10 +91,10 @@
         },
         {
           "label": "Requires",
-          "text": "Stackbar 0.27.0 or later."
+          "text": "Stackbar 0.31.0 or later."
         }
       ],
-      "version": "1.9.1"
+      "version": "1.11.0"
     },
     "io.navbytes.stackbar.plugins.app-switcher": {
       "changes": [
@@ -1927,6 +1939,12 @@
   },
   "demos": {
     "io.navbytes.stackbar.clipboard": {
+      "1.11.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/dark/demo/b07000be5086/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/light/demo/b07000be5086/panel.png",
+        "seconds": 7.2,
+        "surface": "panel"
+      },
       "1.5.0": {
         "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.5.0/dark/demo/b07000be5086/panel.png",
         "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.5.0/light/demo/b07000be5086/panel.png",
@@ -2052,6 +2070,16 @@
   "format": 1,
   "plugins": {
     "io.navbytes.stackbar.clipboard": {
+      "1.11.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/light/panel.png"
+        }
+      },
       "1.4.0": {
         "menuBar": {
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.4.0/dark/menuBar.png",
@@ -3434,6 +3462,29 @@
   },
   "previews": {
     "io.navbytes.stackbar.clipboard": {
+      "1.11.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Everything you copied, one keystroke away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/dark/previews/pinned/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/light/previews/pinned/panel.png",
+          "name": "pinned",
+          "surface": "panel",
+          "title": "Pin what you paste every day"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/dark/previews/insights/window.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/light/previews/insights/window.png",
+          "name": "insights",
+          "surface": "window",
+          "title": "What you copy, and from where"
+        }
+      ],
       "1.5.0": [
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.5.0/dark/previews/hero/panel.png",
