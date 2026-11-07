@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.emoji",
+  "protocol" : 21,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "866bca9e95600ccc863992b1618a660541d6ca48931300e5d87575cd11285910",
+  "signature" : "8kmvBXu49AU8YVMk1mRa3kBPtU/QsSU0fN3k2LS96RmdaTc5J7LvrSACW/hLP/jRrBwYdXKj25mJb41IPOY6Dg==",
+  "size" : 5672856,
+  "sourceDigest" : "c5da696fbc284c98634b8f0a1df57eaa95272ecf653176404319fa1ab6fa8734",
+  "stackbarKit" : "57e56ef1ed3a435465e3d3019dde607d0867fab923492636cc1d68538a05cdfe",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-57e56ef1ed3a4354/Emoji-c5da696fbc28",
+  "version" : "1.1.1"
+}
