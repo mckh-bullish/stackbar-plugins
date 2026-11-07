@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.menu-search",
+  "protocol" : 21,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "7844e51c5c7ffd5b7eda4bee5d3a46679dbc47b8940e6af59662cdabaa6ecf71",
+  "signature" : "l+Oz9p+H5oaZbvJNCI7BLO9EHdDV2m9M+fheEnZ/Hll62M4yZuVl1s2wHXs2mxXux8AU5jhAyBJV5lo+GIXzBw==",
+  "size" : 5597112,
+  "sourceDigest" : "a8b0bb6786437af514448976ae2b8d672cd6f17c9d2d5871f388c99e61f1a513",
+  "stackbarKit" : "57e56ef1ed3a435465e3d3019dde607d0867fab923492636cc1d68538a05cdfe",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-57e56ef1ed3a4354/MenuSearch-a8b0bb678643",
+  "version" : "1.0.0"
+}

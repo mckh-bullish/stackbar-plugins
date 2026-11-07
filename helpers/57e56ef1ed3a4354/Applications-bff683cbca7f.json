@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.applications",
+  "protocol" : 21,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "d0227dbeb78bcffa9d9e486a609a15fe7d70127a75c329196ba2392a022c587c",
+  "signature" : "dAcMZ7X2ZkYnuLfaM/LdE9E1PAeR+Jm6N4/InPBce4UQ3rE/vWqDMQQTS+odDcSjVmnP36uAqVfccTlFINyuCA==",
+  "size" : 5623088,
+  "sourceDigest" : "bff683cbca7f9abf2f5ea63585ecd0d6d2fe10c8f68e2ec6381d44a165a578db",
+  "stackbarKit" : "57e56ef1ed3a435465e3d3019dde607d0867fab923492636cc1d68538a05cdfe",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-57e56ef1ed3a4354/Applications-bff683cbca7f",
+  "version" : "1.2.0"
+}
