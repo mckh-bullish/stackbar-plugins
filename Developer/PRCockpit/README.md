@@ -24,7 +24,9 @@ all here, with the same `GITHUB_TOKEN`.
   seconds. Re-run failed jobs (or all of them) from there, open a job's
   log, or copy a summary of what failed. Settings can make a click open the
   browser as before; ⌘↩ always does. Re-running needs a token with Actions
-  write access.
+  write access. In the palette, a selected pull request shows its checks
+  beside the list, fetched in the background for the ones whose checks
+  changed (a setting turns this off); ⌘I opens them in full.
 - **Surfaces:** menu bar, panel (To review, Mine, Issues and an optional
   Inbox), window, widget, settings.
 - **Settings:** include team review requests, include drafts, how recently a
@@ -67,6 +69,10 @@ how long reviews have waited.
 ### On your desktop too
 A widget keeps the review queue in view.
 <!-- preview: widget -->
+
+## What's new in 1.11.0
+
+- The palette shows a pull request's checks beside the list as soon as you select it. Your listed pull requests' checks are fetched in the background, in one request and only for those whose checks changed. A setting turns this off.
 
 ## What's new in 1.10.0
 

@@ -24,7 +24,7 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.10.0",
+        version: "1.11.0",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(20)), .wake],
@@ -381,6 +381,12 @@ final class PRCockpit: StackbarPlugin {
     var listsFetched: Date?
     /// A click on a pull request opens its checks (or the browser, as before).
     @Stored("clickShowsChecks") var clickShowsChecks = true
+    /// Fetch the listed pull requests' checks in the background, so the
+    /// palette's preview shows them as you move through the list.
+    @Stored("previewChecks") var previewChecks = true
+    /// What each pull request looked like (updated, rollup) when its checks
+    /// were fetched; a change means they're worth fetching again.
+    var checksStamp: [String: String] = [:]
     /// The re-run a first press asked for, and when.
     var rerunArmed: String?
     var rerunArmedAt = Date.distantPast
@@ -416,6 +422,7 @@ final class PRCockpit: StackbarPlugin {
         issues = []; issuesLoaded = false; issuesFetched = nil; inbox = []; inboxLoaded = false; inboxFetched = nil
         searchResults = []; searchedText = nil; repoSearches = [:]; repoResults = []
         repos = []; reposLoaded = nil; history = []; seenStarted = false; seen = [:]; snoozed = [:]; announced = [:]
+        details = [:]; detailErrors = [:]; checksStamp = [:]; expanded = nil
     }
 
     /// Seconds a refresh request may take. The plugin handles one message at a
@@ -447,6 +454,7 @@ final class PRCockpit: StackbarPlugin {
         async let assigned: Void = loadIssues()
         _ = await (pullRequests, notifications, assigned)
         await followOpenChecks()
+        if previewChecks { await prefetchChecks() }
     }
 
     /// Both lists and what closed lately, in one GraphQL request.
@@ -1154,6 +1162,8 @@ final class PRCockpit: StackbarPlugin {
                 self.clickShowsChecks = chosen == "Shows its checks"
             }
             Text("Checks open under the pull request with why they failed, its deployments, and Re-run. ⌘↩ always opens the browser. Re-running needs a token with Actions write access.").style(.caption).role(.secondary)
+            Toggle("Show checks in the palette's preview", isOn: previewChecks) { self.previewChecks = $0 }
+            Text("Fetches the checks of your listed pull requests in the background, only for those whose checks changed, so the preview beside the palette shows them as you move through the list.").style(.caption).role(.secondary)
         }
         Section("Notifications") {
             Toggle("Notify me about changes", isOn: notifyChanges) { self.notifyChanges = $0 }
@@ -1570,6 +1580,12 @@ struct PRDetails: Equatable {
     }
 }
 
+/// The reply for several pull requests' checks, one alias (`p0`, `p1`…)
+/// each; an alias GitHub couldn't answer comes back null.
+struct BatchDetailsReply: Decodable {
+    let data: [String: DetailsReply.Repository?]?
+}
+
 /// The GraphQL reply for one pull request's checks and deployments.
 struct DetailsReply: Decodable {
     struct Problem: Decodable { let message: String }
@@ -1629,22 +1645,31 @@ struct DetailsReply: Decodable {
     let data: Payload?
     let errors: [Problem]?
 
-    static let query = """
-    query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { \
-    commits(last: 1) { nodes { commit { oid \
-    statusCheckRollup { contexts(first: 100) { nodes { __typename \
-    ... on CheckRun { databaseId name status conclusion detailsUrl startedAt completedAt isRequired(pullRequestNumber: $number) \
-    checkSuite { workflowRun { databaseId workflow { name } } app { name } } \
-    steps(first: 60) { nodes { name conclusion } } \
-    annotations(first: 5) { nodes { message path location { start { line } } } } } \
-    ... on StatusContext { context state targetUrl description createdAt isRequired(pullRequestNumber: $number) } } } } \
-    deployments(first: 5, orderBy: { field: CREATED_AT, direction: DESC }) { nodes { id environment state createdAt latestStatus { state environmentUrl logUrl } } } \
-    } } } } } }
-    """
+    /// The commit's checks and deployments for one pull request; `number`
+    /// is `$number` in the one-pull query or a literal in a batch.
+    static func selection(number: String) -> String {
+        """
+        commits(last: 1) { nodes { commit { oid \
+        statusCheckRollup { contexts(first: 100) { nodes { __typename \
+        ... on CheckRun { databaseId name status conclusion detailsUrl startedAt completedAt isRequired(pullRequestNumber: \(number)) \
+        checkSuite { workflowRun { databaseId workflow { name } } app { name } } \
+        steps(first: 60) { nodes { name conclusion } } \
+        annotations(first: 5) { nodes { message path location { start { line } } } } } \
+        ... on StatusContext { context state targetUrl description createdAt isRequired(pullRequestNumber: \(number)) } } } } \
+        deployments(first: 5, orderBy: { field: CREATED_AT, direction: DESC }) { nodes { id environment state createdAt latestStatus { state environmentUrl logUrl } } } \
+        } } }
+        """
+    }
+
+    static let query = "query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { \(selection(number: "$number")) } } }"
 
     /// The checks and deployments, newest deployment per environment.
     func details(at now: Date = Date()) -> PRDetails? {
-        guard let commit = data?.repository?.pullRequest?.commits.nodes.last?.commit else { return nil }
+        data?.repository?.pullRequest.flatMap { Self.details($0, at: now) }
+    }
+
+    static func details(_ pull: PullRequest, at now: Date = Date()) -> PRDetails? {
+        guard let commit = pull.commits.nodes.last?.commit else { return nil }
         let checks = (commit.statusCheckRollup?.contexts.nodes ?? []).compactMap { $0 }.enumerated().compactMap { index, context -> CheckItem? in
             if context.__typename == "StatusContext" {
                 let state: CheckItem.State = switch context.state {
@@ -1734,9 +1759,60 @@ extension PRCockpit {
             if details.count > 40, let oldest = details.min(by: { $0.value.fetchedAt < $1.value.fetchedAt })?.key { details[oldest] = nil }
             details[url] = found
             detailErrors[url] = nil
+            if let pr = pull(url) { checksStamp[url] = Self.stamp(pr) }
         } catch {
             detailErrors[url] = "\(error)"
         }
+    }
+
+    /// When a pull request's checks were last seen to change: GitHub moves
+    /// `updatedAt` on a push and the rollup state when a check finishes.
+    static func stamp(_ pr: PullRequest) -> String {
+        "\(pr.updatedAt.timeIntervalSince1970)|\(pr.checks ?? "")"
+    }
+
+    /// The listed pull requests whose checks aren't kept or changed since,
+    /// at most ten, fetched together so the palette can preview them.
+    func prefetchChecks() async {
+        var seen: Set<String> = []
+        let stale = (shownReview + shownMine).prefix(20).filter { pr in
+            guard seen.insert(pr.url).inserted else { return false }
+            return details[pr.url] == nil || checksStamp[pr.url] != Self.stamp(pr)
+        }
+        guard !stale.isEmpty else { return }
+        await loadDetails(Array(stale.prefix(10)))
+    }
+
+    /// Several pull requests' checks and deployments in one GraphQL request,
+    /// one alias each. It runs in the background, so a failure is left for
+    /// the panel and the checks view, which ask again and say why.
+    func loadDetails(_ pulls: [PullRequest]) async {
+        let named = { (text: String) in !text.isEmpty && text.allSatisfy { $0.isLetter || $0.isNumber || "._-".contains($0) } }
+        let targets = pulls.compactMap { pr in Self.parts(of: pr.url).map { (pr: pr, parts: $0) } }.filter { named($0.parts.owner) && named($0.parts.name) }
+        guard !targets.isEmpty else { return }
+        do {
+            guard try await loadEnterpriseServer(), let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else { return }
+            let fields = targets.enumerated().map { index, target in
+                "p\(index): repository(owner: \"\(target.parts.owner)\", name: \"\(target.parts.name)\") { pullRequest(number: \(target.parts.number)) { \(DetailsReply.selection(number: "\(target.parts.number)")) } }"
+            }
+            let body = try JSONEncoder().encode(["query": "query { \(fields.joined(separator: " ")) }"])
+            let response = try await Stackbar.http(HTTPRequest(url: graphqlURL, method: "POST", headers: [
+                "Authorization": "Bearer \(token)", "Content-Type": "application/json", "Accept": "application/json",
+            ], body: body, timeout: Self.refreshTimeout))
+            guard (200..<300).contains(response.status) else { return }
+            let reply = try Self.restDecoder.decode(BatchDetailsReply.self, from: response.body)
+            let now = Date()
+            for (index, target) in targets.enumerated() {
+                guard let pull = reply.data?["p\(index)"]??.pullRequest, let found = DetailsReply.details(pull, at: now) else { continue }
+                details[target.pr.url] = found
+                detailErrors[target.pr.url] = nil
+                checksStamp[target.pr.url] = Self.stamp(target.pr)
+            }
+            while details.count > 40, let oldest = details.min(by: { $0.value.fetchedAt < $1.value.fetchedAt })?.key {
+                details[oldest] = nil
+                checksStamp[oldest] = nil
+            }
+        } catch {}
     }
 
     func toggleChecks(_ pr: PullRequest) async {

@@ -260,6 +260,41 @@ final class PRCockpitTests: XCTestCase {
         await supervisor.stop()
     }
 
+    /// After a refresh the listed pull requests' checks are fetched together,
+    /// so the palette previews them; a second refresh with nothing changed
+    /// asks for no checks.
+    func testThePalettePreviewsChecksFetchedInTheBackground() async throws {
+        let answers = Locked(Answers(review: ["Bearer A": [1]], mine: ["Bearer A": [2]]))
+        let stub = try GitHubStub { method, path, auth, body in
+            let text = String(decoding: body, as: UTF8.self)
+            if path == "/api/graphql", text.contains("p0: repository") {
+                let failed = #"{"__typename":"CheckRun","databaseId":7,"name":"test","status":"COMPLETED","conclusion":"FAILURE","detailsUrl":"https://ci/7","isRequired":true,"steps":{"nodes":[{"name":"Run tests","conclusion":"FAILURE"}]},"annotations":{"nodes":[]}}"#
+                let passed = #"{"__typename":"CheckRun","databaseId":8,"name":"lint","status":"COMPLETED","conclusion":"SUCCESS","isRequired":false,"steps":{"nodes":[]},"annotations":{"nodes":[]}}"#
+                func pull(_ check: String) -> String { #"{"pullRequest":{"commits":{"nodes":[{"commit":{"oid":"abc","statusCheckRollup":{"contexts":{"nodes":[\#(check)]}},"deployments":{"nodes":[]}}}]}}}"# }
+                return (200, #"{"data":{"p0":\#(pull(failed)),"p1":\#(pull(passed))}}"#)
+            }
+            return gitHub(method, path, auth, answers.current)
+        }
+        let host = Host(self)
+        try await connect(host, stub, token: "A")
+        let session = try await host.session("PRCockpit")
+        try await session.refresh()
+        let batches = { stub.requests.all.filter { $0.contains("p0: repository") } }
+        XCTAssertEqual(batches().count, 1, "one request for both pull requests")
+        XCTAssertTrue(batches().first?.contains("p1: repository") == true)
+
+        let opened = try await session.openView("search", query: CommandQuery(text: ""))
+        let rows = opened.root?.rows ?? []
+        let review = try XCTUnwrap(rows.first { $0.title == "PR 1" })
+        XCTAssertEqual(review.preview?.caption, "1 failed")
+        XCTAssertTrue(review.preview?.text?.contains("✕ test: Run tests") == true, review.preview?.text ?? "")
+        XCTAssertEqual(rows.first { $0.title == "PR 2" }?.preview?.caption, "1 passed")
+
+        try await session.refresh()
+        XCTAssertEqual(batches().count, 1, "nothing changed, so no checks are asked for again")
+        await session.stop()
+    }
+
     /// Without a token the window explains how to connect, not empty lists.
     func testWindowSaysHowToConnectWhenThereIsNoToken() async throws {
         let host = Host(self)
