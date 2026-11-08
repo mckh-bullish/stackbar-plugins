@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.calculator",
+  "protocol" : 21,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "5590ba5d0925bb8ae478d3d6594a10031d4ad8c895c8cd443ec250d35724013d",
+  "signature" : "CLYFmyfGA+y0NVvXcFG2Tc3jaXoBIxQc9jHx9C3tficRMgyQ022Gk6o2xppBJxwJwA4t6gihdNaD/QrrcUhnAQ==",
+  "size" : 5782904,
+  "sourceDigest" : "3451bebe7b2dd55a1c536f052e95cdc89edb916f488d62967f510040a36b72ef",
+  "stackbarKit" : "57e56ef1ed3a435465e3d3019dde607d0867fab923492636cc1d68538a05cdfe",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-57e56ef1ed3a4354/Calculator-3451bebe7b2d",
+  "version" : "1.6.0"
+}

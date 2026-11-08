@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.quicklinks",
+  "protocol" : 21,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "3c3d1bd78b9164a3ce45bbc669aa6606d4a3d9201e63b0dd4fd95f8de93bc9ca",
+  "signature" : "sb6Ai+VODAgcmHAwrJ3Ugimzvm4oKTsphRL91wqZNk/2VdtdwxujOaQoWzUXWwlas7UcToTEegURkcuvYfbXDA==",
+  "size" : 5844504,
+  "sourceDigest" : "67b218878eb25c42e476a431a0f116ac4384fe71d63aedad624f7b9c3078b824",
+  "stackbarKit" : "57e56ef1ed3a435465e3d3019dde607d0867fab923492636cc1d68538a05cdfe",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-57e56ef1ed3a4354/Quicklinks-67b218878eb2",
+  "version" : "1.6.1"
+}
