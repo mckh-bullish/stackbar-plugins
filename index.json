@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-08T12:01:56Z",
+  "generated" : "2026-11-08T13:50:43Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -337,6 +337,34 @@
       "version" : "1.12.0"
     },
     {
+      "accent" : "blue",
+      "bundle" : "Productivity/io.navbytes.stackbar.clipboard-1.13.0.stackbarplugin",
+      "capabilities" : [
+        "Reads everything you copy, and pastes into the app you're using"
+      ],
+      "capabilityKinds" : [
+        "clipboard"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
+      "id" : "io.navbytes.stackbar.clipboard",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Clipboard History",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.clipboard.png",
+      "sha256" : "a06fdb8510ae1a7e32fc2bf18062b3aa6c878cebc2f1d551d9add343d522f8b6",
+      "summary" : "Everything you copy, searchable and one keystroke from pasting back.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "settings"
+      ],
+      "symbol" : "doc.on.clipboard.fill",
+      "updated" : "2026-11-08",
+      "version" : "1.13.0"
+    },
+    {
       "accent" : "indigo",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.app-switcher-1.0.0.stackbarplugin",
       "capabilities" : [
@@ -490,6 +518,37 @@
       "symbol" : "command",
       "updated" : "2026-11-08",
       "version" : "1.3.0"
+    },
+    {
+      "accent" : "indigo",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.app-switcher-1.4.0.stackbarplugin",
+      "capabilities" : [
+        "Sees which apps are installed and running, and switches to, opens or hides them",
+        "Listens for a key you hold (like Right ⌘) and the letter you press with it",
+        "Opens x-apple.systempreferences: links"
+      ],
+      "capabilityKinds" : [
+        "apps",
+        "keyLayer",
+        "openURLs"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/AppSwitcher",
+      "id" : "io.navbytes.stackbar.plugins.app-switcher",
+      "minimumStackbar" : "0.35.0",
+      "name" : "App Switcher",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.app-switcher.png",
+      "sha256" : "b9ac5c2a8a468424726718f1f2d9be45ceb0f3772785522f62dbfab2a37aa3ee",
+      "summary" : "Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "settings"
+      ],
+      "symbol" : "command",
+      "updated" : "2026-11-08",
+      "version" : "1.4.0"
     },
     {
       "accent" : "blue",
@@ -741,6 +800,35 @@
       "version" : "1.1.0"
     },
     {
+      "accent" : "cyan",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.browser-tabs-1.2.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /usr/bin/osascript (can run any program), /bin/cat",
+        "Sees which apps are installed and running, and switches to, opens or hides them",
+        "Reads and writes ~/Library/Application Support/Google/Chrome/Default, ~/Library/Application Support/BraveSoftware/Brave-Browser/Default, ~/Library/Application Support/Microsoft Edge/Default, ~/Library/Application Support/Vivaldi/Default"
+      ],
+      "capabilityKinds" : [
+        "run",
+        "apps",
+        "files"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/BrowserTabs",
+      "id" : "io.navbytes.stackbar.plugins.browser-tabs",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Browser Tabs",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.browser-tabs.png",
+      "sha256" : "7762647c6c27905f7aa44cf91cf1f6526af62a04fae08a4209e9a9888aaba7d4",
+      "summary" : "Switch to any open tab in Safari, Chrome, Arc, Brave or Edge, and search your bookmarks.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "rectangle.stack.fill",
+      "updated" : "2026-11-08",
+      "version" : "1.2.0"
+    },
+    {
       "accent" : "orange",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.calculator-1.0.0.stackbarplugin",
       "capabilities" : [
@@ -971,6 +1059,32 @@
       "symbol" : "eyedropper",
       "updated" : "2026-11-08",
       "version" : "1.1.0"
+    },
+    {
+      "accent" : "pink",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.color-picker-1.2.0.stackbarplugin",
+      "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
+
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/ColorPicker",
+      "id" : "io.navbytes.stackbar.plugins.color-picker",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Color Picker",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.color-picker.png",
+      "sha256" : "f12b3a9c272c6af38463c0aa4e5cf35840f8ee6f09808f41fd351d8e7616f68e",
+      "summary" : "Pick a color from anywhere on screen and copy it as hex, RGB or HSL.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "eyedropper",
+      "updated" : "2026-11-08",
+      "version" : "1.2.0"
     },
     {
       "accent" : "indigo",
@@ -1306,6 +1420,37 @@
       "version" : "1.8.0"
     },
     {
+      "accent" : "cyan",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.docker-1.9.0.stackbarplugin",
+      "capabilities" : [
+        "Runs docker (not installed)",
+        "Opens your terminal app running a command it names, where you see it run"
+      ],
+      "capabilityKinds" : [
+        "run",
+        "terminal"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
+      "id" : "io.navbytes.stackbar.plugins.docker",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Docker",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.docker.png",
+      "sha256" : "10a6e8f2ebb9cf78cd634bd55a58fec9984e44a9c93e741a2aa138a599891697",
+      "summary" : "Your containers with live CPU and memory, Compose projects, and start, stop, restart and logs a click away.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "shippingbox.fill",
+      "updated" : "2026-11-08",
+      "version" : "1.9.0"
+    },
+    {
       "accent" : "amber",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.emoji-1.0.0.stackbarplugin",
       "capabilities" : [
@@ -1519,6 +1664,39 @@
       "symbol" : "arrow.triangle.branch",
       "updated" : "2026-11-08",
       "version" : "1.0.0"
+    },
+    {
+      "accent" : "green",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.git-sync-1.1.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /opt/homebrew/bin/git, /usr/bin/find",
+        "Uses your SSH keys through the SSH agent, for the commands it runs",
+        "Opens any link, file or folder, in any app"
+      ],
+      "capabilityKinds" : [
+        "run",
+        "sshAgent",
+        "openURLs"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/GitSync",
+      "id" : "io.navbytes.stackbar.plugins.git-sync",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Git Sync",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.git-sync.png",
+      "sha256" : "9ecb11ed2699b83c517594fa7e8e993fba34655f6434dd2fc716709b8cce236e",
+      "summary" : "Which local repositories are behind or ahead of their remote, with the safe ones updated in one click.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "arrow.triangle.branch",
+      "updated" : "2026-11-08",
+      "version" : "1.1.0"
     },
     {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.github-1.0.0.stackbarplugin",
@@ -2024,6 +2202,32 @@
       "version" : "1.2.0"
     },
     {
+      "accent" : "red",
+      "bundle" : "System/io.navbytes.stackbar.plugins.kill-process-1.3.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /bin/ps, /bin/kill"
+      ],
+      "capabilityKinds" : [
+        "run"
+      ],
+      "category" : "System",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/KillProcess",
+      "id" : "io.navbytes.stackbar.plugins.kill-process",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Kill Process",
+      "publisher" : "navbytes",
+      "screenshot" : "System/io.navbytes.stackbar.plugins.kill-process.png",
+      "sha256" : "2d0ec8b58f96304621c9127262ff79c161174aefb3449e91ab3f435884c980ab",
+      "summary" : "Find a process by name, see its CPU and memory, and quit or force quit it.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "xmark.octagon.fill",
+      "updated" : "2026-11-08",
+      "version" : "1.3.0"
+    },
+    {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.linear-1.0.0.stackbarplugin",
       "capabilities" : [
         "Connects to api.linear.app",
@@ -2254,6 +2458,36 @@
       "symbol" : "circle.lefthalf.filled",
       "updated" : "2026-11-08",
       "version" : "1.6.0"
+    },
+    {
+      "accent" : "indigo",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.linear-1.7.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to api.linear.app",
+        "Reads the secret LINEAR_API_KEY"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
+      "id" : "io.navbytes.stackbar.plugins.linear",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Linear",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.linear.png",
+      "sha256" : "1be6946c575422f1679f880ddbe42155ac7d638cce4af42bf701265183591df5",
+      "summary" : "Your assigned Linear issues and inbox: change status and priority, start work, comment, and new issues from the palette.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "circle.lefthalf.filled",
+      "updated" : "2026-11-08",
+      "version" : "1.7.0"
     },
     {
       "bundle" : "Monitoring/io.navbytes.stackbar.plugins.litellm-1.0.0.stackbarplugin",
@@ -3206,6 +3440,32 @@
       "version" : "1.4.2"
     },
     {
+      "accent" : "teal",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.ports-1.5.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /usr/sbin/lsof, /bin/kill"
+      ],
+      "capabilityKinds" : [
+        "run"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports",
+      "id" : "io.navbytes.stackbar.plugins.ports",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Ports",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.ports.png",
+      "sha256" : "880a3ca5c7201ad9d39e15f9e2244d10553204447b6ee14175401c049518f98b",
+      "summary" : "Which process is listening on which port, and a way to stop it.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "point.3.connected.trianglepath.dotted",
+      "updated" : "2026-11-08",
+      "version" : "1.5.0"
+    },
+    {
       "accent" : "blue",
       "bundle" : "Developer/io.navbytes.stackbar.plugins.recent-projects-1.0.0.stackbarplugin",
       "capabilities" : [
@@ -3413,6 +3673,33 @@
     },
     {
       "accent" : "graphite",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.script-commands-1.3.0.stackbarplugin",
+      "capabilities" : [
+        "Reads and writes ~/Script Commands",
+        "Runs /usr/bin/grep, /bin/bash (can run any program), /bin/zsh (can run any program), /bin/sh (can run any program), /opt/homebrew/bin/python3 (can run any program), /opt/homebrew/bin/node (can run any program), /opt/homebrew/bin/ruby (can run any program), /opt/homebrew/bin/perl (can run any program), php (not installed), /usr/bin/swift (can run any program), /usr/bin/osascript (can run any program)"
+      ],
+      "capabilityKinds" : [
+        "files",
+        "run"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/ScriptCommands",
+      "id" : "io.navbytes.stackbar.plugins.script-commands",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Script Commands",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.script-commands.png",
+      "sha256" : "66e3d22223da887c89a5525a32e3a393aabf9f9cd743a5ee32f5e76c79bfc0a4",
+      "summary" : "Run your own scripts from the palette, in Raycast's Script Commands format.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "terminal.fill",
+      "updated" : "2026-11-08",
+      "version" : "1.3.0"
+    },
+    {
+      "accent" : "graphite",
       "bundle" : "System/io.navbytes.stackbar.plugins.system-commands-1.0.0.stackbarplugin",
       "capabilities" : [
         "Locks, sleeps, restarts, shuts down or logs out the Mac, empties the Trash, toggles dark mode, hides or quits other apps and ejects disks"
@@ -3485,6 +3772,31 @@
       "symbol" : "power.circle.fill",
       "updated" : "2026-11-08",
       "version" : "1.0.2"
+    },
+    {
+      "accent" : "graphite",
+      "bundle" : "System/io.navbytes.stackbar.plugins.system-commands-1.1.0.stackbarplugin",
+      "capabilities" : [
+        "Locks, sleeps, restarts, shuts down or logs out the Mac, empties the Trash, toggles dark mode, hides or quits other apps and ejects disks"
+      ],
+      "capabilityKinds" : [
+        "systemActions"
+      ],
+      "category" : "System",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/System/SystemCommands",
+      "id" : "io.navbytes.stackbar.plugins.system-commands",
+      "minimumStackbar" : "0.35.0",
+      "name" : "System Commands",
+      "publisher" : "navbytes",
+      "screenshot" : "System/io.navbytes.stackbar.plugins.system-commands.png",
+      "sha256" : "cd8d0d20e6739aee37c4a5e35cc286e53a703c8e1b261e487a8869d66dc9446b",
+      "summary" : "Lock, sleep, restart, empty the Trash or switch to dark mode from the palette.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "power.circle.fill",
+      "updated" : "2026-11-08",
+      "version" : "1.1.0"
     },
     {
       "bundle" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor-1.0.0.stackbarplugin",
@@ -3741,6 +4053,36 @@
       "version" : "1.7.0"
     },
     {
+      "accent" : "green",
+      "bundle" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor-1.8.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /bin/ps, /usr/sbin/sysctl, /usr/bin/vm_stat, /usr/sbin/netstat, /bin/df, /bin/kill",
+        "Reads your Mac's temperatures and fan speeds"
+      ],
+      "capabilityKinds" : [
+        "run",
+        "sensors"
+      ],
+      "category" : "Monitoring",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
+      "id" : "io.navbytes.stackbar.plugins.system-monitor",
+      "minimumStackbar" : "0.35.0",
+      "name" : "System Monitor",
+      "publisher" : "navbytes",
+      "screenshot" : "Monitoring/io.navbytes.stackbar.plugins.system-monitor.png",
+      "sha256" : "043bfe84b3d036f049636d3937de03a278d028fc3f7f3553db94671cc445fbb2",
+      "summary" : "CPU, memory, disk and network speed in the menu bar, the processes using the most, and alerts when one stays high.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "gauge.with.dots.needle.67percent",
+      "updated" : "2026-11-08",
+      "version" : "1.8.0"
+    },
+    {
       "accent" : "orange",
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.timers-1.0.0.stackbarplugin",
       "capabilities" : [
@@ -3820,6 +4162,33 @@
       "symbol" : "timer",
       "updated" : "2026-11-08",
       "version" : "1.1.0"
+    },
+    {
+      "accent" : "orange",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.timers-1.2.0.stackbarplugin",
+      "capabilities" : [
+
+      ],
+      "capabilityKinds" : [
+
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Timers",
+      "id" : "io.navbytes.stackbar.plugins.timers",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Timers",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.timers.png",
+      "sha256" : "3835e08a26cfccd116b3631efce98c353cc09ef2e6e35743562165679e465fd6",
+      "summary" : "Countdown timers from the palette, several at once, the soonest in the menu bar.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "settings"
+      ],
+      "symbol" : "timer",
+      "updated" : "2026-11-08",
+      "version" : "1.2.0"
     },
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.todo-1.0.0.stackbarplugin",
@@ -4014,6 +4383,34 @@
       "symbol" : "checklist",
       "updated" : "2026-11-08",
       "version" : "2.2.0"
+    },
+    {
+      "accent" : "orange",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.todo-2.3.0.stackbarplugin",
+      "capabilities" : [
+        "Reads and changes your reminders"
+      ],
+      "capabilityKinds" : [
+        "reminders"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Todo",
+      "id" : "io.navbytes.stackbar.plugins.todo",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Todo",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.todo.png",
+      "sha256" : "07bedf234910662590d8817fc00901cdb88c76ca763ba60ecffc30ae6f75b3f6",
+      "summary" : "A calm to-do list that understands dates as you type them, kept in Apple Reminders so it's on all your devices.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "settings",
+        "widget"
+      ],
+      "symbol" : "checklist",
+      "updated" : "2026-11-08",
+      "version" : "2.3.0"
     },
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.translate-1.0.0.stackbarplugin",
@@ -4514,6 +4911,36 @@
       "symbol" : "macwindow.on.rectangle",
       "updated" : "2026-11-08",
       "version" : "2.1.0"
+    },
+    {
+      "accent" : "indigo",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.workspaces-2.2.0.stackbarplugin",
+      "capabilities" : [
+        "Sees which windows you have open and where, moves them, and opens apps"
+      ],
+      "capabilityKinds" : [
+        "windows"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Windows",
+      "id" : "io.navbytes.stackbar.plugins.workspaces",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Windows",
+      "publisher" : "navbytes",
+      "replaces" : [
+        "io.navbytes.stackbar.plugins.window-layouts"
+      ],
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.workspaces.png",
+      "sha256" : "212874aebe1e6344265edd68a35aa647f9d4ae7eb3d5e56722584157f80d14ba",
+      "summary" : "Snap the front window to halves, thirds or quarters, and save where your windows go for each monitor setup.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "settings"
+      ],
+      "symbol" : "macwindow.on.rectangle",
+      "updated" : "2026-11-08",
+      "version" : "2.2.0"
     },
     {
       "bundle" : "Productivity/io.navbytes.stackbar.plugins.world-clock-1.0.0.stackbarplugin",
@@ -5141,6 +5568,39 @@
       "version" : "1.11.0"
     },
     {
+      "accent" : "violet",
+      "bundle" : "Developer/io.navbytes.stackbar.pr-cockpit-1.12.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to api.github.com",
+        "Reads the secret GITHUB_TOKEN",
+        "Connects to the server you enter as GITHUB_ENTERPRISE_URL, and no other"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret",
+        "userServer"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
+      "id" : "io.navbytes.stackbar.pr-cockpit",
+      "minimumStackbar" : "0.35.0",
+      "name" : "PR Cockpit",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.pr-cockpit.png",
+      "sha256" : "194856a33be20b61d666915b31504526754e0cafc4ec4a794d1cfa1763c51429",
+      "summary" : "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "arrow.triangle.pull",
+      "updated" : "2026-11-08",
+      "version" : "1.12.0"
+    },
+    {
       "bundle" : "Productivity/io.navbytes.stackbar.quicklinks-1.0.1.stackbarplugin",
       "capabilities" : [
         "Opens any link, file or folder, in any app",
@@ -5391,6 +5851,38 @@
       "version" : "1.6.1"
     },
     {
+      "accent" : "cyan",
+      "bundle" : "Productivity/io.navbytes.stackbar.quicklinks-1.7.0.stackbarplugin",
+      "capabilities" : [
+        "Opens any link, file or folder, in any app",
+        "Reads everything you copy, and pastes into the app you're using",
+        "Reads the text you select and which app you're in",
+        "Connects to icons.duckduckgo.com"
+      ],
+      "capabilityKinds" : [
+        "openURLs",
+        "clipboard",
+        "context",
+        "network"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
+      "id" : "io.navbytes.stackbar.quicklinks",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Quicklinks",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.quicklinks.png",
+      "sha256" : "1fd7e9745b639d379315729e947693857f5bad6b16689c86685954b9fee35774",
+      "summary" : "Open links and folders by name, with placeholders filled in.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "link",
+      "updated" : "2026-11-08",
+      "version" : "1.7.0"
+    },
+    {
       "bundle" : "Productivity/io.navbytes.stackbar.snippets-1.0.1.stackbarplugin",
       "capabilities" : [
         "Reads everything you copy, and pastes into the app you're using",
@@ -5633,6 +6125,38 @@
       "symbol" : "text.insert",
       "updated" : "2026-11-08",
       "version" : "1.6.0"
+    },
+    {
+      "accent" : "indigo",
+      "bundle" : "Productivity/io.navbytes.stackbar.snippets-1.7.0.stackbarplugin",
+      "capabilities" : [
+        "Reads everything you copy, and pastes into the app you're using",
+        "Reads the text you select and which app you're in",
+        "Stores up to 16 MB",
+        "Replaces keywords it sets up as you type them, in any app (it never sees what you type)"
+      ],
+      "capabilityKinds" : [
+        "clipboard",
+        "context",
+        "storage",
+        "textExpansion"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
+      "id" : "io.navbytes.stackbar.snippets",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Snippets",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.snippets.png",
+      "sha256" : "29c483101cc060a53afd64e565f0f2683a4985d127b69c5b7202b7282808e2da",
+      "summary" : "Paste text by name, with placeholders filled in.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "text.insert",
+      "updated" : "2026-11-08",
+      "version" : "1.7.0"
     },
     {
       "bundle" : "System/io.navbytes.stackbar.stay-awake-1.0.1.stackbarplugin",
@@ -6096,5 +6620,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "7hTbPDUiZF5Wsj52K7LN6IszMBd1hWwMOFlfvkBzv+OKaHsiQlciYX2zMNWLWTn5GxdJkqn/NqQh5U7hcnSUCw=="
+  "signature" : "XLK6y0+hpxvikuTHvA6f8//1Ukjqidm1++OhUZjwHzMO16QTjLjR56zAv0OxQPcJh2jlV288Cwv8C4crn05jCw=="
 }
