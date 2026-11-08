@@ -1514,6 +1514,19 @@
       "id": "io.navbytes.stackbar.plugins.browser-tabs",
       "protocol": 25,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "bd8f3816d136bea3cc11b964f09fe8cc925e0477c8fadfb75a0c9b2be1ec72a8",
+      "signature": "5o4iMnd4M2rPVMqM5mLm8ToT8eYCFViX6saTTWKFj6HqQj5I9qg9xkCZ+E0hjGAIEfs2nUkycDIT0SEonbk4Ag==",
+      "size": 5924848,
+      "sourceDigest": "49061afcc3d03c2ac673747739587ac3c90a50f3d61bfac8840e3aa52e5357a8",
+      "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/BrowserTabs-49061afcc3d0",
+      "version": "1.2.1"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.browser-tabs",
+      "protocol": 25,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
       "sha256": "c8128c4f34f2adac9147b6dc5a0adce95f3e258368bd8d09c52283048d71641d",
       "signature": "vI7IfMRGdZPXOBdn/K7pKLq/UjU04wcvl3hEeJiWV/Gcs+zgDlTt7Syj+HB7VxwH7Es6xRe1feo4DTO02prpAw==",
       "size": 5924848,
@@ -1846,6 +1859,19 @@
       "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/PRCockpit-7e462c5a00a0",
       "version": "1.12.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.pr-cockpit",
+      "protocol": 25,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "e6d964e34b7ded7c2ea091ab5bd0d2b0023c4927764d6f98c5200ce95927bc84",
+      "signature": "2IzKQAnBB1qNWhHiMxcnUmjGqrkrH3sURrE/+erzQ4M2RwfkX4Fm3ka6rtXfGeNMcdEDMZ9J1bm9FVTg3VwaCg==",
+      "size": 7363608,
+      "sourceDigest": "83f0f1f40058e3c7b10a6c2cc3a66f517767320ca1decb6184108dfd0312194f",
+      "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/PRCockpit-83f0f1f40058",
+      "version": "1.13.0"
     },
     {
       "arch": "arm64",
