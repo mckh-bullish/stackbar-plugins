@@ -822,6 +822,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.recent-projects",
+      "protocol": 21,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "2f513a28309c49c93e43543479a937a48dc354713b41967bd65394b1ed3cabd0",
+      "signature": "pDJTqzZJ6pAbUEA/YXCzTZY+9JbTHdBuBUZiL7gN5mjy3SCRrQ7iVVnv1QAXiXAQHcG6oQ5oaUunL6HY0QLiAg==",
+      "size": 5728816,
+      "sourceDigest": "6779d8f9a4b3881aaff8f074c06b0e0bc595e10ee142a248ea22bf7408f9eb19",
+      "stackbarKit": "cf17d15a1f99a4a7c6a3d776d3df8e0319464b063d731eb093e8b5cb7482b734",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-cf17d15a1f99a4a7/RecentProjects-6779d8f9a4b3",
+      "version": "1.3.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.script-commands",
       "protocol": 21,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -1823,6 +1836,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.recent-projects",
+      "protocol": 21,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "a8c1d7f9355f40557582d43d5ccbaccbc4f12aca587d4ad98dee6e56a31e7bad",
+      "signature": "DEYu6QS3st1UG7rrfh08HWwSAC9a8DMvurcWxSu9dJH9t3hSo6TbHlOV99x4ZhNPgECh6OfoPYrM4X59wdoSDA==",
+      "size": 5760480,
+      "sourceDigest": "6779d8f9a4b3881aaff8f074c06b0e0bc595e10ee142a248ea22bf7408f9eb19",
+      "stackbarKit": "09f58a166a9dac093224c0213fbb8fd3d3a14ec4f27a483e7477a0d9a637bd76",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-09f58a166a9dac09/RecentProjects-6779d8f9a4b3",
+      "version": "1.3.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.script-commands",
       "protocol": 21,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -2746,6 +2772,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.recent-projects",
+      "protocol": 22,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "a5976bd83c5675abd12c35ac4b606f25d58c6adc796c7d991fbc0b83473a602c",
+      "signature": "ApXRrWB/EZwSbwBx5O4QYkO3mpo4CG4RR8wrbA8cEzDsZlwXq5+rsL3GMpTsb2XATpuLj4hdSWZCYHxZiIpwBg==",
+      "size": 5763088,
+      "sourceDigest": "6779d8f9a4b3881aaff8f074c06b0e0bc595e10ee142a248ea22bf7408f9eb19",
+      "stackbarKit": "1547c54553d04ac15e47e7337ca7fe8dac512cd94f065d8ca66acd5b15fc595c",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-1547c54553d04ac1/RecentProjects-6779d8f9a4b3",
+      "version": "1.3.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.script-commands",
       "protocol": 22,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -3354,6 +3393,19 @@
       "stackbarKit": "cb89cba477fee504b2ce00a008075c857f3a5892dd5025bbe3bfbfb8a691282a",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-cb89cba477fee504/RecentProjects-29a05fda4995",
       "version": "1.2.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.recent-projects",
+      "protocol": 23,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "aa428a0e4f06fe95744cedcc3bab1318d5be237b08a8252d08f9d6d740895e45",
+      "signature": "3fEAmfYV5ecC9/KqZCUKkUBdxOe49Aq5TJTix4E7NU3h6s8Oo4wpY/52ScwwXIGXH5Xqv/0AlGpWrcTlyGaVCg==",
+      "size": 5812592,
+      "sourceDigest": "6779d8f9a4b3881aaff8f074c06b0e0bc595e10ee142a248ea22bf7408f9eb19",
+      "stackbarKit": "cb89cba477fee504b2ce00a008075c857f3a5892dd5025bbe3bfbfb8a691282a",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-cb89cba477fee504/RecentProjects-6779d8f9a4b3",
+      "version": "1.3.0"
     },
     {
       "arch": "arm64",
