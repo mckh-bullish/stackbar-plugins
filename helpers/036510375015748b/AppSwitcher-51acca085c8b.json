@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.app-switcher",
+  "protocol" : 25,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "b166814705dfbdea7b65cc0c2f57dd90d1ec74121600ca77062b7b0bb718cecd",
+  "signature" : "kuiyFu5gB8fJH5kj6gXgdj5bYjxxGseb0czVl0uwyBbfn2idZ1w5FDAt4FHKoKyBeBX+8SJTZKwd0APy/EuVDg==",
+  "size" : 5896832,
+  "sourceDigest" : "51acca085c8be7633c72f44f5dc8055d97b197ba5194fb5a7057b593ed48d709",
+  "stackbarKit" : "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/AppSwitcher-51acca085c8b",
+  "version" : "1.4.0"
+}
