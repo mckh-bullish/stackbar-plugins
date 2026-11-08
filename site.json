@@ -2057,6 +2057,12 @@
       "changes": [
         {
           "notes": [
+            "The palette shows a pull request's checks beside the list as soon as you select it. Your listed pull requests' checks are fetched in the background, in one request and only for those whose checks changed. A setting turns this off."
+          ],
+          "version": "1.11.0"
+        },
+        {
+          "notes": [
             "Click a pull request to see its checks and deployments under it: what failed and why (the failing step and its first errors), which checks are required, how long each took, and preview links. Running checks refresh every 20 seconds while you look.",
             "Re-run failed jobs, or all of them, from the checks (press twice). Needs a token with Actions write access.",
             "Copy a summary of what failed, to paste into a chat or an issue.",
@@ -2125,7 +2131,7 @@
         },
         {
           "label": "Checks on click",
-          "text": "click a pull request to see each check under it: failures first with the step that failed and its first errors, which checks are required, how long each took, and the commit's deployments with their preview links. While checks run they refresh every 20 seconds. Re-run failed jobs (or all of them) from there, open a job's log, or copy a summary of what failed. Settings can make a click open the browser as before; \u2318\u21a9 always does. Re-running needs a token with Actions write access."
+          "text": "click a pull request to see each check under it: failures first with the step that failed and its first errors, which checks are required, how long each took, and the commit's deployments with their preview links. While checks run they refresh every 20 seconds. Re-run failed jobs (or all of them) from there, open a job's log, or copy a summary of what failed. Settings can make a click open the browser as before; \u2318\u21a9 always does. Re-running needs a token with Actions write access. In the palette, a selected pull request shows its checks beside the list, fetched in the background for the ones whose checks changed (a setting turns this off); \u2318I opens them in full."
         },
         {
           "label": "Surfaces",
@@ -2144,7 +2150,7 @@
           "text": "`review_queue`, `my_pull_requests` and `my_issues`."
         }
       ],
-      "version": "1.10.0"
+      "version": "1.11.0"
     },
     "io.navbytes.stackbar.quicklinks": {
       "changes": [
@@ -2613,6 +2619,12 @@
       "1.10.0": {
         "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/dark/demo/526649a16612/panel.png",
         "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/light/demo/526649a16612/panel.png",
+        "seconds": 5.0,
+        "surface": "panel"
+      },
+      "1.11.0": {
+        "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/dark/demo/526649a16612/panel.png",
+        "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/light/demo/526649a16612/panel.png",
         "seconds": 5.0,
         "surface": "panel"
       },
@@ -4039,6 +4051,16 @@
         "panel": {
           "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/light/panel.png"
+        }
+      },
+      "1.11.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/light/panel.png"
         }
       },
       "1.4.0": {
@@ -6412,6 +6434,43 @@
         {
           "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/dark/previews/widget/widget.png",
           "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your review queue on the desktop"
+        }
+      ],
+      "1.11.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every pull request waiting on you"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/dark/previews/mine/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/light/previews/mine/panel.png",
+          "name": "mine",
+          "surface": "panel",
+          "title": "Your own PRs: checks, reviews and conflicts"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/dark/previews/checks/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/light/previews/checks/panel.png",
+          "name": "checks",
+          "surface": "panel",
+          "title": "Why a check failed, and its preview deploy, without leaving the menu bar"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/dark/previews/dashboard/window.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/light/previews/dashboard/window.png",
+          "name": "dashboard",
+          "surface": "window",
+          "title": "Both lists, what merged and how long reviews wait"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.11.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "Your review queue on the desktop"
