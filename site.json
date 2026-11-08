@@ -1927,6 +1927,15 @@
       "changes": [
         {
           "notes": [
+            "**Use it in place of the macOS clock.** The menu bar can show this Mac's own time, and Settings has the macOS clock's options: the date, the day of the week, 24-hour time, AM/PM, seconds, the city's name and the globe. A custom format (like `EEE d MMM HH:mm`) replaces them all.",
+            "The menu-bar clock now changes on the minute (or the second) exactly, instead of up to 30 seconds late, and keeps one width so the menu bar doesn't shift.",
+            "The time-travel slider moves every clock while you drag it, not only when you let go.",
+            "Needs Stackbar 0.32.0 or later."
+          ],
+          "version": "1.7.0"
+        },
+        {
+          "notes": [
             "Type the cities people actually say: Mumbai, Bangalore, San Francisco, Beijing, S\u00e3o Paulo, and in \"time in \u2026\" also NYC, SF, PST or UTC. A question mark at the end is fine, and so is the curly apostrophe in \"what\u2019s the time in\".",
             "A name typed in full wins: \"time in ist\" shows India and \"time in la\" Los Angeles first, ahead of cities that only start with those letters.",
             "A city added by its own name keeps that name, so Mumbai shows as Mumbai.",
@@ -1967,7 +1976,7 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "nothing beyond Stackbar 0.22.0 or later. No network, files or secrets."
+          "text": "nothing beyond Stackbar 0.32.0 or later. No network, files or secrets."
         },
         {
           "label": "Surfaces",
@@ -1975,7 +1984,7 @@
         },
         {
           "label": "Settings",
-          "text": "the cities (type a time zone like `Asia/Tokyo`, or a city name like `Tokyo`), which one the menu bar shows, 12- or 24-hour time, and your working hours."
+          "text": "the cities (type a time zone like `Asia/Tokyo`, or a city name like `Tokyo`), whether the menu bar shows this Mac's time or a city, the menu-bar clock's date, weekday, 24-hour, AM/PM, seconds, city name and globe (or a custom format), and your working hours."
         },
         {
           "label": "In the panel",
@@ -1990,7 +1999,7 @@
           "text": "`times` returns the time in every city."
         }
       ],
-      "version": "1.6.0"
+      "version": "1.7.0"
     },
     "io.navbytes.stackbar.pr-cockpit": {
       "changes": [
@@ -2523,6 +2532,12 @@
       "1.6.0": {
         "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/dark/demo/6b74b0a73db2/panel.png",
         "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/light/demo/6b74b0a73db2/panel.png",
+        "seconds": 5.75,
+        "surface": "panel"
+      },
+      "1.7.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/dark/demo/6b74b0a73db2/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/light/demo/6b74b0a73db2/panel.png",
         "seconds": 5.75,
         "surface": "panel"
       }
@@ -3911,6 +3926,16 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/light/panel.png"
+        }
+      },
+      "1.7.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/light/panel.png"
         }
       }
     },
@@ -6172,6 +6197,36 @@
           "name": "widget",
           "surface": "widget",
           "title": "Your cities on the desktop"
+        }
+      ],
+      "1.7.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every city you work with, and their working hours"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/dark/previews/plan/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/light/previews/plan/panel.png",
+          "name": "plan",
+          "surface": "panel",
+          "title": "Slide to find a time that works everywhere"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/dark/previews/widget/widget.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your cities on the desktop"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/dark/previews/menu-bar/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.7.0/light/previews/menu-bar/menuBar.png",
+          "name": "menu-bar",
+          "surface": "menuBar",
+          "title": "In place of the macOS clock"
         }
       ]
     },
