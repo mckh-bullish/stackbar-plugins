@@ -1371,6 +1371,19 @@
       "id": "io.navbytes.stackbar.pr-cockpit",
       "protocol": 22,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "b4d80b006528f415fb32cb8b45b0007b57c86aeb20c10c608c8021e45c11d182",
+      "signature": "njCE246wmfdO4Y2Z9FdlPHUPVgWbz0p5hTzpJe49gXHMIuo4X7knQYGbMqJo7v1rYhDguJIrLRzcySyZYqVyDQ==",
+      "size": 7049816,
+      "sourceDigest": "5197e3022dbd0b666dbed59aa93056d24c493c271398261b46abfe98bc64229a",
+      "stackbarKit": "1547c54553d04ac15e47e7337ca7fe8dac512cd94f065d8ca66acd5b15fc595c",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-1547c54553d04ac1/PRCockpit-5197e3022dbd",
+      "version": "1.10.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.pr-cockpit",
+      "protocol": 22,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
       "sha256": "32b7a2b9bbe56467876e14968355971af76dc054b7a737d1e61e55bd56c01d20",
       "signature": "CnDiO3eCbaDHCdco/aBRATWuDuYg+PyeBqtSEkjz44OknHwTMPXnGTF5W6kCsmjLu6ycsYakDA+QWJ2vZQqEDQ==",
       "size": 6435000,
@@ -2070,6 +2083,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.pr-cockpit",
+      "protocol": 23,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "d49d37ffdae24d4c2e5f34280803f4b17a15280c645351aa7b0c2cd0d25487ad",
+      "signature": "YK5Z8DYvG8D5CJp3TaOabQAB+MB7NK3iyXcjAb8OTbs9i4vTs0ATsAfF+kyIv7JNTGD2U4QERQ2xCw7Rw+lfCw==",
+      "size": 7099128,
+      "sourceDigest": "5197e3022dbd0b666dbed59aa93056d24c493c271398261b46abfe98bc64229a",
+      "stackbarKit": "cb89cba477fee504b2ce00a008075c857f3a5892dd5025bbe3bfbfb8a691282a",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-cb89cba477fee504/PRCockpit-5197e3022dbd",
+      "version": "1.10.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.pomodoro",
       "protocol": 23,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -2548,6 +2574,19 @@
       "stackbarKit": "a4c131a63549c9609f8d3cf11490dce90eefa36600327fe523e37f9b36d38b59",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-a4c131a63549c960/PRCockpit-48c08838e9e8",
       "version": "1.9.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.pr-cockpit",
+      "protocol": 23,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "d4601265362393caad884c2adfc7feb613f22c29637c1e7bea9d6b66e5d679f2",
+      "signature": "G3YufOOgbFGlZQ2iNf74oz42t9acGs1O1bIA9jHnIMpjcC1ENZswJqcp3HkAwTU5f0HaF780whNcDF3Nb2/tAQ==",
+      "size": 7099128,
+      "sourceDigest": "5197e3022dbd0b666dbed59aa93056d24c493c271398261b46abfe98bc64229a",
+      "stackbarKit": "a4c131a63549c9609f8d3cf11490dce90eefa36600327fe523e37f9b36d38b59",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-a4c131a63549c960/PRCockpit-5197e3022dbd",
+      "version": "1.10.0"
     },
     {
       "arch": "arm64",

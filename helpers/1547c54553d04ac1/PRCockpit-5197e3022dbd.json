@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.pr-cockpit",
+  "protocol" : 22,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "b4d80b006528f415fb32cb8b45b0007b57c86aeb20c10c608c8021e45c11d182",
+  "signature" : "njCE246wmfdO4Y2Z9FdlPHUPVgWbz0p5hTzpJe49gXHMIuo4X7knQYGbMqJo7v1rYhDguJIrLRzcySyZYqVyDQ==",
+  "size" : 7049816,
+  "sourceDigest" : "5197e3022dbd0b666dbed59aa93056d24c493c271398261b46abfe98bc64229a",
+  "stackbarKit" : "1547c54553d04ac15e47e7337ca7fe8dac512cd94f065d8ca66acd5b15fc595c",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-1547c54553d04ac1/PRCockpit-5197e3022dbd",
+  "version" : "1.10.0"
+}
