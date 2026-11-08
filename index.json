@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-08T05:01:30Z",
+  "generated" : "2026-11-08T08:05:37Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -5042,6 +5042,39 @@
       "version" : "1.9.0"
     },
     {
+      "accent" : "violet",
+      "bundle" : "Developer/io.navbytes.stackbar.pr-cockpit-1.10.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to api.github.com",
+        "Reads the secret GITHUB_TOKEN",
+        "Connects to the server you enter as GITHUB_ENTERPRISE_URL, and no other"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret",
+        "userServer"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
+      "id" : "io.navbytes.stackbar.pr-cockpit",
+      "minimumStackbar" : "0.31.0",
+      "name" : "PR Cockpit",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.pr-cockpit.png",
+      "sha256" : "3197b745c514b58e540ce77370136eaca4d5745ac01e3c36689bb2884f8cbb56",
+      "summary" : "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "arrow.triangle.pull",
+      "updated" : "2026-11-08",
+      "version" : "1.10.0"
+    },
+    {
       "bundle" : "Productivity/io.navbytes.stackbar.quicklinks-1.0.1.stackbarplugin",
       "capabilities" : [
         "Opens any link, file or folder, in any app",
@@ -5997,5 +6030,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "5VXdjlwcg6PTGx+fhIfOS5RrQCwO+9fEI5iFjb+vaFqiL7PQ0Z4O11wDhVGE/8RmXYh5E7NmHEefjAwCFlgKBg=="
+  "signature" : "44elOp6kRQE5kSfwTZicgNZawW69OE5xQHSH3Yy4u/PP5MyjEOmtbD/ucg7ZmXRkf6mzL3kl8by1OGfhx+NbBg=="
 }

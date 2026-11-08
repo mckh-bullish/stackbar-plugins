@@ -2011,6 +2011,17 @@
       "changes": [
         {
           "notes": [
+            "Click a pull request to see its checks and deployments under it: what failed and why (the failing step and its first errors), which checks are required, how long each took, and preview links. Running checks refresh every 20 seconds while you look.",
+            "Re-run failed jobs, or all of them, from the checks (press twice). Needs a token with Actions write access.",
+            "Copy a summary of what failed, to paste into a chat or an issue.",
+            "In the palette, \u2318I on a pull request opens its checks, and a selected pull request shows them beside the list once loaded.",
+            "A setting keeps the old click, which opens the browser. \u2318\u21a9 opens it either way.",
+            "Needs Stackbar 0.31.0 or later."
+          ],
+          "version": "1.10.0"
+        },
+        {
+          "notes": [
             "GitHub Inbox in the palette, and Mark All as Read there and in the panel's Inbox tab (press twice to confirm).",
             "Approve a pull request straight from your review queue.",
             "Approve asks for a second press within 10 seconds, so a stray click doesn't approve anything.",
@@ -2067,6 +2078,10 @@
           "text": "network access to `api.github.com` only, and a `GITHUB_TOKEN` secret kept in the Keychain. A fine-grained token with read access to pull requests, issues and metadata covers everything except creating issues, which needs write access to issues. Approving needs write access to pull requests. On GitHub Enterprise Server, turn it on in Settings and enter the server as `GITHUB_ENTERPRISE_URL`; the plugin then reaches that server and no other."
         },
         {
+          "label": "Checks on click",
+          "text": "click a pull request to see each check under it: failures first with the step that failed and its first errors, which checks are required, how long each took, and the commit's deployments with their preview links. While checks run they refresh every 20 seconds. Re-run failed jobs (or all of them) from there, open a job's log, or copy a summary of what failed. Settings can make a click open the browser as before; \u2318\u21a9 always does. Re-running needs a token with Actions write access."
+        },
+        {
           "label": "Surfaces",
           "text": "menu bar, panel (To review, Mine, Issues and an optional Inbox), window, widget, settings."
         },
@@ -2083,7 +2098,7 @@
           "text": "`review_queue`, `my_pull_requests` and `my_issues`."
         }
       ],
-      "version": "1.9.0"
+      "version": "1.10.0"
     },
     "io.navbytes.stackbar.quicklinks": {
       "changes": [
@@ -2549,6 +2564,12 @@
       }
     },
     "io.navbytes.stackbar.pr-cockpit": {
+      "1.10.0": {
+        "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/dark/demo/526649a16612/panel.png",
+        "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/light/demo/526649a16612/panel.png",
+        "seconds": 5.0,
+        "surface": "panel"
+      },
       "1.6.0": {
         "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.6.0/dark/demo/526649a16612/panel.png",
         "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.6.0/light/demo/526649a16612/panel.png",
@@ -3952,6 +3973,16 @@
       }
     },
     "io.navbytes.stackbar.pr-cockpit": {
+      "1.10.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/light/panel.png"
+        }
+      },
       "1.4.0": {
         "menuBar": {
           "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.4.0/dark/menuBar.png",
@@ -6259,6 +6290,43 @@
       ]
     },
     "io.navbytes.stackbar.pr-cockpit": {
+      "1.10.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every pull request waiting on you"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/dark/previews/mine/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/light/previews/mine/panel.png",
+          "name": "mine",
+          "surface": "panel",
+          "title": "Your own PRs: checks, reviews and conflicts"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/dark/previews/checks/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/light/previews/checks/panel.png",
+          "name": "checks",
+          "surface": "panel",
+          "title": "Why a check failed, and its preview deploy, without leaving the menu bar"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/dark/previews/dashboard/window.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/light/previews/dashboard/window.png",
+          "name": "dashboard",
+          "surface": "window",
+          "title": "Both lists, what merged and how long reviews wait"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.10.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your review queue on the desktop"
+        }
+      ],
       "1.6.0": [
         {
           "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.6.0/dark/previews/hero/panel.png",
