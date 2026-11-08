@@ -34,6 +34,7 @@ An update that asks for something new waits for your approval.
 | [Stay Awake](System/StayAwake) | System | Keeps your Mac awake for a while, until a time, while an app runs or on a schedule. |
 | [System Commands](System/SystemCommands) | System | Lock, sleep, restart, empty the Trash or switch to dark mode from the palette. |
 | [Docker](Developer/Docker) | Developer | Your containers with live CPU and memory, Compose projects, and start, stop, restart and logs a click away. |
+| [Git Sync](Developer/GitSync) | Developer | Which local repositories are behind or ahead of their remote, with the safe ones updated in one click. |
 | [Homebrew](Developer/Homebrew) | Developer | Outdated formulae and casks, with upgrades a click away. |
 | [Jira](Developer/Jira) | Developer | Your assigned Jira issues: change status, assign, comment and watch, with alerts and new issues from the palette. |
 | [Linear](Developer/Linear) | Developer | Your assigned Linear issues and inbox: change status and priority, start work, comment, and new issues from the palette. |

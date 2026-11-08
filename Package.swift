@@ -14,7 +14,7 @@ import PackageDescription
 /// and custom styling.
 /// Switch to `exact:` once tags are pushed, and raise it in its own pull
 /// request; a plugin may still set an older `minimumStackbar`.
-let stackbarRevision = "aa70bb67dd20de56103ad3934053fa909529b9dd" // 0.32.0 dev: clock node and live sliders (#156)
+let stackbarRevision = "9905abcbacd714125cd55be9a8fa9a33a5844d8c" // 0.34.0 dev: folders you choose and the SSH agent (#160)
 
 /// Category folders. The folder name is the category the store shows.
 let categories = ["System", "Developer", "Network", "Monitoring", "Productivity"]
