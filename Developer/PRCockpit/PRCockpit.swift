@@ -24,12 +24,12 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.9.0",
+        version: "1.10.0",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
-        triggers: [.launch, .minutes(2), .wake],
+        triggers: [.launch, .every(.seconds(20)), .wake],
         capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN"), .userServer(secret: "GITHUB_ENTERPRISE_URL")],
-        minimumStackbar: "0.22.0",
+        minimumStackbar: "0.31.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
         accent: .violet,
         symbol: "arrow.triangle.pull"
@@ -42,6 +42,26 @@ final class PRCockpit: StackbarPlugin {
         PreviewScene("mine", "Your own PRs: checks, reviews and conflicts") { plugin in
             sample(plugin)
             plugin.tab = Tab.mine.rawValue
+        },
+        PreviewScene("checks", "Why a check failed, and its preview deploy, without leaving the menu bar") { plugin in
+            sample(plugin)
+            plugin.tab = Tab.mine.rawValue
+            let url = "https://github.com/acme/web/pull/1485"
+            let now = Date()
+            func check(_ name: String, _ state: CheckItem.State, required: Bool = false, step: String? = nil, notes: [String] = [], minutes: Double) -> CheckItem {
+                CheckItem(id: name, name: name, group: "CI", state: state, isRequired: required, url: url + "/checks", startedAt: now.addingTimeInterval(-minutes * 60 - 200),
+                          completedAt: state == .running ? nil : now.addingTimeInterval(-minutes * 60), failedStep: step, annotations: notes, runID: 4242, note: nil)
+            }
+            plugin.details[url] = PRDetails(checks: [
+                check("test (macos-26)", .failed, required: true, step: "Run swift test", notes: ["Tests/OrderTests.swift:88 XCTAssertEqual failed: (\"dark\") is not equal to (\"light\")"], minutes: 3),
+                check("lint", .running, minutes: 0),
+                check("build (ubuntu)", .passed, required: true, minutes: 6),
+                check("typecheck", .passed, minutes: 7),
+            ], deployments: [
+                DeployItem(id: "d1", environment: "Preview", state: "SUCCESS", url: "https://web-git-dark-mode-acme.vercel.app", logURL: nil, createdAt: now.addingTimeInterval(-240)),
+            ], fetchedAt: now)
+            plugin.expanded = url
+            plugin.expandedAt = now
         },
         PreviewScene("dashboard", "Both lists, what merged and how long reviews wait", surface: .window) { plugin in sample(plugin) },
         PreviewScene("widget", "Your review queue on the desktop", surface: .widget) { plugin in sample(plugin) },
@@ -344,6 +364,27 @@ final class PRCockpit: StackbarPlugin {
     var formError: String?
     var created: String?
 
+    // MARK: Checks state
+
+    /// Each pull request's checks and deployments, by URL, once fetched.
+    var details: [String: PRDetails] = [:]
+    /// Why fetching a pull request's checks failed, by URL.
+    var detailErrors: [String: String] = [:]
+    /// The pull request whose checks are open in the panel or window, and
+    /// when it was opened: running checks are followed for 10 minutes.
+    var expanded: String?
+    var expandedAt: Date?
+    /// Pull requests whose passing checks are all listed, not summed up.
+    var showAllPassed: Set<String> = []
+    /// When the lists were last fetched; the 20-second timer only follows
+    /// open checks in between.
+    var listsFetched: Date?
+    /// A click on a pull request opens its checks (or the browser, as before).
+    @Stored("clickShowsChecks") var clickShowsChecks = true
+    /// The re-run a first press asked for, and when.
+    var rerunArmed: String?
+    var rerunArmedAt = Date.distantPast
+
     /// github.com's API, or the Enterprise server's (`/api/v3` and `/api/graphql`).
     var apiBase: String { enterprise ? (enterpriseServer ?? "") + "/api/v3" : "https://api.github.com" }
     var graphqlURL: String { enterprise ? (enterpriseServer ?? "") + "/api/graphql" : "https://api.github.com/graphql" }
@@ -383,6 +424,12 @@ final class PRCockpit: StackbarPlugin {
     static let refreshTimeout = 20.0
 
     func refresh() async throws {
+        // The 20-second timer follows open checks; the lists every two minutes.
+        if Stackbar.refreshReason == .interval, let listsFetched, Date().timeIntervalSince(listsFetched) < 115 {
+            await followOpenChecks()
+            return
+        }
+        listsFetched = Date()
         defer { loaded = true }
         guard try await loadEnterpriseServer() else {
             lastError = "Enter your GitHub Enterprise server (https://github.example.com) as GITHUB_ENTERPRISE_URL."
@@ -399,6 +446,7 @@ final class PRCockpit: StackbarPlugin {
         async let notifications: Void = showInbox ? refreshInbox(token: token) : ()
         async let assigned: Void = loadIssues()
         _ = await (pullRequests, notifications, assigned)
+        await followOpenChecks()
     }
 
     /// Both lists and what closed lately, in one GraphQL request.
@@ -931,14 +979,26 @@ final class PRCockpit: StackbarPlugin {
         return "\(Int(seconds / 86400))d"
     }
 
-    func row(_ pr: PullRequest, showAuthor: Bool) -> Row {
+    func row(_ pr: PullRequest, showAuthor: Bool, palette: Bool = false) -> Row {
         let size = pr.additions.map { "+\($0) −\(pr.deletions ?? 0)" }
         let comments = (pr.comments?.totalCount ?? 0) >= 5 ? "\(pr.comments?.totalCount ?? 0) comments" : nil
         let subtitle = [pr.id, showAuthor ? pr.author.map { "by \($0.login)" } : nil, size, comments, Self.ago(pr.updatedAt)].compactMap { $0 }.joined(separator: " · ")
         var row = Row(pr.title, subtitle: subtitle, symbol: isNew(pr) ? "circle.fill" : pr.isDraft ? "pencil.circle" : "arrow.triangle.pull", key: pr.url)
         for badge in badges(pr, mine: !showAuthor).prefix(2) { row = row.badge(badge.text, role: badge.role) }
+        if clickShowsChecks && !palette {
+            row = row.action(expanded == pr.url ? "Hide checks" : "Show checks") { await self.toggleChecks(pr) }
+        }
         row = row.action("Open in browser", shortcut: "cmd+return") { self.open(pr) }
-            .action("Open files changed") { self.open(pr, path: "/files") }
+        if !clickShowsChecks && !palette {
+            row = row.action(expanded == pr.url ? "Hide checks" : "Show checks", shortcut: "cmd+i") { await self.toggleChecks(pr) }
+        }
+        if palette {
+            row = row.navigate("Checks and deployments", to: "checks", arguments: ["url": pr.url], shortcut: "cmd+i")
+        }
+        if let summary = details[pr.url]?.summary {
+            row = row.preview(text: details[pr.url].map { checksText(pr, $0) }, caption: summary)
+        }
+        row = row.action("Open files changed") { self.open(pr, path: "/files") }
             .action(isNew(pr) ? "Mark as seen" : "Mark as new", shortcut: "cmd+u") {
                 if self.isNew(pr) { self.markSeen(pr) } else { self.seen[pr.url] = .distantPast }
             }
@@ -1089,6 +1149,12 @@ final class PRCockpit: StackbarPlugin {
             }
             Text("Pull requests and issues nobody has touched for longer stay out of the lists, and fewer to fetch makes refreshing quicker.").style(.caption).role(.secondary)
         }
+        Section("Clicking a pull request") {
+            Picker("Click", options: ["Shows its checks", "Opens it in the browser"], selection: clickShowsChecks ? "Shows its checks" : "Opens it in the browser") { chosen in
+                self.clickShowsChecks = chosen == "Shows its checks"
+            }
+            Text("Checks open under the pull request with why they failed, its deployments, and Re-run. ⌘↩ always opens the browser. Re-running needs a token with Actions write access.").style(.caption).role(.secondary)
+        }
         Section("Notifications") {
             Toggle("Notify me about changes", isOn: notifyChanges) { self.notifyChanges = $0 }
             Text("Review requests, approvals, changes requested, failing checks, ready to merge, merged and closed, and mentions in the inbox.").style(.caption).role(.secondary)
@@ -1142,10 +1208,10 @@ final class PRCockpit: StackbarPlugin {
         if let lastError { Banner(lastError) }
         List(searchable: true) {
             Section("Waiting on your review (\(shownReview.count))") {
-                ForEach(shownReview) { pr in row(pr, showAuthor: true) }
+                ForEach(shownReview) { pr in rowWithChecks(pr, showAuthor: true) }
             }
             Section("Yours (\(shownMine.count))") {
-                ForEach(shownMine) { pr in row(pr, showAuthor: false) }
+                ForEach(shownMine) { pr in rowWithChecks(pr, showAuthor: false) }
             }
         }
         if !recentlyClosed.isEmpty {
@@ -1248,7 +1314,7 @@ final class PRCockpit: StackbarPlugin {
         if prs.isEmpty {
             if lastError == nil { EmptyState(empty.0, symbol: "checkmark", message: empty.1, theme: .success) }
         } else {
-            List(prs, searchable: true) { pr in row(pr, showAuthor: showAuthor) }
+            List(prs, searchable: true) { pr in rowWithChecks(pr, showAuthor: showAuthor) }
         }
     }
 
@@ -1272,7 +1338,7 @@ final class PRCockpit: StackbarPlugin {
                     ContentUnavailableView("Nothing to review", symbol: "checkmark.circle", message: self.lastError ?? "You're all caught up.")
                 } else {
                     List(searchable: true) {
-                        ForEach(self.shownReview) { pr in self.row(pr, showAuthor: true) }
+                        ForEach(self.shownReview) { pr in self.row(pr, showAuthor: true, palette: true) }
                     }
                 }
             }
@@ -1332,12 +1398,21 @@ final class PRCockpit: StackbarPlugin {
         Command("jump", title: "Jump to a Repository or Pull Request", symbol: "arrow.triangle.pull", keywords: ["github"])
             .view(search: { _ in }) { invocation in
                 List {
-                    ForEach(self.rootPulls(invocation.text)) { pr in self.row(pr, showAuthor: true) }
+                    ForEach(self.rootPulls(invocation.text)) { pr in self.row(pr, showAuthor: true, palette: true) }
                     ForEach(self.rootRepos(invocation.text)) { repo in self.repoRow(repo) }
                 }
             }
             .rootSearch(section: "GitHub", matching: #"[\w.-]+/[\w.-]*|[\w./-]*#\d+"#)
             .stackbarOnly()
+        // A pull request's checks and deployments, opened from a row with ⌘I.
+        Command("checks", title: "Pull Request Checks", symbol: "checklist", keywords: ["github", "ci", "checks"])
+            .argument("url", placeholder: "Pull request URL")
+            .stackbarOnly()
+            .view(search: { invocation in
+                if let url = invocation["url"] { await self.loadDetails(url, maxAge: 15) }
+            }) { invocation in
+                self.checksView(invocation["url"] ?? "")
+            }
         Command("refresh", title: "Refresh Pull Requests", symbol: "arrow.clockwise", keywords: ["github"]) { _ in
             try await self.refresh()
             return .message(self.lastError ?? "\(self.shownReview.count) to review, \(self.shownMine.count) of yours open")
@@ -1395,10 +1470,10 @@ final class PRCockpit: StackbarPlugin {
             // The host filters these as you type.
             List(searchable: true) {
                 Section("Waiting on your review") {
-                    ForEach(shownReview) { pr in row(pr, showAuthor: true) }
+                    ForEach(shownReview) { pr in row(pr, showAuthor: true, palette: true) }
                 }
                 Section("Yours") {
-                    ForEach(shownMine) { pr in row(pr, showAuthor: false) }
+                    ForEach(shownMine) { pr in row(pr, showAuthor: false, palette: true) }
                 }
             }
         } else if let searchError {
@@ -1407,7 +1482,7 @@ final class PRCockpit: StackbarPlugin {
             ContentUnavailableView("No pull requests", symbol: "magnifyingglass", message: "Nothing that involves you matches \"\(text)\".")
         } else {
             List {
-                ForEach(searchResults) { pr in row(pr, showAuthor: true) }
+                ForEach(searchResults) { pr in row(pr, showAuthor: true, palette: true) }
             }
         }
     }
@@ -1431,6 +1506,437 @@ final class PRCockpit: StackbarPlugin {
             return self.mine.isEmpty ? "You have no open pull requests." : self.mine.map { pr in
                 "\(pr.id) \(pr.title): checks \(pr.checks?.lowercased() ?? "none"), review \(pr.reviewDecision?.lowercased().replacingOccurrences(of: "_", with: " ") ?? "none")\(pr.mergeable == "CONFLICTING" ? ", has conflicts" : "") (\(pr.url))"
             }.joined(separator: "\n")
+        }
+    }
+}
+
+// MARK: - Checks and deployments
+
+/// One check on a pull request's latest commit: a GitHub Actions job or
+/// another app's check run, or a commit status.
+struct CheckItem: Equatable, Identifiable {
+    enum State: Int, Comparable {
+        case failed, cancelled, running, queued, passed, neutral, skipped
+        static func < (a: State, b: State) -> Bool { a.rawValue < b.rawValue }
+    }
+    let id: String
+    let name: String
+    /// The workflow (or app) it belongs to: "CI".
+    let group: String?
+    let state: State
+    let isRequired: Bool
+    let url: String?
+    let startedAt: Date?
+    let completedAt: Date?
+    /// The first step that failed: "Run swift test".
+    let failedStep: String?
+    /// The first errors it reported, "path:line message".
+    let annotations: [String]
+    /// The Actions workflow run, which Re-run restarts.
+    let runID: Int?
+    /// A commit status's description.
+    let note: String?
+
+    var title: String { group.map { "\($0) / \(name)" } ?? name }
+}
+
+/// A deployment of the pull request's latest commit.
+struct DeployItem: Equatable, Identifiable {
+    let id: String
+    let environment: String
+    /// SUCCESS, ACTIVE, IN_PROGRESS, QUEUED, PENDING, FAILURE, ERROR, INACTIVE.
+    let state: String
+    let url: String?
+    let logURL: String?
+    let createdAt: Date
+}
+
+/// What a pull request's checks and deployments look like now.
+struct PRDetails: Equatable {
+    var checks: [CheckItem]
+    var deployments: [DeployItem]
+    var fetchedAt: Date
+
+    var failed: [CheckItem] { checks.filter { $0.state == .failed } }
+    var isRunning: Bool { checks.contains { $0.state == .running || $0.state == .queued } || deployments.contains { ["IN_PROGRESS", "QUEUED", "PENDING"].contains($0.state) } }
+
+    /// "2 failed · 1 running · 14 passed".
+    var summary: String {
+        let count = { (state: CheckItem.State) in self.checks.filter { $0.state == state }.count }
+        let parts: [(Int, String)] = [(count(.failed), "failed"), (count(.cancelled), "cancelled"), (count(.running), "running"),
+                                      (count(.queued), "queued"), (count(.passed), "passed"), (count(.skipped) + count(.neutral), "skipped")]
+        let text = parts.filter { $0.0 > 0 }.map { "\($0.0) \($0.1)" }.joined(separator: " · ")
+        return text.isEmpty ? "No checks" : text
+    }
+}
+
+/// The GraphQL reply for one pull request's checks and deployments.
+struct DetailsReply: Decodable {
+    struct Problem: Decodable { let message: String }
+    struct Payload: Decodable { let repository: Repository? }
+    struct Repository: Decodable { let pullRequest: PullRequest? }
+    struct PullRequest: Decodable { let commits: Commits }
+    struct Commits: Decodable { let nodes: [Node] }
+    struct Node: Decodable { let commit: Commit }
+    struct Commit: Decodable {
+        let oid: String
+        let statusCheckRollup: Rollup?
+        let deployments: Deployments?
+    }
+    struct Rollup: Decodable { let contexts: Contexts }
+    struct Contexts: Decodable { let nodes: [Context?] }
+    struct Context: Decodable {
+        let __typename: String
+        let isRequired: Bool?
+        // CheckRun
+        let databaseId: Int?
+        let name: String?
+        let status: String?
+        let conclusion: String?
+        let detailsUrl: String?
+        let startedAt: Date?
+        let completedAt: Date?
+        let checkSuite: Suite?
+        let steps: Steps?
+        let annotations: Annotations?
+        // StatusContext
+        let context: String?
+        let state: String?
+        let targetUrl: String?
+        let description: String?
+        let createdAt: Date?
+    }
+    struct Suite: Decodable { let workflowRun: Run?; let app: App? }
+    struct Run: Decodable { let databaseId: Int?; let workflow: Workflow? }
+    struct Workflow: Decodable { let name: String }
+    struct App: Decodable { let name: String }
+    struct Steps: Decodable { let nodes: [Step?] }
+    struct Step: Decodable { let name: String; let conclusion: String? }
+    struct Annotations: Decodable { let nodes: [Annotation?] }
+    struct Annotation: Decodable { let message: String; let path: String?; let location: Location? }
+    struct Location: Decodable { let start: Position }
+    struct Position: Decodable { let line: Int }
+    struct Deployments: Decodable { let nodes: [Deployment?] }
+    struct Deployment: Decodable {
+        let id: String
+        let environment: String?
+        let state: String?
+        let createdAt: Date
+        let latestStatus: Status?
+    }
+    struct Status: Decodable { let state: String; let environmentUrl: String?; let logUrl: String? }
+
+    let data: Payload?
+    let errors: [Problem]?
+
+    static let query = """
+    query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { \
+    commits(last: 1) { nodes { commit { oid \
+    statusCheckRollup { contexts(first: 100) { nodes { __typename \
+    ... on CheckRun { databaseId name status conclusion detailsUrl startedAt completedAt isRequired(pullRequestNumber: $number) \
+    checkSuite { workflowRun { databaseId workflow { name } } app { name } } \
+    steps(first: 60) { nodes { name conclusion } } \
+    annotations(first: 5) { nodes { message path location { start { line } } } } } \
+    ... on StatusContext { context state targetUrl description createdAt isRequired(pullRequestNumber: $number) } } } } \
+    deployments(first: 5, orderBy: { field: CREATED_AT, direction: DESC }) { nodes { id environment state createdAt latestStatus { state environmentUrl logUrl } } } \
+    } } } } } }
+    """
+
+    /// The checks and deployments, newest deployment per environment.
+    func details(at now: Date = Date()) -> PRDetails? {
+        guard let commit = data?.repository?.pullRequest?.commits.nodes.last?.commit else { return nil }
+        let checks = (commit.statusCheckRollup?.contexts.nodes ?? []).compactMap { $0 }.enumerated().compactMap { index, context -> CheckItem? in
+            if context.__typename == "StatusContext" {
+                let state: CheckItem.State = switch context.state {
+                case "SUCCESS": .passed
+                case "FAILURE", "ERROR": .failed
+                default: .running
+                }
+                return CheckItem(id: "status-\(index)-\(context.context ?? "")", name: context.context ?? "Status", group: nil, state: state,
+                                 isRequired: context.isRequired ?? false, url: context.targetUrl, startedAt: context.createdAt, completedAt: nil,
+                                 failedStep: nil, annotations: [], runID: nil, note: context.description)
+            }
+            guard context.__typename == "CheckRun", let name = context.name else { return nil }
+            let state: CheckItem.State
+            if context.status != "COMPLETED" {
+                state = context.status == "IN_PROGRESS" ? .running : .queued
+            } else {
+                state = switch context.conclusion {
+                case "SUCCESS": .passed
+                case "FAILURE", "TIMED_OUT", "STARTUP_FAILURE", "ACTION_REQUIRED": .failed
+                case "CANCELLED": .cancelled
+                case "SKIPPED": .skipped
+                default: .neutral
+                }
+            }
+            let failedStep = (context.steps?.nodes ?? []).compactMap { $0 }.first { ["FAILURE", "TIMED_OUT", "CANCELLED"].contains($0.conclusion ?? "") }?.name
+            let annotations = (context.annotations?.nodes ?? []).compactMap { $0 }.map { note -> String in
+                let place = note.path.map { path in note.location.map { "\(path):\($0.start.line)" } ?? path }
+                let message = note.message.split(separator: "\n").first.map(String.init) ?? note.message
+                return [place, message].compactMap { $0 }.joined(separator: " ")
+            }
+            let group = context.checkSuite?.workflowRun?.workflow?.name ?? context.checkSuite?.app.map(\.name).flatMap { $0 == "GitHub Actions" ? nil : $0 }
+            return CheckItem(id: "run-\(context.databaseId ?? index)", name: name, group: group, state: state, isRequired: context.isRequired ?? false,
+                             url: context.detailsUrl, startedAt: context.startedAt, completedAt: context.completedAt, failedStep: failedStep,
+                             annotations: annotations, runID: context.checkSuite?.workflowRun?.databaseId, note: nil)
+        }
+        var seen: Set<String> = []
+        let deployments = (commit.deployments?.nodes ?? []).compactMap { $0 }.compactMap { deployment -> DeployItem? in
+            let environment = deployment.environment ?? "Deployment"
+            guard seen.insert(environment).inserted else { return nil }
+            return DeployItem(id: deployment.id, environment: environment, state: deployment.latestStatus?.state ?? deployment.state ?? "PENDING",
+                              url: deployment.latestStatus?.environmentUrl.flatMap { $0.isEmpty ? nil : $0 },
+                              logURL: deployment.latestStatus?.logUrl.flatMap { $0.isEmpty ? nil : $0 }, createdAt: deployment.createdAt)
+        }
+        let sorted = checks.sorted { ($0.state.rawValue, $0.isRequired ? 0 : 1, $0.title.lowercased()) < ($1.state.rawValue, $1.isRequired ? 0 : 1, $1.title.lowercased()) }
+        return PRDetails(checks: sorted, deployments: deployments, fetchedAt: now)
+    }
+}
+
+extension PRCockpit {
+    /// owner, name and number from a pull request's web URL, on github.com
+    /// or an Enterprise server: `…/owner/name/pull/123`.
+    static func parts(of url: String) -> (owner: String, name: String, number: Int)? {
+        let path = URL(string: url)?.pathComponents.filter { $0 != "/" } ?? []
+        guard path.count >= 4, path[path.count - 2] == "pull", let number = Int(path[path.count - 1]) else { return nil }
+        return (path[path.count - 4], path[path.count - 3], number)
+    }
+
+    func pull(_ url: String) -> PullRequest? {
+        (toReview + mine + searchResults + recentlyClosed).first { $0.url == url }
+    }
+
+    /// Fetches a pull request's checks and deployments, unless what is
+    /// kept is younger than `maxAge` seconds.
+    func loadDetails(_ url: String, maxAge: Double = 0) async {
+        if let kept = details[url], Date().timeIntervalSince(kept.fetchedAt) < maxAge { return }
+        guard let parts = Self.parts(of: url) else { detailErrors[url] = "That isn't a pull request link."; return }
+        do {
+            guard try await loadEnterpriseServer() else { throw HostError("Enter your GitHub Enterprise server as GITHUB_ENTERPRISE_URL.") }
+            guard let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else { throw HostError("Add a GitHub token to see checks.") }
+            noteCredentials(token)
+            struct Body: Encodable {
+                struct Variables: Encodable { let owner: String; let name: String; let number: Int }
+                let query: String
+                let variables: Variables
+            }
+            let body = try JSONEncoder().encode(Body(query: DetailsReply.query, variables: .init(owner: parts.owner, name: parts.name, number: parts.number)))
+            let response = try await Stackbar.http(HTTPRequest(url: graphqlURL, method: "POST", headers: [
+                "Authorization": "Bearer \(token)", "Content-Type": "application/json", "Accept": "application/json",
+            ], body: body, timeout: Self.refreshTimeout))
+            guard (200..<300).contains(response.status) else {
+                throw HostError(response.status == 401 ? "GitHub rejected the token (401); set a new GITHUB_TOKEN" : "GitHub answered \(response.status)")
+            }
+            let reply = try Self.restDecoder.decode(DetailsReply.self, from: response.body)
+            guard let found = reply.details() else {
+                throw HostError(reply.errors?.map(\.message).joined(separator: "; ") ?? "GitHub has no checks for this pull request")
+            }
+            if details.count > 40, let oldest = details.min(by: { $0.value.fetchedAt < $1.value.fetchedAt })?.key { details[oldest] = nil }
+            details[url] = found
+            detailErrors[url] = nil
+        } catch {
+            detailErrors[url] = "\(error)"
+        }
+    }
+
+    func toggleChecks(_ pr: PullRequest) async {
+        if expanded == pr.url {
+            expanded = nil
+            return
+        }
+        expanded = pr.url
+        expandedAt = Date()
+        markSeen(pr)
+        await loadDetails(pr.url, maxAge: 15)
+    }
+
+    /// While the open pull request's checks run, fetches them again: every
+    /// 20 seconds, for 10 minutes after it was opened.
+    func followOpenChecks() async {
+        guard let url = expanded, let expandedAt, Date().timeIntervalSince(expandedAt) < 600 else { return }
+        let rollupMoved = pull(url).map { pr in
+            guard let kept = details[url] else { return true }
+            return (pr.checks == "PENDING" || pr.checks == "EXPECTED") != kept.isRunning
+        } ?? false
+        guard details[url]?.isRunning == true || rollupMoved else { return }
+        await loadDetails(url, maxAge: 15)
+    }
+
+    /// Re-runs a workflow run's failed jobs (or all of them). The first
+    /// press only asks for a second one within 10 seconds.
+    func rerun(_ url: String, runID: Int, failedOnly: Bool) async {
+        guard let parts = Self.parts(of: url) else { return }
+        let key = "\(runID)-\(failedOnly)"
+        guard rerunArmed == key, Date().timeIntervalSince(rerunArmedAt) < 10 else {
+            rerunArmed = key
+            rerunArmedAt = Date()
+            Stackbar.hud("Press again within 10 s to re-run \(failedOnly ? "the failed jobs" : "every job")")
+            return
+        }
+        rerunArmed = nil
+        do {
+            _ = try await rest("/repos/\(parts.owner)/\(parts.name)/actions/runs/\(runID)/\(failedOnly ? "rerun-failed-jobs" : "rerun")", method: "POST", body: Data("{}".utf8), timeout: Self.refreshTimeout)
+            Stackbar.hud(failedOnly ? "Re-running the failed jobs" : "Re-running every job")
+            expanded = url
+            expandedAt = Date()
+            try? await Task.sleep(for: .seconds(2))
+            await loadDetails(url)
+        } catch {
+            let text = "\(error)"
+            Stackbar.hud(text.contains("403") || text.contains("404") ? "Re-running needs a token with Actions write access" : text, isError: true)
+        }
+    }
+
+    /// The failures in words, to paste into a chat or an issue.
+    func checksText(_ pr: PullRequest?, _ found: PRDetails) -> String {
+        var lines: [String] = []
+        if let pr { lines.append("\(pr.title) (\(pr.id)): \(found.summary)") } else { lines.append(found.summary) }
+        for check in found.checks where check.state == .failed || check.state == .cancelled {
+            lines.append("✕ \(check.title)\(check.failedStep.map { ": \($0)" } ?? "")\(check.url.map { " \($0)" } ?? "")")
+            lines += check.annotations.map { "    \($0)" }
+            if let note = check.note { lines.append("    \(note)") }
+        }
+        for deployment in found.deployments {
+            lines.append("\(deployment.environment): \(Self.deployWord(deployment.state))\(deployment.url.map { " \($0)" } ?? "")")
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    static func symbol(_ state: CheckItem.State) -> String {
+        switch state {
+        case .failed: return "xmark.octagon.fill"
+        case .cancelled: return "slash.circle"
+        case .running: return "arrow.triangle.2.circlepath"
+        case .queued: return "clock"
+        case .passed: return "checkmark.circle.fill"
+        case .neutral, .skipped: return "minus.circle"
+        }
+    }
+
+    static func word(_ state: CheckItem.State) -> (String, Role) {
+        switch state {
+        case .failed: return ("Failed", .critical)
+        case .cancelled: return ("Cancelled", .secondary)
+        case .running: return ("Running", .warning)
+        case .queued: return ("Queued", .secondary)
+        case .passed: return ("Passed", .success)
+        case .neutral: return ("Neutral", .secondary)
+        case .skipped: return ("Skipped", .secondary)
+        }
+    }
+
+    static func deployWord(_ state: String) -> String {
+        switch state {
+        case "SUCCESS", "ACTIVE": return "deployed"
+        case "IN_PROGRESS": return "deploying"
+        case "QUEUED", "PENDING", "WAITING": return "waiting"
+        case "FAILURE", "ERROR": return "failed"
+        case "INACTIVE", "DESTROYED": return "replaced"
+        default: return state.lowercased()
+        }
+    }
+
+    /// "3m 12s", or how long it has been running.
+    static func duration(_ check: CheckItem, now: Date = Date()) -> String? {
+        guard let start = check.startedAt else { return nil }
+        let seconds = Int((check.completedAt ?? now).timeIntervalSince(start))
+        guard seconds >= 0 else { return nil }
+        let text = seconds < 60 ? "\(seconds)s" : seconds < 3600 ? "\(seconds / 60)m \(seconds % 60)s" : "\(seconds / 3600)h \(seconds / 60 % 60)m"
+        return check.completedAt == nil ? "running \(text)" : text
+    }
+
+    func checkRow(_ check: CheckItem, in url: String) -> Row {
+        let detail = [check.failedStep, check.annotations.first, check.note, Self.duration(check)].compactMap { $0 }.joined(separator: " · ")
+        var row = Row(check.title, subtitle: detail.isEmpty ? nil : detail, symbol: Self.symbol(check.state), key: "check-\(url)-\(check.id)")
+        let word = Self.word(check.state)
+        row = row.badge(word.0, role: word.1)
+        if check.isRequired { row = row.badge("Required", role: check.state == .failed ? .critical : .secondary) }
+        if let link = check.url { row = row.action("Open log") { Stackbar.open(link) } }
+        if let runID = check.runID, check.state == .failed || check.state == .cancelled {
+            row = row.action("Re-run failed jobs") { await self.rerun(url, runID: runID, failedOnly: true) }
+        }
+        if let runID = check.runID, check.state == .failed || check.state == .cancelled {
+            row = row.action("Re-run all jobs") { await self.rerun(url, runID: runID, failedOnly: false) }
+        }
+        if !check.annotations.isEmpty {
+            row = row.preview(text: check.annotations.joined(separator: "\n"), caption: check.failedStep)
+                .action("Copy errors") { Stackbar.copy(check.annotations.joined(separator: "\n")) }
+        }
+        return row.hiddenFromPalette()
+    }
+
+    func deployRow(_ deployment: DeployItem, in url: String) -> Row {
+        let failed = ["FAILURE", "ERROR"].contains(deployment.state)
+        let done = ["SUCCESS", "ACTIVE"].contains(deployment.state)
+        var row = Row(deployment.environment, subtitle: [deployment.url, Self.ago(deployment.createdAt) + " ago"].compactMap { $0 }.joined(separator: " · "),
+                      symbol: "shippingbox", key: "deploy-\(url)-\(deployment.id)")
+            .badge(Self.deployWord(deployment.state).capitalized, role: failed ? .critical : done ? .success : .warning)
+        if let site = deployment.url { row = row.action("Open \(deployment.environment)") { Stackbar.open(site) }.action("Copy link") { Stackbar.copy(site) } }
+        if let log = deployment.logURL { row = row.action("Open deployment log") { Stackbar.open(log) } }
+        return row.hiddenFromPalette()
+    }
+
+    func summaryRow(_ found: PRDetails, url: String) -> Row {
+        let failedRuns = Array(Set(found.checks.filter { $0.state == .failed }.compactMap(\.runID))).sorted()
+        var summary = Row(found.summary, subtitle: found.deployments.isEmpty ? "Checks" : "Checks and deployments", symbol: found.failed.isEmpty ? (found.isRunning ? "hourglass" : "checkmark.seal") : "exclamationmark.triangle.fill", key: "checks-\(url)")
+            .action("Open checks page") { Stackbar.open(url + "/checks") }
+        if failedRuns.count == 1, let run = failedRuns.first {
+            summary = summary.action("Re-run failed jobs") { await self.rerun(url, runID: run, failedOnly: true) }
+        }
+        summary = summary.action("Copy summary") { Stackbar.copy(self.checksText(self.pull(url), found)) }
+            .action("Refresh checks") { await self.loadDetails(url) }
+            .action("Hide checks") { self.expanded = nil }
+        return summary.hiddenFromPalette()
+    }
+
+    /// The rows under an open pull request: a summary with the actions for
+    /// all of them, then failures first, then deployments. Passing checks
+    /// fold into one row when there are many.
+    @ViewBuilder func checkRows(_ url: String) -> ViewContent {
+        if let found = details[url] {
+            summaryRow(found, url: url)
+            if let problem = detailErrors[url] { Row("Couldn't refresh the checks", subtitle: problem, symbol: "exclamationmark.triangle", key: "checks-error-\(url)").hiddenFromPalette() }
+            let passed = found.checks.filter { $0.state >= .passed }
+            let rest = found.checks.filter { $0.state < .passed }
+            ForEach(rest) { check in checkRow(check, in: url) }
+            if passed.count > 4 && !showAllPassed.contains(url) {
+                Row("\(passed.count) passed or skipped", symbol: "checkmark.circle", key: "passed-\(url)")
+                    .action("Show them") { self.showAllPassed.insert(url) }
+                    .hiddenFromPalette()
+            } else {
+                ForEach(passed) { check in checkRow(check, in: url) }
+            }
+            ForEach(found.deployments) { deployment in deployRow(deployment, in: url) }
+        } else if let problem = detailErrors[url] {
+            Row("Couldn't load the checks", subtitle: problem, symbol: "exclamationmark.triangle", key: "checks-error-\(url)")
+                .action("Try again") { await self.loadDetails(url) }
+                .hiddenFromPalette()
+        } else {
+            Row("Loading checks…", symbol: "hourglass", key: "checks-loading-\(url)").hiddenFromPalette()
+        }
+    }
+
+    /// A pull request's row, with its checks under it while it is open.
+    @ViewBuilder func rowWithChecks(_ pr: PullRequest, showAuthor: Bool) -> ViewContent {
+        row(pr, showAuthor: showAuthor)
+        if expanded == pr.url { checkRows(pr.url) }
+    }
+
+    /// The palette's view of one pull request's checks and deployments.
+    @ViewBuilder func checksView(_ url: String) -> ViewContent {
+        if details[url] == nil, let problem = detailErrors[url] {
+            ContentUnavailableView("Can't load the checks", symbol: "exclamationmark.triangle", message: problem)
+        } else if let found = details[url] {
+            List(searchable: true) {
+                Section(pull(url).map { "\($0.title) · \($0.id)" } ?? (Self.parts(of: url).map { "\($0.owner)/\($0.name)#\($0.number)" } ?? "Checks")) {
+                    checkRows(url)
+                }
+                if found.checks.isEmpty && found.deployments.isEmpty {
+                    Row("This pull request has no checks", symbol: "checkmark.circle", key: "no-checks").action("Open in browser") { Stackbar.open(url) }
+                }
+            }
+        } else {
+            ContentUnavailableView("Loading checks…", symbol: "hourglass")
         }
     }
 }

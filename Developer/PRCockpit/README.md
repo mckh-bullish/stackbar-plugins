@@ -17,6 +17,14 @@ all here, with the same `GITHUB_TOKEN`.
   requests. On GitHub Enterprise Server, turn it on in Settings and enter the
   server as `GITHUB_ENTERPRISE_URL`; the plugin then reaches that server and
   no other.
+- **Checks on click:** click a pull request to see each check under it:
+  failures first with the step that failed and its first errors, which
+  checks are required, how long each took, and the commit's deployments
+  with their preview links. While checks run they refresh every 20
+  seconds. Re-run failed jobs (or all of them) from there, open a job's
+  log, or copy a summary of what failed. Settings can make a click open the
+  browser as before; ⌘↩ always does. Re-running needs a token with Actions
+  write access.
 - **Surfaces:** menu bar, panel (To review, Mine, Issues and an optional
   Inbox), window, widget, settings.
 - **Settings:** include team review requests, include drafts, how recently a
@@ -32,6 +40,11 @@ all here, with the same `GITHUB_TOKEN`.
 - **Agent tools:** `review_queue`, `my_pull_requests` and `my_issues`.
 
 ## Highlights
+
+### Why it failed, without opening the browser
+Click a pull request to see its checks, the step that failed and the error,
+and its preview deploy. Re-run the failed jobs right there.
+<!-- preview: checks -->
 
 ### Everything waiting on your review
 Every pull request waiting on you, with its CI, review state and conflicts.
@@ -54,6 +67,15 @@ how long reviews have waited.
 ### On your desktop too
 A widget keeps the review queue in view.
 <!-- preview: widget -->
+
+## What's new in 1.10.0
+
+- Click a pull request to see its checks and deployments under it: what failed and why (the failing step and its first errors), which checks are required, how long each took, and preview links. Running checks refresh every 20 seconds while you look.
+- Re-run failed jobs, or all of them, from the checks (press twice). Needs a token with Actions write access.
+- Copy a summary of what failed, to paste into a chat or an issue.
+- In the palette, ⌘I on a pull request opens its checks, and a selected pull request shows them beside the list once loaded.
+- A setting keeps the old click, which opens the browser. ⌘↩ opens it either way.
+- Needs Stackbar 0.31.0 or later.
 
 ## What's new in 1.9.0
 
