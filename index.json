@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-08T13:50:43Z",
+  "generated" : "2026-11-08T14:17:36Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -827,6 +827,35 @@
       "symbol" : "rectangle.stack.fill",
       "updated" : "2026-11-08",
       "version" : "1.2.0"
+    },
+    {
+      "accent" : "cyan",
+      "bundle" : "Productivity/io.navbytes.stackbar.plugins.browser-tabs-1.2.1.stackbarplugin",
+      "capabilities" : [
+        "Runs /usr/bin/osascript (can run any program), /bin/cat",
+        "Sees which apps are installed and running, and switches to, opens or hides them",
+        "Reads and writes ~/Library/Application Support/Google/Chrome/Default, ~/Library/Application Support/BraveSoftware/Brave-Browser/Default, ~/Library/Application Support/Microsoft Edge/Default, ~/Library/Application Support/Vivaldi/Default"
+      ],
+      "capabilityKinds" : [
+        "run",
+        "apps",
+        "files"
+      ],
+      "category" : "Productivity",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/BrowserTabs",
+      "id" : "io.navbytes.stackbar.plugins.browser-tabs",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Browser Tabs",
+      "publisher" : "navbytes",
+      "screenshot" : "Productivity/io.navbytes.stackbar.plugins.browser-tabs.png",
+      "sha256" : "d61d12e385d0e46028fe19fb0c36788c05c20d7ae61d778b35af075027e90969",
+      "summary" : "Switch to any open tab in Safari, Chrome, Arc, Brave or Edge, and search your bookmarks.",
+      "surfaces" : [
+        "panel"
+      ],
+      "symbol" : "rectangle.stack.fill",
+      "updated" : "2026-11-08",
+      "version" : "1.2.1"
     },
     {
       "accent" : "orange",
@@ -5601,6 +5630,39 @@
       "version" : "1.12.0"
     },
     {
+      "accent" : "violet",
+      "bundle" : "Developer/io.navbytes.stackbar.pr-cockpit-1.13.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to api.github.com",
+        "Reads the secret GITHUB_TOKEN",
+        "Connects to the server you enter as GITHUB_ENTERPRISE_URL, and no other"
+      ],
+      "capabilityKinds" : [
+        "network",
+        "secret",
+        "userServer"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
+      "id" : "io.navbytes.stackbar.pr-cockpit",
+      "minimumStackbar" : "0.35.0",
+      "name" : "PR Cockpit",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.pr-cockpit.png",
+      "sha256" : "35dea9c415ee6b1f6af43f8d301a4faeec290166c44351d445c4bccb68e1ef23",
+      "summary" : "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "arrow.triangle.pull",
+      "updated" : "2026-11-08",
+      "version" : "1.13.0"
+    },
+    {
       "bundle" : "Productivity/io.navbytes.stackbar.quicklinks-1.0.1.stackbarplugin",
       "capabilities" : [
         "Opens any link, file or folder, in any app",
@@ -6620,5 +6682,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "XLK6y0+hpxvikuTHvA6f8//1Ukjqidm1++OhUZjwHzMO16QTjLjR56zAv0OxQPcJh2jlV288Cwv8C4crn05jCw=="
+  "signature" : "nPrubpVPChytg4KzdXwzsKKuFB2Pg+EDwZ0nXKdzYgl89xAAEedwzqrBjVnFW4jgxPXn7KWMDSE5QXXGf/zXDA=="
 }

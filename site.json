@@ -250,6 +250,12 @@
       "changes": [
         {
           "notes": [
+            "Search Browser Tabs lists your tabs again. It said \"No tabs open\" for every browser, because the script that reads them wrote the word \"tab\" where it meant a tab character."
+          ],
+          "version": "1.2.1"
+        },
+        {
+          "notes": [
             "Close Tab says outright that it closes at once, so Stackbar doesn't ask.",
             "Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question."
           ],
@@ -299,7 +305,7 @@
           "text": "Safari's bookmarks, which macOS keeps behind Full Disk Access, and browser profiles other than the default one."
         }
       ],
-      "version": "1.2.0"
+      "version": "1.2.1"
     },
     "io.navbytes.stackbar.plugins.calculator": {
       "changes": [
@@ -2162,6 +2168,17 @@
       "changes": [
         {
           "notes": [
+            "Merge your own pull request from the panel or the palette once it is approved with green checks, the way its repository merges (squash, rebase or a merge commit).",
+            "Enable Auto-Merge on one still waiting on reviews or checks, and GitHub merges it by itself; the row says Auto-merge while it is on.",
+            "Mark Ready for Review takes one of your drafts out of draft.",
+            "View Diff (\u2318D) lists the files a pull request changes, with each diff beside the list.",
+            "Copy checkout command copies `gh pr checkout` for the pull request.",
+            "Mark as done (\u2318E) in the inbox takes a notification out of GitHub's inbox, as Done does on github.com."
+          ],
+          "version": "1.13.0"
+        },
+        {
+          "notes": [
             "Approve, Mark All as Read and the re-run actions ask through Stackbar, naming what they do.",
             "Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question."
           ],
@@ -2239,11 +2256,19 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "network access to `api.github.com` only, and a `GITHUB_TOKEN` secret kept in the Keychain. A fine-grained token with read access to pull requests, issues and metadata covers everything except creating issues, which needs write access to issues. Approving needs write access to pull requests. On GitHub Enterprise Server, turn it on in Settings and enter the server as `GITHUB_ENTERPRISE_URL`; the plugin then reaches that server and no other."
+          "text": "network access to `api.github.com` only, and a `GITHUB_TOKEN` secret kept in the Keychain. A fine-grained token with read access to pull requests, issues and metadata covers everything except creating issues, which needs write access to issues. Approving, merging, auto-merge and Mark Ready for Review need write access to pull requests (merging also needs contents write). Mark as done in the inbox needs notifications. On GitHub Enterprise Server, turn it on in Settings and enter the server as `GITHUB_ENTERPRISE_URL`; the plugin then reaches that server and no other."
         },
         {
           "label": "Checks on click",
           "text": "click a pull request to see each check under it: failures first with the step that failed and its first errors, which checks are required, how long each took, and the commit's deployments with their preview links. While checks run they refresh every 20 seconds. Re-run failed jobs (or all of them) from there, open a job's log, or copy a summary of what failed. Settings can make a click open the browser as before; \u2318\u21a9 always does. Re-running needs a token with Actions write access. In the palette, a selected pull request shows its checks beside the list, fetched in the background for the ones whose checks changed (a setting turns this off); \u2318I opens them in full."
+        },
+        {
+          "label": "Your own pull requests",
+          "text": "merge one that is approved with green checks the way its repository's merge button does (squash, rebase or a merge commit), turn on auto-merge for one still waiting on reviews or checks so GitHub merges it by itself, or take a draft out of draft. Stackbar asks for a second press first, naming the pull request."
+        },
+        {
+          "label": "View Diff",
+          "text": "\u2318D on any pull request lists the files it changes, with each file's diff beside the list."
         },
         {
           "label": "Surfaces",
@@ -2255,14 +2280,14 @@
         },
         {
           "label": "Commands",
-          "text": "Search Pull Requests, Review Queue, Open Next Review, Search GitHub Repositories (yours first, recently opened on top, then GitHub search; each row opens the repository, its pull requests, issues or Actions, copies the clone URL, or starts a new issue), My GitHub Issues, GitHub Inbox (with Mark All as Read), Create GitHub Issue, Refresh Pull Requests."
+          "text": "Search Pull Requests (each row also copies a `gh pr checkout` command), Review Queue, Open Next Review, Search GitHub Repositories (yours first, recently opened on top, then GitHub search; each row opens the repository, its pull requests, issues or Actions, copies the clone URL, or starts a new issue), My GitHub Issues, GitHub Inbox (Mark as read, Mark as done, Mark All as Read), Create GitHub Issue, Refresh Pull Requests."
         },
         {
           "label": "Agent tools",
           "text": "`review_queue`, `my_pull_requests` and `my_issues`."
         }
       ],
-      "version": "1.12.0"
+      "version": "1.13.0"
     },
     "io.navbytes.stackbar.quicklinks": {
       "changes": [
@@ -2778,6 +2803,12 @@
         "seconds": 5.0,
         "surface": "panel"
       },
+      "1.13.0": {
+        "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/dark/demo/526649a16612/panel.png",
+        "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/light/demo/526649a16612/panel.png",
+        "seconds": 5.0,
+        "surface": "panel"
+      },
       "1.6.0": {
         "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.6.0/dark/demo/526649a16612/panel.png",
         "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.6.0/light/demo/526649a16612/panel.png",
@@ -3057,6 +3088,12 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.2.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.2.0/light/panel.png"
+        }
+      },
+      "1.2.1": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.2.1/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.2.1/light/panel.png"
         }
       }
     },
@@ -4349,6 +4386,16 @@
           "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.12.0/light/panel.png"
         }
       },
+      "1.13.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/light/panel.png"
+        }
+      },
       "1.4.0": {
         "menuBar": {
           "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.4.0/dark/menuBar.png",
@@ -5112,6 +5159,22 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.2.0/dark/previews/browsers/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.2.0/light/previews/browsers/panel.png",
+          "name": "browsers",
+          "surface": "panel",
+          "title": "Safari, Chrome, Arc, Brave and Edge in one list"
+        }
+      ],
+      "1.2.1": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.2.1/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.2.1/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every tab, a few letters away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.2.1/dark/previews/browsers/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.2.1/light/previews/browsers/panel.png",
           "name": "browsers",
           "surface": "panel",
           "title": "Safari, Chrome, Arc, Brave and Edge in one list"
@@ -7109,6 +7172,43 @@
         {
           "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.12.0/dark/previews/widget/widget.png",
           "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.12.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your review queue on the desktop"
+        }
+      ],
+      "1.13.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every pull request waiting on you"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/dark/previews/mine/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/light/previews/mine/panel.png",
+          "name": "mine",
+          "surface": "panel",
+          "title": "Your own PRs: checks, reviews and conflicts"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/dark/previews/checks/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/light/previews/checks/panel.png",
+          "name": "checks",
+          "surface": "panel",
+          "title": "Why a check failed, and its preview deploy, without leaving the menu bar"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/dark/previews/dashboard/window.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/light/previews/dashboard/window.png",
+          "name": "dashboard",
+          "surface": "window",
+          "title": "Both lists, what merged and how long reviews wait"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "Your review queue on the desktop"
