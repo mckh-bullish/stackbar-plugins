@@ -9,13 +9,13 @@ final class Applications: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.applications",
         name: "Applications",
-        version: "1.2.1",
+        version: "1.2.2",
         summary: "Open any app or System Settings pane from the command palette by typing a few letters.",
         surfaces: [.panel],
-        triggers: [.launch],
+        triggers: [.launch, .every(.seconds(300)), .wake],
         // Listing and opening apps; opening Settings panes by their link.
         capabilities: [.apps, .openURLs(schemes: ["x-apple.systempreferences"])],
-        minimumStackbar: "0.20.0",
+        minimumStackbar: "0.31.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/System/Applications",
         accent: .blue,
         symbol: "square.grid.3x3.fill"
@@ -25,6 +25,10 @@ final class Applications: StackbarPlugin {
         PreviewScene("hero", "Every app a few letters away") { plugin in
             try await plugin.load(force: true)
             plugin.opens = ["com.apple.Safari": 12, "com.apple.dt.Xcode": 8, "com.google.Chrome": 3]
+        },
+        PreviewScene("settings", "System Settings panes too") { plugin in
+            try await plugin.load(force: true)
+            plugin.opens = ["com.apple.Wi-Fi-Settings.extension": 9, "com.apple.Safari": 7, "com.apple.Displays-Settings.extension": 4]
         },
     ]
 
@@ -57,7 +61,7 @@ final class Applications: StackbarPlugin {
     }
 
     func refresh() async throws {
-        try await load()
+        try await load(force: true)
     }
 
     // MARK: Matching
@@ -94,19 +98,22 @@ final class Applications: StackbarPlugin {
     func open(_ app: InstalledApp) async throws {
         opens[app.id, default: 0] += 1
         if app.kind == .settingsPane, let url = app.url {
-            Stackbar.open(url)
+            try await Stackbar.open(url, with: nil)
         } else {
             try await Stackbar.activateApp(app.id, launch: true)
         }
     }
 
-    func row(_ app: InstalledApp) -> Row {
+    /// A panel row also hides from the palette: its actions would sit there
+    /// beside the Applications section's rows for the same apps.
+    func row(_ app: InstalledApp, inPanel: Bool = false) -> Row {
         let pane = app.kind == .settingsPane
-        return Row(app.name, subtitle: pane ? "System Settings" : nil, symbol: pane ? "gearshape" : "app", key: app.id)
+        let row = Row(app.name, subtitle: pane ? "System Settings" : nil, symbol: pane ? "gearshape" : "app", key: app.id)
             .appIcon(pane ? "com.apple.systempreferences" : app.id)
             .action("Open") { try await self.open(app) }
             .action("Copy Path", shortcut: "cmd+shift+c") { Stackbar.copy(app.path) }
             .action("Copy Bundle ID") { Stackbar.copy(app.id) }
+        return inPanel ? row.hiddenFromPalette() : row
     }
 
     // MARK: Commands
@@ -114,7 +121,8 @@ final class Applications: StackbarPlugin {
     var commands: [Command] {
         Command("search", title: "Search Applications", subtitle: "Open an app or a Settings pane", symbol: "square.grid.3x3", keywords: ["app", "launch", "open", "settings"])
             .view(search: { invocation in
-                try await self.load()
+                // Typing answers from the list in memory; the refresh trigger rescans it.
+                if self.apps.isEmpty { try await self.load() }
                 self.results = Self.matches(invocation.text, in: self.apps, opens: self.opens)
             }) { invocation in
                 if let problem = self.problem {
@@ -154,7 +162,7 @@ final class Applications: StackbarPlugin {
             EmptyState("Open apps from the palette", symbol: "square.grid.3x3", message: "Press ⌃⌥Space and type a few letters of an app or a Settings pane. Return opens it.", theme: theme)
         } else {
             Card("Most opened", spacing: 0, padding: Space.s) {
-                ForEach(top) { app in self.row(app) }
+                ForEach(top) { app in self.row(app, inPanel: true) }
             }
         }
         HStack(spacing: Space.xs) {

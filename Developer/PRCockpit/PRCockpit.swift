@@ -24,12 +24,12 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.8.1",
+        version: "1.9.0",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
         capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN"), .userServer(secret: "GITHUB_ENTERPRISE_URL")],
-        minimumStackbar: "0.21.0",
+        minimumStackbar: "0.22.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
         accent: .violet,
         symbol: "arrow.triangle.pull"
@@ -43,6 +43,7 @@ final class PRCockpit: StackbarPlugin {
             sample(plugin)
             plugin.tab = Tab.mine.rawValue
         },
+        PreviewScene("dashboard", "Both lists, what merged and how long reviews wait", surface: .window) { plugin in sample(plugin) },
         PreviewScene("widget", "Your review queue on the desktop", surface: .widget) { plugin in sample(plugin) },
     ]
 
@@ -67,6 +68,11 @@ final class PRCockpit: StackbarPlugin {
             pr("acme/web", 1485, "Dark mode for the order screen", by: "you", minutesAgo: 50, review: "REVIEW_REQUIRED", checks: "PENDING", plus: 77, minus: 9, comments: 0),
             pr("acme/api", 969, "Audit log for admin actions", by: "you", minutesAgo: 1440, review: "REVIEW_REQUIRED", checks: "SUCCESS", mergeable: "CONFLICTING", plus: 520, minus: 61, comments: 2),
         ]
+        plugin.recentlyClosed = [
+            pr("acme/web", 1474, "Remove the legacy cart endpoint", by: "you", minutesAgo: 300, review: "APPROVED", checks: "SUCCESS", plus: 12, minus: 340, comments: 2),
+        ].map { PullRequest(number: $0.number, title: $0.title, url: $0.url, isDraft: false, updatedAt: $0.updatedAt, repository: $0.repository, author: $0.author,
+                            reviewDecision: $0.reviewDecision, mergeable: nil, headRefName: $0.headRefName, additions: $0.additions, deletions: $0.deletions,
+                            commits: $0.commits, comments: $0.comments, state: "MERGED") }
         plugin.history = [3, 4, 2, 5, 6, 4, 3, 5, 7, 4]
         plugin.updatedAt = now
         plugin.loaded = true
@@ -224,11 +230,15 @@ final class PRCockpit: StackbarPlugin {
             /// Search results, skipping any node that isn't a pull request.
             struct Search: Decodable {
                 let nodes: [PullRequest]
-                private enum Keys: String, CodingKey { case nodes }
+                /// How many pull requests match, however many were sent.
+                let issueCount: Int?
+                private enum Keys: String, CodingKey { case nodes, issueCount }
                 private struct Skip: Decodable {}
 
                 init(from decoder: Decoder) throws {
-                    var list = try decoder.container(keyedBy: Keys.self).nestedUnkeyedContainer(forKey: .nodes)
+                    let keys = try decoder.container(keyedBy: Keys.self)
+                    issueCount = try keys.decodeIfPresent(Int.self, forKey: .issueCount)
+                    var list = try keys.nestedUnkeyedContainer(forKey: .nodes)
                     var found: [PullRequest] = []
                     while !list.isAtEnd {
                         if try list.decodeNil() { continue }
@@ -260,10 +270,17 @@ final class PRCockpit: StackbarPlugin {
     """
 
     var toReview: [PullRequest] = []
+    /// The token and server the lists were fetched with. A change means
+    /// another account, so what was loaded for the old one is dropped.
+    var credentials: String?
     /// Every review request listed since launch, so one that drops out of the
     /// age window and comes back with new activity isn't announced as new.
     var everRequested: Set<String> = []
     var mine: [PullRequest] = []
+    /// How many pull requests each list matches on GitHub, which can be more
+    /// than the 40 fetched.
+    var reviewTotal = 0
+    var mineTotal = 0
     var lastError: String?
     var updatedAt: Date?
     var loaded = false
@@ -295,6 +312,13 @@ final class PRCockpit: StackbarPlugin {
     /// Whether the inbox has loaded once, so an empty one still has a
     /// "before" to compare a new mention against.
     var inboxLoaded = false
+    /// When the inbox was last fetched for the palette, and when Mark All as
+    /// Read was first pressed (the second press within 10 s does it).
+    var inboxFetched: Date?
+    var markAllArmed: Date?
+    /// The approval a first press asked for ("approve:<id>"), and when.
+    var approveArmed: String?
+    var approveArmedAt = Date.distantPast
     var recentlyClosed: [PullRequest] = []
     var issues: [Issue] = []
     var issuesError: String?
@@ -338,6 +362,21 @@ final class PRCockpit: StackbarPlugin {
         return enterpriseServer != nil
     }
 
+    /// Notes which account the next request is for. A token or server change
+    /// starts over, so the new account's lists aren't announced as news.
+    func noteCredentials(_ token: String) {
+        let current = token + "|" + apiBase
+        if let credentials, credentials != current { resetForNewAccount() }
+        credentials = current
+    }
+
+    func resetForNewAccount() {
+        everRequested = []; updatedAt = nil; toReview = []; mine = []; recentlyClosed = []; reviewTotal = 0; mineTotal = 0
+        issues = []; issuesLoaded = false; issuesFetched = nil; inbox = []; inboxLoaded = false; inboxFetched = nil
+        searchResults = []; searchedText = nil; repoSearches = [:]; repoResults = []
+        repos = []; reposLoaded = nil; history = []; seenStarted = false; seen = [:]; snoozed = [:]; announced = [:]
+    }
+
     /// Seconds a refresh request may take. The plugin handles one message at a
     /// time, so a slow GitHub holds up every click behind the refresh; a
     /// short limit keeps that wait short, and the next refresh tries again.
@@ -353,6 +392,7 @@ final class PRCockpit: StackbarPlugin {
             lastError = "Add a GitHub token to see your pull requests."
             return
         }
+        noteCredentials(token)
         // The three requests run side by side: a refresh takes as long as the
         // slowest one, not all three, and a tab click waits for less.
         async let pullRequests: Void = loadPullRequests(token: token)
@@ -369,8 +409,8 @@ final class PRCockpit: StackbarPlugin {
         let since = Self.day(Date().addingTimeInterval(-2 * 86400))
         let query = """
         query { \
-        review: search(query: "is:pr is:open archived:false \(requested)\(draft)\(recent) sort:updated-desc", type: ISSUE, first: 40) { nodes { ...pr } } \
-        mine: search(query: "is:pr is:open archived:false author:@me\(recent) sort:updated-desc", type: ISSUE, first: 40) { nodes { ...pr } } \
+        review: search(query: "is:pr is:open archived:false \(requested)\(draft)\(recent) sort:updated-desc", type: ISSUE, first: 40) { issueCount nodes { ...pr } } \
+        mine: search(query: "is:pr is:open archived:false author:@me\(recent) sort:updated-desc", type: ISSUE, first: 40) { issueCount nodes { ...pr } } \
         closed: search(query: "is:pr is:closed archived:false author:@me closed:>=\(since)", type: ISSUE, first: 20) { nodes { ...pr } } \
         } \(Self.fragment)
         """
@@ -387,6 +427,8 @@ final class PRCockpit: StackbarPlugin {
             let reply = try decoder.decode(Reply.self, from: response.body)
             guard let data = reply.data else { throw HostError(reply.errors?.map(\.message).joined(separator: "; ") ?? "GitHub sent no data") }
             update(review: data.review.nodes, mine: data.mine.nodes, closed: data.closed?.nodes ?? [])
+            reviewTotal = data.review.issueCount ?? 0
+            mineTotal = data.mine.issueCount ?? 0
             lastError = nil
         } catch {
             lastError = "\(error)"
@@ -425,8 +467,13 @@ final class PRCockpit: StackbarPlugin {
             let items = try decoder.decode([InboxItem].self, from: response.body)
             if notifyChanges, inboxLoaded {
                 let known = Set(inbox.map(\.id))
-                for item in items where item.unread && !known.contains(item.id) && (item.reason == "mention" || item.reason == "team_mention") {
-                    Stackbar.notify("Mentioned: \(item.subject.title)", body: item.repository.full_name, actions: [NotificationAction("Open", url: item.webURL)])
+                let mentions = items.filter { $0.unread && !known.contains($0.id) && ($0.reason == "mention" || $0.reason == "team_mention") }
+                if mentions.count > 3 {
+                    Stackbar.notify("\(mentions.count) new mentions on GitHub", body: mentions.prefix(3).map { $0.subject.title }.joined(separator: "\n"))
+                } else {
+                    for item in mentions {
+                        Stackbar.notify("Mentioned: \(item.subject.title)", body: item.repository.full_name, actions: [NotificationAction("Open", url: item.webURL)])
+                    }
                 }
             }
             inbox = items.sorted { $0.updated_at > $1.updated_at }
@@ -437,12 +484,65 @@ final class PRCockpit: StackbarPlugin {
         }
     }
 
+    /// The inbox for the palette, which asks on every keystroke. A fetch less
+    /// than `maxAge` old is kept, and a failed one waits 30 s.
+    func loadInbox(maxAge: TimeInterval) async {
+        if let at = inboxFetched, Date().timeIntervalSince(at) < (inboxError == nil ? maxAge : max(maxAge, 30)) { return }
+        guard (try? await loadEnterpriseServer()) == true else {
+            inboxError = "Enter your GitHub Enterprise server as GITHUB_ENTERPRISE_URL."
+            inboxFetched = Date()
+            return
+        }
+        guard let token = try? await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else {
+            inboxError = "Add a GitHub token first"
+            return
+        }
+        noteCredentials(token)
+        await refreshInbox(token: token)
+        inboxFetched = Date()
+    }
+
+    /// Marks notifications as read on GitHub, up to the last fetch: GitHub
+    /// marks the whole account unless told otherwise, and anything that arrived
+    /// since would be marked read unseen. The first press only asks for a second
+    /// one within 10 seconds, as the other bulk actions do.
+    func markAllRead() async {
+        guard let armed = markAllArmed, Date().timeIntervalSince(armed) < 10 else {
+            markAllArmed = Date()
+            // The inbox loads up to 40, so 40 may be only some of them.
+            let scope = inbox.count >= 40 ? "all your GitHub notifications" : "\(inbox.count)"
+            Stackbar.hud("Press again within 10 s to mark \(scope) as read")
+            return
+        }
+        markAllArmed = nil
+        let count = inbox.count
+        do {
+            guard let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else { throw HostError("Add a GitHub token first") }
+            let stamp = ISO8601DateFormatter().string(from: inboxFetched ?? updatedAt ?? Date())
+            let body = try JSONSerialization.data(withJSONObject: ["read": true, "last_read_at": stamp])
+            let response = try await Stackbar.http(HTTPRequest(url: apiBase + "/notifications", method: "PUT", headers: [
+                "Authorization": "Bearer \(token)", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28",
+                "Content-Type": "application/json",
+            ], body: body, timeout: Self.refreshTimeout))
+            guard response.status == 202 || response.status == 205 else { throw HostError("GitHub answered \(response.status)") }
+            inbox = []
+            Stackbar.hud("Marked \(count) as read")
+        } catch {
+            Stackbar.hud("Couldn't mark them as read: \(error)", isError: true)
+        }
+    }
+
     func markRead(_ item: InboxItem) async {
-        guard let token = try? await Stackbar.secret("GITHUB_TOKEN") else { return }
-        let response = try? await Stackbar.http(HTTPRequest(url: apiBase + "/notifications/threads/\(item.id)", method: "PATCH", headers: [
-            "Authorization": "Bearer \(token)", "Accept": "application/vnd.github+json",
-        ]))
-        if let response, (200..<300).contains(response.status) { inbox.removeAll { $0.id == item.id } }
+        do {
+            guard let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else { throw HostError("Add a GitHub token first") }
+            let response = try await Stackbar.http(HTTPRequest(url: apiBase + "/notifications/threads/\(item.id)", method: "PATCH", headers: [
+                "Authorization": "Bearer \(token)", "Accept": "application/vnd.github+json",
+            ], timeout: Self.refreshTimeout))
+            guard (200..<300).contains(response.status) else { throw HostError("GitHub answered \(response.status)") }
+            inbox.removeAll { $0.id == item.id }
+        } catch {
+            Stackbar.hud("Couldn't mark it as read: \(error)", isError: true)
+        }
     }
 
     func inboxRow(_ item: InboxItem) -> Row {
@@ -465,8 +565,14 @@ final class PRCockpit: StackbarPlugin {
         let notifying = notifyChanges && updatedAt != nil
         if notifying {
             let wasOpen = Set(mine.map(\.id))
-            for pr in closed where wasOpen.contains(pr.id) && announce(pr, "closed", as: pr.state ?? "CLOSED") {
-                Stackbar.notify(pr.state == "MERGED" ? "Merged: \(pr.title)" : "Closed: \(pr.title)", body: pr.id, actions: [NotificationAction("Open", url: pr.url)])
+            var ended: [PullRequest] = []
+            for pr in closed where wasOpen.contains(pr.id) && announce(pr, "closed", as: pr.state ?? "CLOSED") { ended.append(pr) }
+            if ended.count > 3 {
+                Stackbar.notify("\(ended.count) of your pull requests merged or closed", body: ended.prefix(3).map(\.title).joined(separator: "\n"))
+            } else {
+                for pr in ended {
+                    Stackbar.notify(pr.state == "MERGED" ? "Merged: \(pr.title)" : "Closed: \(pr.title)", body: pr.id, actions: [NotificationAction("Open", url: pr.url)])
+                }
             }
             let added = review.filter { !everRequested.contains($0.id) }
             if added.count == 1, let pr = added.first {
@@ -574,6 +680,27 @@ final class PRCockpit: StackbarPlugin {
         Stackbar.open(pr.url + path)
     }
 
+    /// Approves a pull request, then refreshes the lists so it leaves the queue.
+    /// The first press only asks for a second one within 10 seconds, as the
+    /// other bulk actions do, so a stray click doesn't approve anything.
+    func approve(_ pr: PullRequest) async {
+        let id = "approve:\(pr.id)"
+        guard approveArmed == id, Date().timeIntervalSince(approveArmedAt) < 10 else {
+            approveArmed = id
+            approveArmedAt = Date()
+            Stackbar.hud("Press Approve again within 10 s to approve \(pr.id)")
+            return
+        }
+        approveArmed = nil
+        do {
+            _ = try await rest("/repos/\(pr.repo)/pulls/\(pr.number)/reviews", method: "POST", body: JSONSerialization.data(withJSONObject: ["event": "APPROVE"]), timeout: Self.refreshTimeout)
+            Stackbar.hud("Approved \(pr.id)")
+            try? await refresh()
+        } catch {
+            Stackbar.hud("\(error)", isError: true)
+        }
+    }
+
     // MARK: Issues and repositories (REST)
 
     static let restDecoder: JSONDecoder = {
@@ -587,6 +714,7 @@ final class PRCockpit: StackbarPlugin {
         guard let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else {
             throw HostError("Add a GitHub token (GITHUB_TOKEN) first")
         }
+        noteCredentials(token)
         let response = try await Stackbar.http(HTTPRequest(url: apiBase + path, method: method, headers: [
             "Authorization": "Bearer \(token)",
             "Accept": "application/vnd.github+json",
@@ -817,6 +945,9 @@ final class PRCockpit: StackbarPlugin {
             .action("Snooze until it changes", shortcut: "cmd+s") { self.snoozed[pr.url] = pr.updatedAt }
             .action("Hide \(pr.repo)") { if !self.hiddenRepos.contains(pr.repo) { self.hiddenRepos.append(pr.repo) } }
             .action("Copy link") { Stackbar.copy(pr.url) }
+        if toReview.contains(where: { $0.id == pr.id }) {
+            row = row.action("Approve", shortcut: "cmd+shift+a") { await self.approve(pr) }
+        }
         if let branch = pr.headRefName {
             row = row.action("Copy branch name") { Stackbar.copy(branch) }
         }
@@ -864,14 +995,8 @@ final class PRCockpit: StackbarPlugin {
         VStack(spacing: Space.m) {
             if !loaded {
                 PanelHeader("Pull requests", subtitle: "Checking…", symbol: "arrow.triangle.pull", theme: theme)
-            } else if let lastError, toReview.isEmpty, mine.isEmpty, updatedAt == nil {
-                if lastError.contains("Add a GitHub token") {
-                    EmptyState("Paste a GitHub token above", symbol: "key.fill", message: "A fine-grained token with read access to pull requests, issues and metadata. Add write access to issues to create them from the palette.", theme: theme)
-                } else {
-                    EmptyState("Can't reach GitHub", symbol: "exclamationmark.triangle.fill", message: lastError, theme: .critical) {
-                        ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh() }
-                    }
-                }
+            } else if lastError != nil, toReview.isEmpty, mine.isEmpty, updatedAt == nil {
+                problemState
             } else {
                 PanelHeader(headline, subtitle: "\(shownMine.count) of yours open" + (updatedAt.map { " · updated \($0.formatted(date: .omitted, time: .shortened))" } ?? ""), symbol: "arrow.triangle.pull", theme: theme) {
                     if (shownReview + shownMine).contains(where: isNew) {
@@ -899,6 +1024,7 @@ final class PRCockpit: StackbarPlugin {
                     if inbox.isEmpty {
                         if inboxError == nil { EmptyState("Inbox zero", symbol: "tray", message: "No GitHub notifications.", theme: .success) }
                     } else {
+                        ActionButton("Mark All as Read", symbol: "checkmark.circle", theme: theme, key: "inbox-mark-all") { await self.markAllRead() }
                         List(inbox, searchable: true) { item in inboxRow(item) }
                     }
                 } else if currentTab == .issues {
@@ -910,8 +1036,10 @@ final class PRCockpit: StackbarPlugin {
                     }
                 } else if currentTab == .mine {
                     list(shownMine, showAuthor: false, empty: ("Nothing of yours open", "Pull requests you open show up here."))
+                    if mineTotal > 40 { Text("Showing the 40 most recently updated of \(mineTotal).").style(.caption).role(.secondary) }
                 } else {
                     list(shownReview, showAuthor: true, empty: ("No reviews waiting", "Pull requests that ask for your review show up here."))
+                    if reviewTotal > 40 { Text("Showing the 40 most recently updated of \(reviewTotal).").style(.caption).role(.secondary) }
                 }
                 if hiddenCount > 0 || !hiddenRepos.isEmpty {
                     ActionButton("Show \(hiddenCount) hidden", symbol: "eye", theme: theme, key: "unhide") {
@@ -919,6 +1047,18 @@ final class PRCockpit: StackbarPlugin {
                         self.hiddenRepos = []
                     }
                 }
+            }
+        }
+    }
+
+    /// What to show instead of the lists when none have loaded: how to add a
+    /// token, or why GitHub can't be reached.
+    @ViewBuilder var problemState: ViewContent {
+        if let lastError, lastError.contains("Add a GitHub token") {
+            EmptyState("Paste a GitHub token above", symbol: "key.fill", message: "A fine-grained token with read access to pull requests, issues and metadata. Add write access to issues to create them from the palette.", theme: theme)
+        } else {
+            EmptyState("Can't reach GitHub", symbol: "exclamationmark.triangle.fill", message: lastError, theme: .critical) {
+                ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh() }
             }
         }
     }
@@ -989,7 +1129,17 @@ final class PRCockpit: StackbarPlugin {
 
     /// Both lists side by side in sections, since a window has the room.
     var window: ViewContent {
-        if let lastError { Text(lastError).role(.warning) }
+        if !loaded {
+            PanelHeader("Pull requests", subtitle: "Checking…", symbol: "arrow.triangle.pull", theme: theme)
+        } else if lastError != nil, toReview.isEmpty, mine.isEmpty, updatedAt == nil {
+            problemState
+        } else {
+            windowContent
+        }
+    }
+
+    @ViewBuilder var windowContent: ViewContent {
+        if let lastError { Banner(lastError) }
         List(searchable: true) {
             Section("Waiting on your review (\(shownReview.count))") {
                 ForEach(shownReview) { pr in row(pr, showAuthor: true) }
@@ -1158,6 +1308,20 @@ final class PRCockpit: StackbarPlugin {
                     List(self.shownIssues, searchable: true) { issue in self.issueRow(issue) }
                 }
             }
+        Command("inbox", title: "GitHub Inbox", subtitle: "Mentions, review requests and everything GitHub notifies you about", symbol: "tray", keywords: ["github", "notifications", "mentions", "inbox", "gh"])
+            .view(search: { _ in await self.loadInbox(maxAge: 30) }) { _ in
+                if let inboxError = self.inboxError, self.inbox.isEmpty {
+                    ContentUnavailableView("Can't read your GitHub inbox", symbol: "exclamationmark.triangle", message: inboxError)
+                } else if self.inbox.isEmpty {
+                    ContentUnavailableView("Inbox zero", symbol: "tray")
+                } else {
+                    List(searchable: true) {
+                        ForEach(self.inbox) { item in self.inboxRow(item) }
+                        Row("Mark All as Read", symbol: "checkmark.circle", key: "inbox-mark-all")
+                            .action("Mark All as Read") { await self.markAllRead() }
+                    }
+                }
+            }
         Command("create-issue", title: "Create GitHub Issue", symbol: "plus.circle", keywords: ["github", "issue", "new", "bug", "gh"])
             .argument("repo", placeholder: "Repository", required: false)
             .stackbarOnly()
@@ -1200,17 +1364,20 @@ final class PRCockpit: StackbarPlugin {
             searchError = "Enter your GitHub Enterprise server as GITHUB_ENTERPRISE_URL."
             return
         }
-        guard let token = try await Stackbar.secret("GITHUB_TOKEN") else {
+        guard let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else {
             searchError = "Add a GitHub token to search."
             return
         }
+        noteCredentials(token)
         let escaped = text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
         let query = "query { found: search(query: \"is:pr archived:false involves:@me \(escaped)\", type: ISSUE, first: 30) { nodes { ...pr } } } \(Self.fragment)"
         do {
             let response = try await Stackbar.http(HTTPRequest(url: graphqlURL, method: "POST", headers: [
                 "Authorization": "Bearer \(token)", "Content-Type": "application/json", "Accept": "application/json",
-            ], body: try JSONEncoder().encode(["query": query])))
-            guard (200..<300).contains(response.status) else { throw HostError("GitHub answered \(response.status)") }
+            ], body: try JSONEncoder().encode(["query": query]), timeout: Self.refreshTimeout))
+            guard (200..<300).contains(response.status) else {
+                throw HostError(response.status == 401 ? "GitHub rejected the token (401); set a new GITHUB_TOKEN" : "GitHub answered \(response.status)")
+            }
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let reply = try decoder.decode(SearchReply.self, from: response.body)
@@ -1249,13 +1416,19 @@ final class PRCockpit: StackbarPlugin {
 
     var tools: [AgentTool] {
         AgentTool("review_queue", description: "Pull requests waiting on my review, one per line") { _ in
-            self.toReview.isEmpty ? "No pull requests are waiting on your review." : self.toReview.map { "\($0.id) \($0.title) by \($0.author?.login ?? "?") (\($0.url))" }.joined(separator: "\n")
+            if !self.loaded { try await self.refresh() }
+            if self.toReview.isEmpty && self.mine.isEmpty, let problem = self.lastError { return problem }
+            return self.toReview.isEmpty ? "No pull requests are waiting on your review." : self.toReview.map { "\($0.id) \($0.title) by \($0.author?.login ?? "?") (\($0.url))" }.joined(separator: "\n")
         }
         AgentTool("my_issues", description: "Open GitHub issues assigned to me, one per line") { _ in
-            self.issues.isEmpty ? "No open issues are assigned to you." : self.issues.map { "\($0.reference) \($0.title) (\($0.html_url))" }.joined(separator: "\n")
+            if !self.loaded { try await self.refresh() }
+            if self.issues.isEmpty, !self.issuesLoaded, let problem = self.issuesError ?? self.lastError { return problem }
+            return self.issues.isEmpty ? "No open issues are assigned to you." : self.issues.map { "\($0.reference) \($0.title) (\($0.html_url))" }.joined(separator: "\n")
         }
         AgentTool("my_pull_requests", description: "My open pull requests with their checks and review state, one per line") { _ in
-            self.mine.isEmpty ? "You have no open pull requests." : self.mine.map { pr in
+            if !self.loaded { try await self.refresh() }
+            if self.toReview.isEmpty && self.mine.isEmpty, let problem = self.lastError { return problem }
+            return self.mine.isEmpty ? "You have no open pull requests." : self.mine.map { pr in
                 "\(pr.id) \(pr.title): checks \(pr.checks?.lowercased() ?? "none"), review \(pr.reviewDecision?.lowercased().replacingOccurrences(of: "_", with: " ") ?? "none")\(pr.mergeable == "CONFLICTING" ? ", has conflicts" : "") (\(pr.url))"
             }.joined(separator: "\n")
         }

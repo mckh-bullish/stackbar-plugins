@@ -39,5 +39,10 @@
     "preview": "hero",
     "surface": "panel",
     "steps": ["--wait", "1", "--wait", "1", "--wait", "1"]
+  },
+  "io.navbytes.stackbar.plugins.system-commands": {
+    "preview": "hero",
+    "surface": "panel",
+    "steps": ["--hold", "1.5", "--event", "row/restart/Restart", "--hold", "2.5"]
   }
 }

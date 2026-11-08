@@ -15,12 +15,12 @@ final class Linear: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.linear",
         name: "Linear",
-        version: "1.5.1",
+        version: "1.6.0",
         summary: "Your assigned Linear issues and inbox: change status and priority, start work, comment, and new issues from the palette.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("api.linear.app"), .secret(name: "LINEAR_API_KEY")],
-        minimumStackbar: "0.21.0",
+        minimumStackbar: "0.22.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
         accent: .indigo,
         symbol: "circle.lefthalf.filled"
@@ -138,12 +138,16 @@ final class Linear: StackbarPlugin {
 
     var assigned: [Issue] = []
     var found: [Issue] = []
+    /// The title search `found` answers, so typing it again asks Linear nothing.
+    var foundText: String?
     /// The issue an identifier typed at the palette's root names.
     var keyed: [String: Issue] = [:]
     /// When each identifier that wasn't found (or failed to load) was asked
     /// for, and why a failed one failed.
     var lookupMisses: [String: Date] = [:]
     var lookupProblems: [String: String] = [:]
+    /// When Mark All as Read was first pressed; a second press within 10 s does it.
+    var markAllArmed: Date?
     @Stored("teams") var teams: [Team] = []
     @Stored("defaultTeam") var defaultTeam = ""
     @Stored("menuBarCount") var menuBarCount = "In progress"
@@ -152,6 +156,8 @@ final class Linear: StackbarPlugin {
     /// refresh only remembers.
     @Stored("seenInbox") var seenInbox: [String] = []
     @Stored("seenReady") var seenReady = false
+    /// The user the seen entries belong to, so a key for another account starts over.
+    @Stored("viewer") var seenViewer = ""
     var inbox: [InboxItem] = []
     var states: [String: [WorkflowState]] = [:]
     var viewerID: String?
@@ -175,7 +181,7 @@ final class Linear: StackbarPlugin {
         let body = try JSONSerialization.data(withJSONObject: ["query": text, "variables": variables])
         let response = try await Stackbar.http(HTTPRequest(url: "https://api.linear.app/graphql", method: "POST", headers: [
             "Authorization": key, "Content-Type": "application/json",
-        ], body: body))
+        ], body: body, timeout: 15))
         guard response.status != 401 else { throw HostError("Linear rejected the API key (401); set a new LINEAR_API_KEY") }
         guard (200..<300).contains(response.status) || response.status == 400 else { throw HostError("Linear answered \(response.status)") }
         let reply = try JSONDecoder().decode(GraphQLReply<T>.self, from: response.body)
@@ -188,7 +194,7 @@ final class Linear: StackbarPlugin {
     var refreshed: Date?
 
     func refresh(maxAge: TimeInterval) async throws {
-        if problem == nil, loaded, let at = refreshed, Date().timeIntervalSince(at) < maxAge { return }
+        if loaded, let at = refreshed, Date().timeIntervalSince(at) < (problem == nil ? maxAge : max(maxAge, 30)) { return }
         try await refresh()
     }
 
@@ -249,6 +255,10 @@ final class Linear: StackbarPlugin {
                 assigned += (try? await moreAssigned(after: cursor)) ?? []
             }
             viewerID = data.viewer.id
+            if !seenViewer.isEmpty, seenViewer != data.viewer.id {
+                seenReady = false; states = [:]; keyed = [:]; lookupMisses = [:]; lookupProblems = [:]; found = []; foundText = nil
+            }
+            if seenViewer != data.viewer.id { seenViewer = data.viewer.id }
             teams = data.teams.nodes
             // Archived and snoozed entries come back too; unread issue ones are the inbox.
             inbox = data.notifications.nodes.filter { $0.issue != nil }
@@ -264,21 +274,27 @@ final class Linear: StackbarPlugin {
     /// searches titles. A failure says why instead of an empty list.
     func search(_ text: String) async {
         let term = text.trimmingCharacters(in: .whitespaces)
-        guard term.count >= 2 else { found = []; searchProblem = nil; return }
+        guard term.count >= 2 else { found = []; searchProblem = nil; foundText = nil; return }
         if let identifier = Self.identifier(in: term) {
+            foundText = nil
             await lookUp(identifier: identifier)
             found = keyed[identifier].map { [$0] } ?? []
             searchProblem = found.isEmpty ? (lookupProblems[identifier].map { "Couldn't look up \(identifier): \($0)" } ?? "No issue \(identifier)") : nil
             return
         }
+        // Asked once typing pauses; retyping the text it last found asks nothing.
+        if term == foundText, searchProblem == nil { return }
+        try? await Task.sleep(for: .milliseconds(250))
         struct Data: Decodable { struct Issues: Decodable { let nodes: [Issue] }; let issues: Issues }
         do {
             let data = try await query("query($term: String!) { issues(first: 25, orderBy: updatedAt, filter: { title: { containsIgnoreCase: $term } }) { nodes { \(Self.fields) } } }", variables: ["term": term], as: Data.self)
             found = data.issues.nodes
             searchProblem = nil
+            foundText = term
         } catch {
             found = []
             searchProblem = "\(error)"
+            foundText = nil
         }
     }
 
@@ -323,6 +339,28 @@ final class Linear: StackbarPlugin {
         }
     }
 
+    /// Marks up to 30 unread inbox entries as read. The first press only asks
+    /// for a second within 10 seconds, as the other bulk actions do.
+    func markAllRead() async {
+        guard let armed = markAllArmed, Date().timeIntervalSince(armed) < 10 else {
+            markAllArmed = Date()
+            Stackbar.hud("Press again within 10 s to mark \(min(unread.count, 30)) as read")
+            return
+        }
+        markAllArmed = nil
+        var done = 0
+        for item in Array(unread.prefix(30)) {
+            do {
+                try await markRead(item)
+                done += 1
+            } catch {
+                Stackbar.hud("Marked \(done), then: \(error)", isError: true)
+                return
+            }
+        }
+        Stackbar.hud("Marked \(done) as read")
+    }
+
     func inboxRow(_ item: InboxItem) -> Row {
         let issue = item.issue
         let when = Self.date(item.createdAt).map { Self.ago($0) } ?? ""
@@ -337,11 +375,12 @@ final class Linear: StackbarPlugin {
             .action("Copy ID", shortcut: "cmd+shift+c") { if let id = issue?.identifier { Stackbar.copy(id) } }
     }
 
+    static let fractionalStyle = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+    static let plainStyle = Date.ISO8601FormatStyle()
     /// Linear's timestamps carry milliseconds (`2026-11-03T10:15:30.123Z`),
     /// which the default formatter rejects; plain ones are accepted too.
     static func date(_ text: String) -> Date? {
-        let fractional = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
-        return (try? fractional.parse(text)) ?? (try? Date.ISO8601FormatStyle().parse(text))
+        (try? fractionalStyle.parse(text)) ?? (try? plainStyle.parse(text))
     }
 
     static func ago(_ date: Date) -> String {
@@ -530,20 +569,28 @@ final class Linear: StackbarPlugin {
 
     let theme = Theme.indigo
     var urgent: Int { assigned.filter { $0.priority == 1 }.count }
+    /// No API key yet: a setup prompt, not a failure.
+    var needsKey: Bool { (problem?.contains("LINEAR_API_KEY") ?? false) && !(problem?.contains("401") ?? false) }
 
     /// In progress first, then the rest assigned; a click opens the issue.
     var widget: ViewContent {
-        PanelHeader(inProgress.isEmpty ? "\(assigned.count) assigned" : "\(inProgress.count) in progress", subtitle: "Linear", symbol: "checklist", theme: theme)
-        if assigned.isEmpty {
-            EmptyState(problem == nil ? "Nothing assigned" : "Can't reach Linear", symbol: "checkmark.circle", theme: theme)
+        if needsKey {
+            EmptyState("Connect Linear", symbol: "key.fill", message: "Add your Linear API key in Stackbar.", theme: theme)
         } else {
-            List(inProgress + assigned.filter { $0.state.type != "started" }) { issue in self.row(issue) }
+            PanelHeader(inProgress.isEmpty ? "\(assigned.count) assigned" : "\(inProgress.count) in progress", subtitle: "Linear", symbol: "checklist", theme: theme)
+            if assigned.isEmpty {
+                EmptyState(problem == nil ? "Nothing assigned" : "Can't reach Linear", symbol: "checkmark.circle", theme: theme)
+            } else {
+                List(inProgress + assigned.filter { $0.state.type != "started" }) { issue in self.row(issue) }
+            }
         }
     }
 
     var menuBar: ViewContent {
         let count = menuBarCount == "All assigned" ? assigned.count : inProgress.count
-        if problem != nil, loaded {
+        if needsKey {
+            Label("", symbol: "checklist").role(.secondary)
+        } else if problem != nil, loaded {
             Label("", symbol: "checklist").role(.warning)
         } else if !unread.isEmpty {
             Label("\(unread.count)", symbol: "bell.badge.fill").role(.warning)
@@ -559,7 +606,7 @@ final class Linear: StackbarPlugin {
             if !loaded {
                 PanelHeader("Linear", subtitle: "Checking…", symbol: "checklist", theme: theme)
             } else if let problem, assigned.isEmpty {
-                if problem.contains("LINEAR_API_KEY") && !problem.contains("401") {
+                if needsKey {
                     EmptyState("Connect Linear", symbol: "key.fill", message: "Create a personal API key in Linear under Settings > Security & access. Stackbar asks for it once and keeps it in your Keychain.", theme: theme) {
                         ActionButton("Add API Key", symbol: "key.fill", theme: theme, prominent: true) { try await self.refresh() }
                     }
@@ -582,7 +629,10 @@ final class Linear: StackbarPlugin {
                 }
                 if let problem { Banner(problem) }
                 if !unread.isEmpty {
-                    Section("Inbox · \(unread.count) new") { ForEach(Array(unread.prefix(5))) { item in self.inboxRow(item) } }
+                    Section("Inbox · \(unread.count) new") {
+                        ActionButton("Mark All as Read", symbol: "checkmark.circle", theme: theme, key: "inbox-mark-all") { await self.markAllRead() }
+                        ForEach(Array(unread.prefix(5))) { item in self.inboxRow(item) }
+                    }
                 }
                 if assigned.isEmpty {
                     EmptyState("Nothing assigned to you", symbol: "checkmark", theme: .success)
@@ -635,7 +685,7 @@ final class Linear: StackbarPlugin {
             }
         Command("search", title: "Search Linear Issues", symbol: "magnifyingglass", keywords: ["linear", "issue", "find"])
             .view(search: { invocation in await self.search(invocation.text) }) { invocation in
-                if invocation.text.count < 2 {
+                if invocation.text.trimmingCharacters(in: .whitespaces).count < 2 {
                     ContentUnavailableView("Type to search titles, or paste an ID or link", symbol: "magnifyingglass")
                 } else if let problem = self.searchProblem, self.found.isEmpty {
                     ContentUnavailableView("Can't search Linear", symbol: "exclamationmark.triangle", message: problem)
@@ -652,7 +702,13 @@ final class Linear: StackbarPlugin {
                 } else if self.inbox.isEmpty {
                     ContentUnavailableView("Inbox zero", symbol: "tray")
                 } else {
-                    List(self.inbox, searchable: true) { item in self.inboxRow(item) }
+                    List(searchable: true) {
+                        ForEach(self.inbox) { item in self.inboxRow(item) }
+                        if !self.unread.isEmpty {
+                            Row("Mark All as Read", symbol: "checkmark.circle", key: "inbox-mark-all")
+                                .action("Mark All as Read") { await self.markAllRead() }
+                        }
+                    }
                 }
             }
         Command("status", title: "Change Linear Issue Status", symbol: "arrow.triangle.swap", keywords: ["linear", "state", "move", "done"])

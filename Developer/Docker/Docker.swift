@@ -15,7 +15,7 @@ final class Docker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.docker",
         name: "Docker",
-        version: "1.7.1",
+        version: "1.8.0",
         summary: "Your containers with live CPU and memory, Compose projects, and start, stop, restart and logs a click away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
@@ -39,11 +39,31 @@ final class Docker: StackbarPlugin {
             plugin.crashedIDs = ["c6"]
             plugin.loaded = true
         },
+        PreviewScene("logs", "Follow a container's logs beside your editor", surface: .window) { plugin in
+            plugin.containers = samples
+            plugin.stats = sampleStats
+            plugin.loaded = true
+            plugin.watched = "c2"
+            plugin.logs["c2"] = sampleLogs
+        },
         PreviewScene("widget", "Your stack's health on the desktop", surface: .widget) { plugin in
             plugin.containers = samples
             plugin.loaded = true
         },
     ]
+
+    static let sampleLogs = """
+    2026-11-07T10:42:01.123Z GET /api/orders 200 12ms
+    2026-11-07T10:42:01.980Z POST /api/cart 201 31ms
+    2026-11-07T10:42:02.415Z GET /api/products?page=2 200 9ms
+    2026-11-07T10:42:03.007Z WARN slow query 840ms: select * from orders
+    2026-11-07T10:42:03.512Z GET /healthz 200 1ms
+    2026-11-07T10:42:04.260Z POST /api/checkout 500 118ms
+    2026-11-07T10:42:04.261Z ERROR payment provider timeout
+    2026-11-07T10:42:05.044Z GET /api/orders/5810 200 14ms
+    2026-11-07T10:42:06.390Z GET /api/session 304 3ms
+    2026-11-07T10:42:07.118Z POST /api/cart 201 27ms
+    """
 
     static let samples: [Container] = {
         func container(_ id: String, _ name: String, _ image: String, _ state: String, _ status: String, _ ports: String?, project: String?) -> Container {
@@ -177,8 +197,15 @@ final class Docker: StackbarPlugin {
     var crashedIDs: Set<String> = []
     /// Containers this plugin is stopping, so their exit isn't a crash.
     var stopping: Set<String> = []
+    /// The destructive action pressed once, waiting for a second press.
+    var armed: String?
+    var armedAt = Date.distantPast
+    static let armWindow: TimeInterval = 10
+    var armedNow: String? { armed.flatMap { Date().timeIntervalSince(armedAt) < Self.armWindow ? $0 : nil } }
+    func arm(_ id: String) { armed = id; armedAt = Date() }
 
     var running: [Container] { containers.filter(\.isRunning) }
+    var prunable: [Container] { containers.filter { !$0.isRunning && $0.state != "paused" } }
     var shown: [Container] { showStopped ? containers : running }
 
     func refresh() async throws {
@@ -228,7 +255,11 @@ final class Docker: StackbarPlugin {
     /// second or two, so only while something runs.
     func loadStats() async {
         guard !running.isEmpty else { stats = [:]; return }
-        guard let result = try? await Stackbar.run("docker", ["stats", "--no-stream", "--no-trunc", "--format", "{{json .}}"], timeout: .seconds(20)), result.succeeded else { return }
+        guard let result = try? await Stackbar.run("docker", ["stats", "--no-stream", "--no-trunc", "--format", "{{json .}}"], timeout: .seconds(20)), result.succeeded else {
+            // Keep the numbers of containers still running; the rest have stopped.
+            stats = stats.filter { id, _ in self.running.contains { $0.id == id } }
+            return
+        }
         let decoder = JSONDecoder()
         var fresh: [String: Stats] = [:]
         for line in result.text.split(separator: "\n") {
@@ -254,6 +285,7 @@ final class Docker: StackbarPlugin {
     func compose(_ verb: String, project: String) async throws {
         let members = containers.filter { $0.project == project }
         busyText = "\(["stop": "Stopping", "start": "Starting", "restart": "Restarting"][verb] ?? verb) \(project)…"
+        Stackbar.hud(busyText ?? "")
         if verb != "start" { stopping.formUnion(members.map(\.id)) }
         members.forEach { busy.insert($0.id) }
         defer {
@@ -266,16 +298,25 @@ final class Docker: StackbarPlugin {
         await load()
     }
 
-    /// Stops every running container at once.
-    func stopAll() async throws -> String {
-        let ids = running.map(\.id)
+    /// The ids a confirm row showed, if each one still qualifies after a fresh
+    /// read. Nil when the list has changed, and the row then does nothing.
+    func stillListed(_ shown: [String], among now: () -> [Container]) async throws -> [String]? {
+        await load()
+        if let problem { throw HostError(problem) }
+        let current = Set(now().map(\.id))
+        return shown.allSatisfy(current.contains) ? shown : nil
+    }
+
+    /// Stops the given containers at once.
+    func stopAll(_ ids: [String]) async throws -> String {
         guard !ids.isEmpty else { return "Nothing is running" }
         busyText = "Stopping \(ids.count) container\(ids.count == 1 ? "" : "s")…"
+        Stackbar.hud(busyText ?? "")
         stopping.formUnion(ids)
         defer { busyText = nil; stopping.subtract(ids) }
         let result = try await Stackbar.run("docker", ["stop"] + ids, timeout: .seconds(180))
-        guard result.succeeded else { throw HostError(Self.explain(result)) }
         await load()
+        guard result.succeeded else { throw HostError(Self.explain(result)) }
         return "Stopped \(ids.count) container\(ids.count == 1 ? "" : "s")"
     }
 
@@ -284,19 +325,28 @@ final class Docker: StackbarPlugin {
     func noticeTrouble(from old: [Container], to new: [Container]) {
         let before = Dictionary(old.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var lines: [String] = []
+        var ids: [String] = []
         for container in new {
             guard let was = before[container.id] else { continue }
             if was.isRunning, container.crashed, !stopping.contains(container.id) {
                 crashedIDs.insert(container.id)
                 lines.append("\(container.name) crashed (exit \(container.exitCode ?? 0))")
+                ids.append(container.id)
             } else if container.isUnhealthy, !was.isUnhealthy {
                 lines.append("\(container.name) is unhealthy")
+                ids.append(container.id)
             } else if container.state == "restarting", was.state != "restarting" {
                 lines.append("\(container.name) keeps restarting")
+                ids.append(container.id)
             }
         }
         guard notifyTrouble, !lines.isEmpty else { return }
-        Stackbar.notify(lines.count == 1 ? lines[0] : "\(lines.count) containers need a look", body: lines.count == 1 ? "Open Docker in the menu bar for its logs." : lines.joined(separator: "\n"))
+        if lines.count == 1 {
+            Stackbar.notify(lines[0], body: "Open Docker in the menu bar for its logs.",
+                            actions: [NotificationAction("Show Logs", command: "logs", arguments: ["container": ids[0]])])
+        } else {
+            Stackbar.notify("\(lines.count) containers need a look", body: lines.joined(separator: "\n"))
+        }
     }
 
     /// Containers that need a look: unhealthy, restarting, or crashed.
@@ -306,7 +356,8 @@ final class Docker: StackbarPlugin {
 
     static func explain(_ result: RunResult) -> String {
         let text = result.errorText
-        if text.contains("Cannot connect to the Docker daemon") || text.contains("docker daemon running") || text.contains("connect: no such file") {
+        if text.contains("Cannot connect to the Docker daemon") || text.contains("docker daemon running") || text.contains("connect: no such file")
+            || text.contains("failed to connect to the docker API") || text.contains("connection refused") || text.contains("Is the docker daemon running") {
             return "Docker isn't running. Start Docker Desktop, OrbStack or Colima."
         }
         if result.timedOut { return "docker took too long to answer" }
@@ -315,7 +366,8 @@ final class Docker: StackbarPlugin {
 
     func act(_ verb: String, _ container: Container) async throws {
         busy.insert(container.id)
-        busyText = "\(["stop": "Stopping", "start": "Starting", "restart": "Restarting", "rm": "Removing"][verb] ?? verb) \(container.name)…"
+        busyText = "\(["stop": "Stopping", "start": "Starting", "restart": "Restarting", "unpause": "Resuming", "rm": "Removing"][verb] ?? verb) \(container.name)…"
+        Stackbar.hud(busyText ?? "Working…")
         if verb == "stop" || verb == "restart" { stopping.insert(container.id) }
         defer {
             busy.remove(container.id)
@@ -520,7 +572,9 @@ final class Docker: StackbarPlugin {
 
     func row(_ container: Container) -> Row {
         var row = Row(container.name, subtitle: "\(container.shortImage) · \(container.status.replacingOccurrences(of: " (unhealthy)", with: "").replacingOccurrences(of: " (healthy)", with: ""))", symbol: container.isRunning ? "circle.fill" : "circle", key: container.id)
-        if busy.contains(container.id) {
+        if armedNow == "rm:\(container.id)" {
+            row = row.badge("press Remove again", role: .critical)
+        } else if busy.contains(container.id) {
             row = row.badge("…")
         } else if container.isUnhealthy {
             row = row.badge("unhealthy", role: .critical)
@@ -547,6 +601,10 @@ final class Docker: StackbarPlugin {
                     // bash when the image has it, sh otherwise.
                     try await Stackbar.openInTerminal(["docker", "exec", "-it", container.name, "sh", "-c", "command -v bash >/dev/null && exec bash || exec sh"], title: container.name)
                 }
+        } else if container.state == "paused" {
+            row = row
+                .action("Resume", shortcut: "cmd+return") { try await self.act("unpause", container) }
+                .action("Stop", shortcut: "cmd+.") { try await self.act("stop", container) }
         } else {
             row = row.action("Start", shortcut: "cmd+return") { try await self.act("start", container) }
         }
@@ -555,7 +613,13 @@ final class Docker: StackbarPlugin {
             .action("Copy ID", shortcut: "cmd+shift+c") { Stackbar.copy(String(container.id.prefix(12))) }
             .action("Copy Exec Command") { Stackbar.copy("docker exec -it \(container.name) sh") }
             .action("Remove", shortcut: "ctrl+x", role: .critical) {
-                guard !container.isRunning else { throw HostError("Stop \(container.name) before removing it") }
+                guard !container.isRunning, container.state != "paused" else { throw HostError("Stop \(container.name) before removing it") }
+                guard self.armedNow == "rm:\(container.id)" else {
+                    self.arm("rm:\(container.id)")
+                    Stackbar.hud("Press Remove again within 10 s to delete \(container.name)")
+                    return
+                }
+                self.armed = nil
                 try await self.act("rm", container)
             }
     }
@@ -568,16 +632,32 @@ final class Docker: StackbarPlugin {
             Toggle("When a container crashes, turns unhealthy or keeps restarting", isOn: notifyTrouble) { self.notifyTrouble = $0 }
         }
         Section("Cleanup") {
-            Button("Remove Stopped Containers", symbol: "trash", role: .critical) { _ = try await self.prune() }
-            Text("Runs docker container prune. Images and volumes are left alone.").style(.caption)
+            if armedNow == "prune" {
+                let shown = prunable.map(\.id)
+                Button("Click Again to Remove \(shown.count) Stopped Containers", symbol: "trash", role: .critical, key: "prune") {
+                    guard self.armedNow == "prune" else { return self.arm("prune") }
+                    self.armed = nil
+                    guard let ids = try await self.stillListed(shown, among: { self.prunable }) else {
+                        Stackbar.hud("The list changed; open it again")
+                        return
+                    }
+                    Stackbar.hud(try await self.prune(ids))
+                }
+            } else {
+                Button("Remove Stopped Containers", symbol: "trash", role: .critical, key: "prune") { self.arm("prune") }
+            }
+            Text("Removes stopped containers with docker rm. Images and volumes are left alone.").style(.caption)
         }
     }
 
-    func prune() async throws -> String {
-        let result = try await Stackbar.run("docker", ["container", "prune", "--force"], timeout: .seconds(120))
-        guard result.succeeded else { throw HostError(Self.explain(result)) }
+    /// Removes the given stopped containers with `docker rm`, which refuses one
+    /// that is still running.
+    func prune(_ ids: [String]) async throws -> String {
+        guard !ids.isEmpty else { return "No stopped containers" }
+        let result = try await Stackbar.run("docker", ["rm"] + ids, timeout: .seconds(120))
         await load()
-        return result.text.split(separator: "\n").last.map(String.init) ?? "Removed stopped containers"
+        guard result.succeeded else { throw HostError(Self.explain(result)) }
+        return "Removed \(ids.count) stopped container\(ids.count == 1 ? "" : "s")"
     }
 
     // MARK: Commands
@@ -625,13 +705,47 @@ final class Docker: StackbarPlugin {
                     List(self.composeProjects.map { ComposeProject(id: $0.name, containers: $0.containers) }, searchable: true) { project in self.projectRow(project) }
                 }
             }
-        Command("stop-all", title: "Stop All Docker Containers", symbol: "stop.circle", keywords: ["docker", "stop", "containers", "all"]) { _ in
-            .message(try await self.stopAll())
-        }
-        Command("prune", title: "Remove Stopped Docker Containers", symbol: "trash", keywords: ["docker", "prune", "clean"]) { _ in
-            .message(try await self.prune())
-        }
-        .stackbarOnly()
+        Command("stop-all", title: "Stop All Docker Containers", symbol: "stop.circle", keywords: ["docker", "stop", "containers", "all"])
+            .view(search: { _ in await self.loadIfStale() }) { _ in
+                if let problem = self.problem {
+                    ContentUnavailableView("Docker isn't available", symbol: "shippingbox", message: problem)
+                } else if self.running.isEmpty {
+                    ContentUnavailableView("Nothing is running", symbol: "moon.zzz")
+                } else {
+                    let shown = self.running
+                    List {
+                        Row("Stop \(shown.count) container\(shown.count == 1 ? "" : "s") now", subtitle: shown.map(\.name).joined(separator: ", "), symbol: "stop.circle", key: "confirm")
+                            .action("Stop All", role: .critical) {
+                                guard let ids = try await self.stillListed(shown.map(\.id), among: { self.running }) else {
+                                    Stackbar.hud("The list changed; open it again")
+                                    return
+                                }
+                                Stackbar.hud(try await self.stopAll(ids))
+                            }
+                    }
+                }
+            }
+        Command("prune", title: "Remove Stopped Docker Containers", symbol: "trash", keywords: ["docker", "prune", "clean"])
+            .view(search: { _ in await self.loadIfStale() }) { _ in
+                if let problem = self.problem {
+                    ContentUnavailableView("Docker isn't available", symbol: "shippingbox", message: problem)
+                } else if self.prunable.isEmpty {
+                    ContentUnavailableView("No stopped containers", symbol: "trash")
+                } else {
+                    let shown = self.prunable
+                    List {
+                        Row("Remove \(shown.count) stopped container\(shown.count == 1 ? "" : "s") now", subtitle: shown.map(\.name).joined(separator: ", "), symbol: "trash", key: "confirm")
+                            .action("Remove", role: .critical) {
+                                guard let ids = try await self.stillListed(shown.map(\.id), among: { self.prunable }) else {
+                                    Stackbar.hud("The list changed; open it again")
+                                    return
+                                }
+                                Stackbar.hud(try await self.prune(ids))
+                            }
+                    }
+                }
+            }
+            .stackbarOnly()
     }
 
     func projectRow(_ project: ComposeProject) -> Row {

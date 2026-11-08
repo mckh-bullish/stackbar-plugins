@@ -4,7 +4,7 @@ Sums, unit and currency conversions and times across zones, answered right in
 the command palette. Type `12*(3+4)`, `2^10`, `15% * 80`, `sqrt(2)`,
 `3h in min`, `72 f to c`, `5 km in mi`, `100 usd in eur`, `$50 to gbp`,
 `5pm london in tokyo` or `now in sf`, and the answer comes first in the
-results. Return copies it and ⌘Return pastes it. Plain numbers and words get
+results. Return copies it. Plain numbers and words get
 no answer, so it never crowds a normal search. The panel keeps your last ten
 answers.
 
@@ -14,7 +14,7 @@ answers.
   network requests at all.
 - **Surfaces:** panel, settings.
 - **Commands:** Calculate.
-- **Units:** length, mass, time, data, volume and temperature, including
+- **Units:** length, mass, time, data, volume, speed and temperature, including
   mixed amounts such as `5 ft 10 in to cm` or `1h 30min in min`.
 - **Currencies:** the European Central Bank's reference rates (about 30
   currencies, updated each working day) from Frankfurter, fetched at launch
@@ -23,6 +23,17 @@ answers.
 - **Time zones:** any city in a time zone's name (`tokyo`, `new york`), plus
   common ones like `sf`, `nyc`, `bangalore`, `uk` and abbreviations like
   `pst` and `ist`. Without a starting place, the time is yours.
+
+## What's new in 1.6.0
+
+- Adding or taking off a percent works the way you'd expect: 100 + 10% is 110 and 200 - 15% is 170.
+- Speeds: 60 mph in km/h, 10 m/s in mph, knots.
+- The constant e works, as in 2*e or e^2.
+- On a Mac that writes decimal commas, answers use a decimal comma too, so they paste straight into your spreadsheet.
+- Opening Calculate with nothing typed lists your recent answers.
+- A currency sum with no exchange rates says why (offline, or conversion turned off), and dividing by zero says so, instead of asking for a sum.
+- Accented city names work: now in são paulo.
+- Removed Paste Answer, which never worked: Calculator has no clipboard access. Return still copies the answer.
 
 ## What's new in 1.5.0
 

@@ -30,8 +30,18 @@ share its selection, it uses what you last copied.
   language, and DeepL's formality.
 - **Commands:** Translate Selection, Translate Text on Screen (drag over
   any text, even in an image or a video; the translation is copied),
-  Translate Selection in Google Translate.
+  Translate Selection in Google Translate, Translate and Replace Selection
+  (pastes the translation over what you selected).
 - **Requires:** Stackbar 0.26.0 or later.
+
+## What's new in 1.7.0
+
+- Translate and Replace Selection pastes the translation straight over the text you selected.
+- Translate and Replace Selection won't replace a selection longer than 5,000 characters when Google or DeepL translates it, so nothing is lost; select less text.
+- Long texts in Chinese, Japanese, Korean and other non-Latin scripts translate with Google instead of failing with an error.
+- Text that is already in your main language goes straight to your second language, so it stays on your Mac when that pair is downloaded instead of going to Google first.
+- A DeepL key pasted with a stray space or line break now works, and a rejected key says which DeepL server it tried.
+- The language name on a translation is easier to read in light and dark mode.
 
 ## What's new in 1.6.1
 

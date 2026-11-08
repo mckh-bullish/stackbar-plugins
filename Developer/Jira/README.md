@@ -10,20 +10,28 @@ first.
   in Settings. On Data Center, `JIRA_SERVER_URL` is your server's address and
   `JIRA_API_TOKEN` a personal access token; the plugin reaches that server
   and no other.
-- **Surfaces:** menu bar, panel, settings.
+- **Surfaces:** menu bar, panel, widget, settings.
 - **On each issue:** Open, Change Status (the issue's own workflow), Comment,
   Assign to Me (on issues that aren't yours yet), Watch, Copy Link, Copy Key,
   Copy Branch Name (`ABC-123-short-summary`, which Jira's development panel
   links).
 - **Notifications:** when an issue is newly assigned to you; Highest and
   Blocker issues say so in the title. Turn it off in Settings.
-- **Commands:** My Jira Issues, Search Jira (text, or a key like `ABC-123`),
-  Change Jira Issue Status, Comment on Jira Issue, Create Jira Issue
-  (project, type, summary, description).
+- **Commands:** My Jira Issues, Search Jira (text, a key like `ABC-123`, or a
+  pasted issue link), Change Jira Issue Status, Comment on Jira Issue, Create
+  Jira Issue (project, type, summary, description).
 - **Settings:** Cloud or Data Center, site, email, the JQL behind the menu
   bar and panel (open issues assigned to you by default), notifications,
   and the default project for new issues.
 - **Agent tool:** `assigned` lists your open issues.
+
+## What's new in 1.6.0
+
+- Paste a Jira issue link into Search Jira to open that issue.
+- Switching to another API token no longer announces every issue on that account as newly assigned, and Assign to Me and Watch act as the new account.
+- Projects created since you set up Jira show up in Create Jira Issue (the list refreshes hourly).
+- Search Jira waits until you pause typing instead of asking Jira on every keystroke.
+- A slow or unreachable Jira holds up clicks for less time.
 
 ## What's new in 1.5.1
 

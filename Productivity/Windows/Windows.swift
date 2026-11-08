@@ -17,7 +17,7 @@ final class Windows: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.workspaces",
         name: "Windows",
-        version: "2.0.0",
+        version: "2.1.0",
         summary: "Snap the front window to halves, thirds or quarters, and save where your windows go for each monitor setup.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .wake, .displays],
@@ -37,6 +37,15 @@ final class Windows: StackbarPlugin {
             try await plugin.refresh()
             for name in ["Coding", "Writing", "Meetings"] { _ = await plugin.save(name) }
             plugin.notice = "Safari: Left Half"
+        },
+        PreviewScene("restored", "Back where they were, apps opened for you") { plugin in
+            try await plugin.refresh()
+            await plugin.save("Desk")
+            plugin.notice = "Restored “Desk”: moved 3 windows; opened Xcode; 1 window not open (Slack)"
+        },
+        PreviewScene("settings", "Gaps, auto-restore and more", surface: .settings) { plugin in
+            try await plugin.refresh()
+            plugin.gap = 8
         },
     ]
 
@@ -67,12 +76,21 @@ final class Windows: StackbarPlugin {
     @Stored("lastSetup") var lastSetup = ""
     /// Space left between a snapped window and the screen's edges, in points.
     @Stored("gap") var gap = 0.0
+    /// Pressing a half again steps through two thirds and one third, as Rectangle does.
+    @Stored("cycleSizes") var cycleSizes = true
     /// Where each window was before its last snap, by app and title.
     var previous: [String: WindowRect] = [:]
+    /// Where each window's last snap left it, and which snap that was: a half
+    /// pressed again on that frame is the next step of a cycle.
+    var placed: [String: (snap: String, frame: WindowRect)] = [:]
 
     var snapshot: WindowSnapshot?
     var problem: String?
     var notice: String?
+    /// The layout (or "all") whose delete waits for a second click, and when it was armed.
+    var armedDelete: String?
+    var armedDeleteAt = Date.distantPast
+    func isArmed(_ id: String) -> Bool { armedDelete == id && Date().timeIntervalSince(armedDeleteAt) < 10 }
 
     func refresh() async throws {
         let reason = Stackbar.refreshReason
@@ -159,8 +177,10 @@ final class Windows: StackbarPlugin {
     }
 
     func restore(_ layout: Layout, automatic: Bool = false) async -> CommandResult {
+        _ = await look()
+        let placements = snapshot.map { Self.fitted(layout.placements, to: $0) } ?? layout.placements
         do {
-            let result = try await Stackbar.arrangeWindows(layout.placements, launch: openApps)
+            let result = try await Stackbar.arrangeWindows(placements, launch: openApps)
             _ = await look()
             let text = Self.describe(result, layout: layout, automatic: automatic)
             notice = text
@@ -205,7 +225,7 @@ final class Windows: StackbarPlugin {
         var unique: [String] = []
         for name in names where !unique.contains(name) { unique.append(name) }
         if unique.count > 3 { return unique.prefix(2).joined(separator: ", ") + " and \(unique.count - 2) more" }
-        if unique.count > 1 { return unique.dropLast().joined(separator: ", ") + " and " + unique.last! }
+        if unique.count > 1 { return unique.dropLast().joined(separator: ", ") + " and " + (unique.last ?? "") }
         return unique.first ?? ""
     }
 
@@ -244,6 +264,7 @@ final class Windows: StackbarPlugin {
         Snap(id: "almost-maximize", title: "Almost Maximize", symbol: "rectangle.inset.filled", group: "Screen", keywords: ["fill", "large"], unit: (0.05, 0.05, 0.9, 0.9)),
         Snap(id: "center", title: "Center", symbol: "rectangle.center.inset.filled", group: "Screen", keywords: ["middle"]),
         Snap(id: "next-display", title: "Next Display", symbol: "rectangle.portrait.and.arrow.forward", group: "Screen", keywords: ["monitor", "screen", "move"]),
+        Snap(id: "previous-display", title: "Previous Display", symbol: "arrow.left.to.line", group: "Screen", keywords: ["monitor", "screen", "move", "back"]),
         Snap(id: "undo-snap", title: "Undo Snap", symbol: "arrow.uturn.backward", group: "Screen", keywords: ["restore", "undo", "back"]),
     ]
 
@@ -288,6 +309,53 @@ final class Windows: StackbarPlugin {
         )
     }
 
+    /// The four halves: the snaps that cycle through two thirds and one third.
+    static let halfIDs: Set<String> = ["left-half", "right-half", "top-half", "bottom-half"]
+
+    /// The part of the screen a half covers when it is `fraction` of the
+    /// screen's width (or height) on its side.
+    static func halfUnit(_ id: String, _ fraction: Double) -> (x: Double, y: Double, width: Double, height: Double)? {
+        switch id {
+        case "left-half": return (0, 0, fraction, 1)
+        case "right-half": return (1 - fraction, 0, fraction, 1)
+        case "top-half": return (0, 0, 1, fraction)
+        case "bottom-half": return (0, 1 - fraction, 1, fraction)
+        default: return nil
+        }
+    }
+
+    /// A half pressed again steps through a half, two thirds and one third on
+    /// its side, as Rectangle does: the next size the window isn't at yet.
+    static func cycled(_ snap: Snap, window: WindowRect, visible: WindowRect, gap: Double) -> WindowRect? {
+        let sizes = [0.5, 2.0 / 3, 1.0 / 3]
+        func sized(_ fraction: Double) -> WindowRect? {
+            var variant = snap
+            variant.unit = halfUnit(snap.id, fraction)
+            return frame(variant, window: window, visible: visible, gap: gap)
+        }
+        let current = sizes.firstIndex { size in sized(size).map { close($0, window) } == true } ?? sizes.count - 1
+        return sized(sizes[(current + 1) % sizes.count])
+    }
+
+    /// Whether two frames are the same place, to within a point or two.
+    static func close(_ a: WindowRect, _ b: WindowRect) -> Bool {
+        abs(a.x - b.x) < 2 && abs(a.y - b.y) < 2 && abs(a.width - b.width) < 2 && abs(a.height - b.height) < 2
+    }
+
+    /// A window whose middle is on no display now (one saved with a display
+    /// that's gone) is moved onto the nearest one, kept whole.
+    static func fitted(_ placements: [WindowPlacement], to snapshot: WindowSnapshot) -> [WindowPlacement] {
+        placements.map { placement in
+            var p = placement
+            let f = p.frame
+            guard !p.isMinimized, !snapshot.displays.contains(where: { $0.frame.contains(x: f.midX, y: f.midY) }),
+                  let v = snapshot.display(for: f)?.visibleFrame else { return p }
+            let w = min(f.width, v.width), h = min(f.height, v.height)
+            p.frame = WindowRect(x: min(max(f.x, v.x), v.x + v.width - w), y: min(max(f.y, v.y), v.y + v.height - h), width: w, height: h)
+            return p
+        }
+    }
+
     /// Stackbar's own windows (the palette, a plugin window) are skipped.
     static let hostID = "io.navbytes.stackbar"
 
@@ -310,14 +378,18 @@ final class Windows: StackbarPlugin {
         case "undo-snap":
             guard let saved = previous[key] else { return .message("Nothing to undo for \(window.appName)") }
             target = saved
-        case "next-display":
+        case "next-display", "previous-display":
             guard current.displays.count > 1, let index = current.displays.firstIndex(where: { $0.id == display.id }) else {
                 return .message("Only one display")
             }
-            let next = current.displays[(index + 1) % current.displays.count]
+            let count = current.displays.count
+            let next = current.displays[(index + (snap.id == "next-display" ? 1 : count - 1)) % count]
             target = Self.moved(window.frame, from: display.visibleFrame, to: next.visibleFrame)
         default:
-            guard let frame = Self.frame(snap, window: window.frame, visible: display.visibleFrame, gap: gap) else { return .done }
+            let framed = cycleSizes && Self.halfIDs.contains(snap.id)
+                ? Self.cycled(snap, window: window.frame, visible: display.visibleFrame, gap: gap)
+                : Self.frame(snap, window: window.frame, visible: display.visibleFrame, gap: gap)
+            guard let frame = framed else { return .done }
             target = frame
         }
         // The app's windows front first: this one's place among them.
@@ -329,10 +401,26 @@ final class Windows: StackbarPlugin {
         } catch {
             return .failure("Couldn't move the window: \(error)")
         }
-        if snap.id != "undo-snap" { previous[key] = window.frame }
+        if snap.id != "undo-snap", !continuesCycle(snap, key: key, window: window.frame) {
+            if previous.count >= 100 {
+                previous.removeAll()
+                placed.removeAll()
+            }
+            previous[key] = window.frame
+        }
+        if placed.count >= 100 { placed.removeAll() }
+        placed[key] = (snap.id, target)
         problem = nil
         notice = "\(window.appName): \(snap.title)"
         return .done
+    }
+
+    /// Whether this press is the next step of a half cycle: the same half again,
+    /// on the frame the last press left the window in. Undo then keeps the frame
+    /// from before the cycle began.
+    func continuesCycle(_ snap: Snap, key: String, window: WindowRect) -> Bool {
+        guard cycleSizes, Self.halfIDs.contains(snap.id), let last = placed[key], last.snap == snap.id else { return false }
+        return Self.close(last.frame, window)
     }
 
     // MARK: - Surfaces
@@ -360,8 +448,16 @@ final class Windows: StackbarPlugin {
         }
         Card("Snap the front window", spacing: Space.xs, padding: Space.s) {
             Grid(columns: 9, spacing: Space.xs) {
-                ForEach(Self.snaps) { snap in
-                    IconButton(snap.symbol, label: snap.title, theme: theme, key: "snap-\(snap.id)") { _ = await self.apply(snap) }
+                ForEach(Self.snaps.filter { $0.id != "previous-display" }) { snap in
+                    IconButton(snap.symbol, label: snap.title, theme: theme, key: "snap-\(snap.id)") {
+                        switch await self.apply(snap) {
+                        case .failure(let text):
+                            // A problem already shows its own banner, so don't repeat it.
+                            if text != self.problem { self.notice = text }
+                        case .message(let text?): self.notice = text
+                        default: break
+                        }
+                    }
                 }
             }
         }
@@ -411,7 +507,15 @@ final class Windows: StackbarPlugin {
                     self.notice = "“\(layout.name)” belongs to \(layout.setupName); save a new layout for this setup instead"
                 }
             }
-            IconButton("trash", label: "Delete \(layout.name)", theme: theme, key: "delete-\(layout.id)") { self.delete(layout) }
+            IconButton(isArmed(layout.id) ? "trash.fill" : "trash", label: isArmed(layout.id) ? "Click again to delete \(layout.name)" : "Delete \(layout.name)", theme: isArmed(layout.id) ? .critical : theme, key: "delete-\(layout.id)") {
+                guard self.isArmed(layout.id) else {
+                    self.armedDelete = layout.id
+                    self.armedDeleteAt = Date()
+                    return
+                }
+                self.armedDelete = nil
+                self.delete(layout)
+            }
         }
         .padding(horizontal: Space.xs, vertical: 5)
         .hover(scale: nil, highlight: .hoverWash, lift: false)
@@ -428,6 +532,7 @@ final class Windows: StackbarPlugin {
             Picker("Gap around windows", options: Self.gaps.map(\.title), selection: Self.gaps.first { $0.points == gap }?.title ?? "None", style: .segmented) { title in
                 self.gap = Self.gaps.first { $0.title == title }?.points ?? 0
             }
+            Toggle("Pressing a half again cycles through two thirds and one third", isOn: cycleSizes) { self.cycleSizes = $0 }
             Text("Every snap is a command: type \u{201C}left half\u{201D} in the palette, or give it a hotkey in Settings › Commands.").role(.secondary)
         }
         Section("Restoring") {
@@ -438,7 +543,13 @@ final class Windows: StackbarPlugin {
         Section("Layouts") {
             Text("\(Self.count(layouts.count, "layout")) saved across \(Self.count(Set(layouts.map(\.setupID)).count, "setup")). Each one is a command you can give a hotkey in Stackbar's Settings.").role(.secondary)
             if !layouts.isEmpty {
-                Button("Delete every layout", symbol: "trash", role: .critical) {
+                Button(isArmed("all") ? "Click again to delete every layout" : "Delete every layout", symbol: "trash", role: .critical, key: "delete-all") {
+                    guard self.isArmed("all") else {
+                        self.armedDelete = "all"
+                        self.armedDeleteAt = Date()
+                        return
+                    }
+                    self.armedDelete = nil
                     self.layouts = []
                     self.defaults = [:]
                 }

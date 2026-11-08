@@ -17,7 +17,7 @@ final class ScriptCommands: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.script-commands",
         name: "Script Commands",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Run your own scripts from the palette, in Raycast's Script Commands format.",
         surfaces: [.panel],
         triggers: [.launch, .every(.seconds(300))],
@@ -41,6 +41,10 @@ final class ScriptCommands: StackbarPlugin {
             ]
             plugin.scanned = true
         },
+        PreviewScene("first-run", "Start with one line in a script") { plugin in
+            plugin.scripts = []
+            plugin.scanned = true
+        },
     ]
 
     let theme = Theme.graphite
@@ -48,9 +52,12 @@ final class ScriptCommands: StackbarPlugin {
     struct Script: Equatable, Identifiable {
         enum Mode: String { case silent, compact, fullOutput, inline }
         struct Argument: Equatable {
+            /// One entry of a dropdown: what the palette shows, and what the script gets.
+            struct Choice: Equatable { var title: String; var value: String }
             var placeholder: String
             var optional: Bool
             var secure = false
+            var choices: [Choice] = []
         }
 
         /// Relative to the folder: `./uuid.py`.
@@ -76,6 +83,12 @@ final class ScriptCommands: StackbarPlugin {
     var problem: String?
     /// The last full output, by script id, for the fullOutput view.
     var outputs: [String: String] = [:]
+    /// The script whose Run was pressed once, waiting for a second press.
+    var armed: String?
+    var armedAt = Date.distantPast
+    static let armWindow: TimeInterval = 10
+    var armedNow: String? { armed.flatMap { Date().timeIntervalSince(armedAt) < Self.armWindow ? $0 : nil } }
+    func arm(_ id: String) { armed = id; armedAt = Date() }
 
     // MARK: Reading the folder
 
@@ -180,31 +193,85 @@ final class ScriptCommands: StackbarPlugin {
         return program
     }
 
-    /// `{ "type": "text", "placeholder": "City", "optional": true }`.
+    /// `{ "type": "text", "placeholder": "City", "optional": true }`. A dropdown's
+    /// choices are read one at a time: a choice that doesn't decode is skipped,
+    /// and choices that can't be read at all leave a free-text argument.
     static func argument(_ json: String) -> Script.Argument? {
-        struct Spec: Decodable { var type: String?; var placeholder: String?; var optional: Bool?; var secure: Bool? }
+        struct Item: Decodable { var title: String; var value: String }
+        struct LossyItem: Decodable {
+            let value: Item?
+            init(from decoder: Decoder) throws { value = try? Item(from: decoder) }
+        }
+        struct Spec: Decodable {
+            enum Key: String, CodingKey { case type, placeholder, optional, secure, data }
+            var type: String?; var placeholder: String?; var optional: Bool?; var secure: Bool?; var data: [Item]?
+            init(from decoder: Decoder) throws {
+                let fields = try decoder.container(keyedBy: Key.self)
+                type = try fields.decodeIfPresent(String.self, forKey: .type)
+                placeholder = try fields.decodeIfPresent(String.self, forKey: .placeholder)
+                optional = try fields.decodeIfPresent(Bool.self, forKey: .optional)
+                secure = try fields.decodeIfPresent(Bool.self, forKey: .secure)
+                let choices = try? fields.decodeIfPresent([LossyItem].self, forKey: .data)
+                data = choices?.compactMap(\.value)
+            }
+        }
         guard let data = json.data(using: .utf8), let spec = try? JSONDecoder().decode(Spec.self, from: data) else { return nil }
-        return Script.Argument(placeholder: spec.placeholder ?? "Argument", optional: spec.optional ?? false, secure: spec.secure ?? (spec.type == "password"))
+        return Script.Argument(placeholder: spec.placeholder ?? "Argument", optional: spec.optional ?? false, secure: spec.secure ?? (spec.type == "password"),
+                               choices: spec.data?.map { Script.Argument.Choice(title: $0.title, value: $0.value) } ?? [])
     }
 
     // MARK: Running
 
-    func run(_ script: Script, arguments: [String]) async throws -> RunResult {
+    /// The interpreter a script runs with, or why it can't run.
+    static func interpreter(for script: Script) throws -> String {
         guard let interpreter = script.interpreter else {
             throw HostError("\(script.name) has no #! line naming its interpreter")
         }
-        guard Self.interpreters.contains(interpreter) else {
-            throw HostError("\(script.name) runs with \(interpreter); Script Commands runs \(Self.interpreters.joined(separator: ", "))")
+        guard interpreters.contains(interpreter) else {
+            throw HostError("\(script.name) runs with \(interpreter); Script Commands runs \(interpreters.joined(separator: ", "))")
         }
+        return interpreter
+    }
+
+    func run(_ script: Script, arguments: [String]) async throws -> RunResult {
+        let interpreter = try Self.interpreter(for: script)
         return try await Stackbar.run(interpreter, [script.file] + arguments, workingDirectory: Self.folder, timeout: .seconds(script.mode == .fullOutput ? 120 : 60))
+    }
+
+    /// Runs a script for a row or a palette command: whether it worked, and
+    /// what to say about it. A silent script shows its last line as a HUD.
+    func perform(_ script: Script, arguments: [String]) async throws -> (ok: Bool, message: String?) {
+        let result = try await run(script, arguments: arguments)
+        if script.mode == .fullOutput { outputs[script.id] = Self.shownOutput(result) }
+        guard result.succeeded else {
+            return (false, "\(script.title) failed (\(result.status))" + (Self.lastLine(result.errorText).map { ": \($0)" } ?? ""))
+        }
+        let last = Self.lastLine(result.text)
+        if script.mode == .silent {
+            if let last { Stackbar.hud(last) }
+            return (true, nil)
+        }
+        return (true, last ?? "\(script.title) done")
     }
 
     static func lastLine(_ text: String) -> String? {
         text.split(separator: "\n").last.map { String($0).trimmingCharacters(in: .whitespaces) }.flatMap { $0.isEmpty ? nil : String($0.prefix(200)) }
     }
 
+    /// What a full-output view shows: the output, with the exit status on top
+    /// when the script failed.
+    static func shownOutput(_ result: RunResult) -> String {
+        var text = result.text + (result.errorText.isEmpty ? "" : "\n" + result.errorText)
+        if !result.succeeded { text = "Exited with status \(result.status)\n" + text }
+        return text.isEmpty ? "(no output, exit \(result.status))" : String(text.prefix(20_000))
+    }
+
+    /// The arguments the script gets. A dropdown's title becomes its value.
     func values(_ script: Script, from invocation: CommandInvocation) -> [String] {
-        script.arguments.indices.map { invocation["argument\($0 + 1)"] ?? "" }
+        script.arguments.enumerated().map { index, argument in
+            let typed = invocation["argument\(index + 1)"] ?? ""
+            return argument.choices.first { $0.title == typed }?.value ?? typed
+        }
     }
 
     func command(for script: Script) -> Command {
@@ -215,17 +282,13 @@ final class ScriptCommands: StackbarPlugin {
                 .view { invocation in self.outputView(script, arguments: self.values(script, from: invocation)) }
         } else {
             command = Command(script.id, title: script.title, subtitle: subtitle.isEmpty ? script.name : subtitle, symbol: "terminal", keywords: ["script", script.package ?? ""].filter { !$0.isEmpty }) { invocation in
-                let result = try await self.run(script, arguments: self.values(script, from: invocation))
-                let last = Self.lastLine(result.text)
-                guard result.succeeded else {
-                    return .failure("\(script.title) failed (\(result.status))" + (Self.lastLine(result.errorText).map { ": \($0)" } ?? ""))
-                }
-                if script.mode == .silent, let last { Stackbar.hud(last) }
-                return .message(script.mode == .silent ? nil : last ?? "\(script.title) done")
+                let (ok, message) = try await self.perform(script, arguments: self.values(script, from: invocation))
+                return ok ? .message(message) : .failure(message ?? "")
             }
         }
         for (index, argument) in script.arguments.enumerated() {
-            command = command.argument("argument\(index + 1)", placeholder: argument.placeholder, required: !argument.optional)
+            command = command.argument("argument\(index + 1)", placeholder: argument.placeholder, required: !argument.optional,
+                                       options: argument.choices.isEmpty ? nil : argument.choices.map(\.title))
         }
         return command
     }
@@ -237,9 +300,7 @@ final class ScriptCommands: StackbarPlugin {
             Row(outputs[script.id] == nil ? "Run \(script.title)" : "Run Again", subtitle: script.needsConfirmation ? "This script asks before it runs" : script.name, symbol: "play.fill", key: "run")
                 .action("Run Script", role: script.needsConfirmation ? .critical : .primary) {
                     do {
-                        let result = try await self.run(script, arguments: arguments)
-                        let text = result.text + (result.errorText.isEmpty ? "" : "\n" + result.errorText)
-                        self.outputs[script.id] = text.isEmpty ? "(no output, exit \(result.status))" : String(text.prefix(20_000))
+                        self.outputs[script.id] = Self.shownOutput(try await self.run(script, arguments: arguments))
                     } catch {
                         self.outputs[script.id] = "\(error)"
                     }
@@ -249,6 +310,31 @@ final class ScriptCommands: StackbarPlugin {
         if let output = outputs[script.id] {
             Text(output).font(size: 12, design: .monospaced)
         }
+    }
+
+    /// A script's row in the panel and in Script Commands. Return or a click
+    /// runs it; one that asks first needs a second press.
+    func scriptRow(_ script: Script) -> Row {
+        Row(script.title, subtitle: [script.package, script.name].compactMap { $0 }.joined(separator: " · "), symbol: "terminal", key: script.id)
+            .badge(script.interpreter ?? "no #!", role: script.interpreter.map { Self.interpreters.contains($0) } == true ? .secondary : .critical)
+            .action("Run") {
+                // Refuse first, so a script that can't run says so before it asks for a second press.
+                _ = try Self.interpreter(for: script)
+                if let missing = script.arguments.first(where: { !$0.optional }) {
+                    throw HostError("\(script.title) needs \(missing.placeholder); run it from the palette")
+                }
+                if script.needsConfirmation {
+                    guard self.armedNow == "run:\(script.id)" else {
+                        self.arm("run:\(script.id)")
+                        Stackbar.hud("Press Run again within 10 s to run \(script.title)")
+                        return
+                    }
+                    self.armed = nil
+                }
+                let (ok, message) = try await self.perform(script, arguments: script.arguments.map { _ in "" })
+                guard ok else { throw HostError(message ?? "") }
+                if let message { Stackbar.hud(message) }
+            }
     }
 
     // MARK: Commands
@@ -263,8 +349,11 @@ final class ScriptCommands: StackbarPlugin {
             }) { _ in
                 if let problem = self.problem { Banner(problem, theme: .warning) }
                 List(self.scripts, searchable: true) { script in
-                    Row(script.title, subtitle: [script.package, script.name].compactMap { $0 }.joined(separator: " · "), symbol: "terminal", key: script.id)
-                        .badge(script.interpreter ?? "no #!", role: script.interpreter.map { Self.interpreters.contains($0) } == true ? .secondary : .critical)
+                    if script.mode == .fullOutput {
+                        self.scriptRow(script).navigate("Show Output", to: script.id)
+                    } else {
+                        self.scriptRow(script)
+                    }
                 }
             }
         Command("reload", title: "Reload Script Commands", subtitle: Self.folder, symbol: "arrow.clockwise", keywords: ["script", "reload", "refresh"]) { _ in
@@ -278,18 +367,14 @@ final class ScriptCommands: StackbarPlugin {
 
     var panel: ViewContent {
         PanelHeader("Script Commands", subtitle: "\(scripts.count) in \(Self.folder)", symbol: "terminal.fill", theme: theme)
-        if let problem {
+        if let problem, !scripts.isEmpty {
             Banner(problem, theme: .warning)
         }
         if scripts.isEmpty {
-            EmptyState("Add your first script", symbol: "terminal", message: "Put a script with a \"# @raycast.title My Command\" line in ~/Script Commands, and it shows up in the palette within a minute. Raycast's script-commands repository on GitHub has hundreds ready to copy.", theme: theme)
+            // With no folder, the problem already says what to do, so it is the one message.
+            EmptyState("Add your first script", symbol: "terminal", message: problem ?? "Put a script with a \"# @raycast.title My Command\" line in ~/Script Commands, and it shows up in the palette within a minute. Raycast's script-commands repository on GitHub has hundreds ready to copy.", theme: theme)
         } else {
-            Card("Your scripts", spacing: 0, padding: Space.s) {
-                ForEach(scripts) { script in
-                    Row(script.title, subtitle: [script.package, script.name].compactMap { $0 }.joined(separator: " · "), symbol: "terminal", key: script.id)
-                        .badge(script.interpreter ?? "no #!", role: script.interpreter.map { Self.interpreters.contains($0) } == true ? .secondary : .critical)
-                }
-            }
+            List(scripts, searchable: scripts.count > 8) { script in self.scriptRow(script) }
         }
     }
 }

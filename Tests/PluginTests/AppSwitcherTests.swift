@@ -87,4 +87,73 @@ final class AppSwitcherTests: XCTestCase {
         XCTAssertEqual(host.system.appActions.last, "cycleWindows com.apple.finder")
         await supervisor.stop()
     }
+
+    func testPinningUnknownOrNamedApps() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("AppSwitcher")
+        _ = await waitUntil { self.layer(host) != nil }
+
+        guard case .failure = await supervisor.runCommand("assign", arguments: ["key": "q", "app": "com.example.nothere"], source: .palette) else { return XCTFail("an app that isn't installed is refused") }
+        XCTAssertNil(layer(host)?.binding(for: "q"), "nothing is pinned")
+
+        host.system.applications["Slack"] = slack
+        guard case .message(let message) = await supervisor.runCommand("assign", arguments: ["key": "q", "app": "Slack"], source: .palette) else { return XCTFail("a name pins") }
+        XCTAssertEqual(message, "Right ⌘ Q now opens Slack")
+        XCTAssertEqual(layer(host)?.binding(for: "q")?.apps, [slack])
+        await supervisor.stop()
+    }
+
+    func testClearingEveryPinNeedsASecondPress() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("AppSwitcher")
+        _ = await waitUntil { self.layer(host) != nil }
+        try await host.system.activateApp(slack, launch: false)
+        let chord = await host.system.pressKeyLayer("k", held: [.rightCommand, .rightOption])
+        guard case .assign(_, let command, let key, let app) = chord else { return XCTFail("the chord assigns: \(chord)") }
+        _ = await supervisor.runCommand(command, arguments: ["key": key, "app": app], source: .hotkey)
+        XCTAssertNotNil(layer(host)?.binding(for: "k"))
+
+        await supervisor.press("button/clear-pins")
+        XCTAssertNotNil(layer(host)?.binding(for: "k"), "the first click only asks")
+        await supervisor.press("button/clear-pins")
+        let cleared = await waitUntil { self.layer(host)?.binding(for: "k") == nil }
+        XCTAssertTrue(cleared, "the second click clears every pin")
+        await supervisor.stop()
+    }
+
+    func testLeavingAnAppOutOfTheLetters() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("AppSwitcher")
+        _ = await waitUntil { self.layer(host) != nil }
+        XCTAssertEqual(layer(host)?.binding(for: "s")?.apps, [safari, slack, spotify])
+
+        await supervisor.press("row/key-s/Leave Out Slack")
+        let left = await waitUntil { self.layer(host)?.binding(for: "s")?.apps == [self.safari, self.spotify] }
+        XCTAssertTrue(left, "Slack no longer takes S, so cycling steps past it")
+
+        await supervisor.press(ActionID("row/skipped-\(slack)/Bring Back"))
+        let back = await waitUntil { self.layer(host)?.binding(for: "s")?.apps == [self.safari, self.slack, self.spotify] }
+        XCTAssertTrue(back, "Bring Back gives it its letter again")
+        await supervisor.stop()
+    }
+
+    func testAPinnedAppThatCantOpenSaysWhy() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("AppSwitcher")
+        _ = await waitUntil { self.layer(host) != nil }
+        _ = await supervisor.runCommand("assign", arguments: ["key": "k", "app": slack], source: .palette)
+
+        // Slack quits and isn't installed, so K has nothing to open.
+        host.system.simulate(apps: host.system.currentApps.filter { $0.id != slack })
+        await supervisor.appsChanged()
+        let offersOpen = await waitUntil {
+            let row = await supervisor.views[.panel]?.rows.first { $0.key == "key-k" }
+            return row?.actions.first?.title == "Open"
+        }
+        XCTAssertTrue(offersOpen, "K's row offers Open once Slack is gone")
+        await supervisor.press("row/key-k/Open")
+        let said = await waitUntil { String(describing: await supervisor.views[.panel]).contains("open Slack: ") }
+        XCTAssertTrue(said, "the panel says why")
+        await supervisor.stop()
+    }
 }

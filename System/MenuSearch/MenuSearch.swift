@@ -11,17 +11,25 @@ final class MenuSearch: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.menu-search",
         name: "Menu Search",
-        version: "1.0.1",
+        version: "1.1.0",
         summary: "Search the menus of the app you're in and choose an item without the mouse.",
         surfaces: [.panel],
         triggers: [.launch],
         // Reading the front app's menus and choosing an item.
         capabilities: [.menus],
-        minimumStackbar: "0.25.0",
+        minimumStackbar: "0.31.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/System/MenuSearch",
         accent: .teal,
         symbol: "filemenu.and.selection"
     )
+
+    static let previews: [PreviewScene<MenuSearch>] = [
+        PreviewScene("hero", "Your most used menu items, one click away") { plugin in
+            plugin.chosen = ["com.apple.Safari|File\u{1f}New Private Window": 9, "com.apple.dt.Xcode|Product\u{1f}Clean Build Folder…": 7,
+                             "com.apple.Safari|View\u{1f}Zoom In": 4, "com.apple.Notes|Format\u{1f}Checklist": 3]
+        },
+        PreviewScene("first-run", "Every menu, a few letters away") { _ in },
+    ]
 
     let theme = Theme.teal
 
@@ -57,7 +65,8 @@ final class MenuSearch: StackbarPlugin {
     }
 
     /// How well `typed` matches `text`, or nil: the start beats the start of
-    /// a word, which beats anywhere.
+    /// a word, which beats anywhere. Initials ("nw") and letters in order
+    /// ("prvate") come last, so a typo still finds the item.
     static func score(_ typed: String, in text: String) -> Int? {
         let text = text.lowercased()
         if text == typed { return 1200 }
@@ -65,6 +74,13 @@ final class MenuSearch: StackbarPlugin {
         let words = text.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
         if words.contains(where: { $0.hasPrefix(typed) }) { return 800 - min(text.count, 100) }
         if text.contains(typed) { return 500 - min(text.count, 100) }
+        if let match = TextMatch.match(typed, in: text) {
+            switch match.tier {
+            case .initials: return 450 - min(text.count, 100)
+            case .inOrder: return 150 - min(text.count, 100)
+            default: break
+            }
+        }
         return nil
     }
 
@@ -72,8 +88,11 @@ final class MenuSearch: StackbarPlugin {
     /// the item's title or a menu above it, with the title worth more, so
     /// "view zoom" finds View › Zoom In. Dimmed items sink to the bottom.
     static func matches(_ query: String, in menus: MenuSnapshot, chosen: [String: Int] = [:], limit: Int = 60) -> [MenuItemInfo] {
-        let words = query.lowercased().split(separator: " ").map(String.init)
-        guard !words.isEmpty else { return Array(menus.items.prefix(limit)) }
+        // "export..." is "export": dots and ellipses trail a name, they aren't in it.
+        let words = query.lowercased().split(separator: " ").map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ".…")) }.filter { !$0.isEmpty }
+        guard !words.isEmpty else {
+            return query.trimmingCharacters(in: .whitespaces).isEmpty ? Array(menus.items.prefix(limit)) : []
+        }
         return menus.items.enumerated().compactMap { index, item -> (MenuItemInfo, Int, Int)? in
             var total = 0
             for word in words {
@@ -133,8 +152,46 @@ final class MenuSearch: StackbarPlugin {
 
     // MARK: Panel
 
+    /// One of the most chosen items; `key` is the one `chosen` counts it by.
+    struct Favourite: Identifiable {
+        var key: String
+        var appID: String
+        var path: [String]
+        var id: String { key }
+    }
+
+    /// The eight most chosen items, ties by key. A key that doesn't parse
+    /// (no app, no menu) is skipped.
+    var favourites: [Favourite] {
+        chosen.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+            .prefix(8)
+            .compactMap { key, _ in
+                guard let bar = key.firstIndex(of: "|") else { return nil }
+                let appID = String(key[..<bar])
+                let path = key[key.index(after: bar)...].split(separator: "\u{1f}").map(String.init)
+                guard !appID.isEmpty, !path.isEmpty else { return nil }
+                return Favourite(key: key, appID: appID, path: path)
+            }
+    }
+
     var panel: ViewContent {
         PanelHeader("Menu Search", subtitle: "Search Menu Items in the palette", symbol: "filemenu.and.selection", theme: theme)
-        EmptyState("Every menu, a few letters away", symbol: "filemenu.and.selection", message: "In any app, open the palette, type Search Menu Items, then part of an item's name. Return chooses it. Stackbar needs Accessibility access for this.", theme: theme)
+        let top = favourites
+        if top.isEmpty {
+            EmptyState("Every menu, a few letters away", symbol: "filemenu.and.selection", message: "In any app, open the palette, type Search Menu Items, then part of an item's name. Return chooses it. Stackbar needs Accessibility access for this.", theme: theme)
+        } else {
+            Card("Most chosen", spacing: 0, padding: Space.s) {
+                ForEach(top) { favourite in
+                    Row(favourite.path.last ?? "", subtitle: favourite.path.dropLast().joined(separator: " › "), symbol: "filemenu.and.selection", key: favourite.key)
+                        .appIcon(favourite.appID)
+                        .hiddenFromPalette()
+                        .action("Choose") {
+                            self.chosen[favourite.key, default: 0] += 1
+                            try await Stackbar.pressMenuItem(appID: favourite.appID, path: favourite.path)
+                        }
+                }
+            }
+            Text("Search Menu Items in the palette for any other item.").role(.secondary).typography(.caption)
+        }
     }
 }

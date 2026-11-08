@@ -149,6 +149,48 @@ final class ClipboardTests: XCTestCase {
         await supervisor.stop()
     }
 
+    func testPastePlainUsesTheLastCopyWhateverTheOrder() async throws {
+        let host = Host(self)
+        let id = "io.navbytes.stackbar.clipboard"
+        try await host.services.storage.set("order", "\"Most used\"", for: id)
+        try await host.services.storage.set("history", #"[{"id":"a","kind":"text","text":"often","files":[],"firstCopied":0,"lastCopied":100,"count":9,"pinned":false},{"id":"b","kind":"text","text":"latest","files":[],"firstCopied":0,"lastCopied":200,"count":1,"pinned":false},{"id":"c","kind":"text","text":"pinned","files":[],"firstCopied":0,"lastCopied":300,"count":1,"pinned":true}]"#, for: id)
+        let session = try await host.session("Clipboard")
+        _ = try await session.runCommand("paste-plain")
+        XCTAssertEqual(host.system.pasted.last, .text("latest"))
+        await session.stop()
+    }
+
+    func testClearCommandKeepsPinned() async throws {
+        let host = Host(self)
+        let id = "io.navbytes.stackbar.clipboard"
+        try await host.services.storage.set("history", #"[{"id":"keep","kind":"text","text":"keep me","files":[],"firstCopied":0,"lastCopied":100,"count":1,"pinned":true},{"id":"drop","kind":"text","text":"drop me","files":[],"firstCopied":0,"lastCopied":200,"count":1,"pinned":false}]"#, for: id)
+        let session = try await host.session("Clipboard")
+        let opened = try await session.openView("clear")
+        let rows = await session.commandView(opened.session)?.rows ?? opened.root?.rows ?? []
+        let confirm = try XCTUnwrap(rows.first { $0.key == "confirm" })
+        try await session.event(try XCTUnwrap(confirm.actions.first).id)
+        let cleared = await waitUntil { await self.history(host, id).count == 1 }
+        XCTAssertTrue(cleared, "the unpinned copy is cleared")
+        let remaining = await history(host, id)
+        XCTAssertEqual(remaining.first?["text"] as? String, "keep me", "the pinned copy stays")
+        await session.stop()
+    }
+
+    func testClearingTheHistoryTakesTwoPresses() async throws {
+        let host = Host(self)
+        let id = "io.navbytes.stackbar.clipboard"
+        try await host.services.storage.set("history", #"[{"id":"a","kind":"text","text":"one","files":[],"firstCopied":0,"lastCopied":100,"count":1,"pinned":false},{"id":"b","kind":"text","text":"two","files":[],"firstCopied":0,"lastCopied":200,"count":1,"pinned":false}]"#, for: id)
+        let supervisor = try await host.start("Clipboard")
+        let clear = ActionID("button/clear")
+        await supervisor.press(clear)
+        let afterOne = await history(host, id).count
+        XCTAssertEqual(afterOne, 2, "the first click only asks")
+        await supervisor.press(clear)
+        let cleared = await waitUntil { await self.history(host, id).isEmpty }
+        XCTAssertTrue(cleared, "the second click clears the unpinned copies")
+        await supervisor.stop()
+    }
+
     private func history(_ host: Host, _ id: String) async -> [[String: Any]] {
         let json = await host.services.storage.snapshot(for: id)["history"] ?? "[]"
         return (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [[String: Any]] ?? []

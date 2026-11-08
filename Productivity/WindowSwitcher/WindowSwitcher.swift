@@ -10,17 +10,28 @@ final class WindowSwitcher: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.window-switcher",
         name: "Window Switcher",
-        version: "1.0.1",
+        version: "1.1.0",
         summary: "Jump to any open window by typing part of its app or title in the palette.",
         surfaces: [.panel],
-        triggers: [.launch],
+        triggers: [.launch, .apps],
         // Listing windows and bringing one to the front.
         capabilities: [.windows],
-        minimumStackbar: "0.25.0",
+        minimumStackbar: "0.31.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WindowSwitcher",
         accent: .indigo,
         symbol: "macwindow.on.rectangle"
     )
+
+    static let previews: [PreviewScene<WindowSwitcher>] = [
+        PreviewScene("hero", "Any window, a few letters away") { plugin in
+            plugin.snapshot = WindowSwitcher.sample(displays: 1)
+            plugin.readAt = Date()
+        },
+        PreviewScene("displays", "Says which display each window is on") { plugin in
+            plugin.snapshot = WindowSwitcher.sample(displays: 2)
+            plugin.readAt = Date()
+        },
+    ]
 
     let theme = Theme.indigo
 
@@ -46,7 +57,29 @@ final class WindowSwitcher: StackbarPlugin {
     }
 
     func refresh() async throws {
+        // A burst of app launches (.apps) would otherwise scan every window once per launch.
+        if Stackbar.refreshReason == .apps, let readAt, Date().timeIntervalSince(readAt) < 2 { return }
         await load()
+    }
+
+    // MARK: Previews
+
+    /// Made-up windows for the store: all on one display, or with Slack and
+    /// Mail on the laptop beside a desk display.
+    static func sample(displays: Int) -> WindowSnapshot {
+        let desk = DisplayInfo(id: "9C1E4F2B-7A1D-4E59-8C3A-5B2F6D0E1A44", name: "Studio Display", frame: WindowRect(x: 0, y: 0, width: 2560, height: 1440), visibleFrame: WindowRect(x: 0, y: 33, width: 2560, height: 1407), isMain: true)
+        let laptop = DisplayInfo(id: "37D8832A-2D66-02CA-B9F7-8F30A301B230", name: "Built-in Retina Display", frame: WindowRect(x: 2560, y: 458, width: 1512, height: 982), isBuiltIn: true)
+        let twoScreens = displays > 1
+        let beside = twoScreens ? laptop.id : desk.id
+        let besideFrame = twoScreens ? WindowRect(x: 2560, y: 458, width: 1512, height: 982) : WindowRect(x: 1700, y: 200, width: 900, height: 800)
+        return WindowSnapshot(displays: twoScreens ? [desk, laptop] : [desk], windows: [
+            WindowInfo(appID: "com.apple.dt.Xcode", appName: "Xcode", title: "Stackbar — Windows.swift", frame: WindowRect(x: 0, y: 33, width: 1700, height: 1407), displayID: desk.id, order: 0),
+            WindowInfo(appID: "com.apple.Safari", appName: "Safari", title: "Pull requests", frame: WindowRect(x: 400, y: 200, width: 1200, height: 900), displayID: desk.id, order: 1),
+            WindowInfo(appID: "com.tinyspeck.slackmacgap", appName: "Slack", title: "#design", frame: besideFrame, displayID: beside, order: 2),
+            WindowInfo(appID: "com.apple.Notes", appName: "Notes", title: "Groceries", frame: WindowRect(x: 1700, y: 33, width: 860, height: 1407), displayID: desk.id, order: 3),
+            WindowInfo(appID: "com.apple.mail", appName: "Mail", title: "Inbox", frame: besideFrame, displayID: beside, order: 4),
+            WindowInfo(appID: "com.apple.Safari", appName: "Safari", title: "Swift Forums", frame: WindowRect(x: 400, y: 200, width: 1200, height: 900), displayID: desk.id, order: 5, isMinimized: true),
+        ])
     }
 
     // MARK: Matching
@@ -101,7 +134,9 @@ final class WindowSwitcher: StackbarPlugin {
         try await Stackbar.focusWindow(WindowTarget(window, in: snapshot))
     }
 
-    func row(_ window: WindowInfo) -> Row {
+    /// A panel row also hides from the palette, where a window that closed
+    /// hours ago would otherwise still be offered.
+    func row(_ window: WindowInfo, inPanel: Bool = false) -> Row {
         var detail = window.title.isEmpty ? nil : window.appName
         if window.isMinimized { detail = [detail, "Minimized"].compactMap { $0 }.joined(separator: " · ") }
         var row = Row(Self.title(window), subtitle: detail, symbol: "macwindow", key: "\(window.appID)#\(window.order)")
@@ -111,6 +146,7 @@ final class WindowSwitcher: StackbarPlugin {
         if let display = snapshot.displays.first(where: { $0.id == window.displayID }), snapshot.displays.count > 1 {
             row = row.badge(display.name, role: .secondary)
         }
+        if inPanel { row = row.hiddenFromPalette() }
         return row
     }
 
@@ -137,7 +173,9 @@ final class WindowSwitcher: StackbarPlugin {
     // MARK: Panel
 
     var panel: ViewContent {
-        PanelHeader("Window Switcher", subtitle: "\(snapshot.windows.count) windows · Switch Windows in the palette", symbol: "macwindow.on.rectangle", theme: theme)
+        PanelHeader("Window Switcher", subtitle: "\(snapshot.windows.count) windows · as of \(readAt.map { $0.formatted(date: .omitted, time: .shortened) } ?? "—")", symbol: "macwindow.on.rectangle", theme: theme) {
+            IconButton("arrow.clockwise", label: "Refresh", theme: theme) { await self.load() }
+        }
         if let problem {
             Banner(problem, theme: .warning)
         }
@@ -145,7 +183,7 @@ final class WindowSwitcher: StackbarPlugin {
             EmptyState("Jump to any window", symbol: "macwindow.on.rectangle", message: "Open the palette, type Switch Windows, then a few letters of the app or the title. Return brings it to the front.", theme: theme)
         } else {
             Card("Open now", spacing: 0, padding: Space.s) {
-                ForEach(Array(snapshot.windows.prefix(8))) { window in self.row(window) }
+                ForEach(Array(snapshot.windows.prefix(8))) { window in self.row(window, inPanel: true) }
             }
         }
     }

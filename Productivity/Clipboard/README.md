@@ -23,7 +23,7 @@ the menu bar icon, if you turn the icon on.
   (not at all, 5 minutes to an hour, or like any copy), apps and text patterns
   to ignore, and pausing the history.
 - **Commands:** Search Clipboard History, Paste Last Copy as Plain Text,
-  Pause Clipboard History, Ignore Next Copy.
+  Pause Clipboard History, Ignore Next Copy, Clear Clipboard History.
 - **Agent tools:** `recent_clips`, `search_clips` and `copy_clip`.
 - **Requires:** Stackbar 0.31.0 or later.
 
@@ -45,6 +45,13 @@ key or card number is masked, kept away from agent tools, and dropped after
 ### See what you copy
 The window shows how much you copy, and from which apps.
 <!-- preview: insights -->
+
+## What's new in 1.12.0
+
+- Paste Last Copy as Plain Text, the Last Copied card and agent tools now always use your latest copy, even when the history is sorted by most used or first copied.
+- Clearing the history in Settings asks for a second click, so one stray click can't wipe it.
+- Clear Clipboard History in the palette clears everything but your pinned items, or everything.
+- The Last Copied label is easier to read in light and dark mode.
 
 ## What's new in 1.11.0
 

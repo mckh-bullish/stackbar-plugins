@@ -9,7 +9,7 @@ final class Dictionary: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.dictionary",
         name: "Dictionary",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Look words up in the Mac's own Dictionary, offline, from the palette.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -21,6 +21,19 @@ final class Dictionary: StackbarPlugin {
         accent: .indigo,
         symbol: "character.book.closed"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<Dictionary>] = [
+        PreviewScene("hero", "Definitions as you type, offline") { plugin in
+            plugin.recent = ["serendipity", "ephemeral", "laconic", "petrichor"]
+            plugin.looked = "serendipity"
+            plugin.found = Definition(word: "serendipity", text: "serendipity | ˌserənˈdipədē | noun the occurrence and development of events by chance in a happy or beneficial way.")
+        },
+        PreviewScene("recent", "Words you looked up, one click away") { plugin in
+            plugin.recent = ["serendipity", "ephemeral", "laconic", "petrichor", "sonder"]
+        },
+    ]
 
     let theme = Theme.indigo
 
@@ -48,6 +61,13 @@ final class Dictionary: StackbarPlugin {
         recent = Array(([word] + recent.filter { $0.lowercased() != word.lowercased() }).prefix(20))
     }
 
+    func openInDictionary(_ word: String) async throws {
+        remember(word)
+        let encoded = word.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? word
+        // The waiting call, so a refusal is shown instead of nothing happening.
+        try await Stackbar.open("dict://\(encoded)", with: nil)
+    }
+
     /// The definition's first sentence-ish piece, for a row's subtitle.
     static func gist(_ text: String) -> String {
         let flat = text.replacingOccurrences(of: "\n", with: " ")
@@ -59,19 +79,14 @@ final class Dictionary: StackbarPlugin {
             .preview(text: definition.text)
             .action("Copy Definition") { self.remember(definition.word); Stackbar.copy(definition.text) }
             .action("Copy Word", shortcut: "cmd+shift+c") { Stackbar.copy(definition.word) }
-            .action("Open in Dictionary", shortcut: "cmd+o") {
-                self.remember(definition.word)
-                let encoded = definition.word.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? definition.word
-                // The waiting call, so a refusal is shown instead of nothing happening.
-                try await Stackbar.open("dict://\(encoded)", with: nil)
-            }
+            .action("Open in Dictionary", shortcut: "cmd+o") { try await self.openInDictionary(definition.word) }
     }
 
     // MARK: Commands
 
     var commands: [Command] {
         Command("define", title: "Define Word", subtitle: "Look a word up in the Mac's Dictionary", symbol: "character.book.closed", keywords: ["define", "dictionary", "meaning", "word", "thesaurus"])
-            .view(search: { invocation in await self.lookUp(invocation.text) }) { _ in
+            .view(search: { invocation in await self.lookUp(invocation.text.isEmpty ? (invocation["text"] ?? "") : invocation.text) }) { _ in
                 if let found = self.found {
                     List { self.row(found) }
                 } else if self.looked.isEmpty {
@@ -93,18 +108,36 @@ final class Dictionary: StackbarPlugin {
                     ContentUnavailableView("No definition", symbol: "questionmark.circle", message: "The Mac's Dictionary has nothing for \"\(self.looked)\". Check the spelling, or add dictionaries in the Dictionary app's settings.")
                 }
             }
+            .fallback()
     }
 
     // MARK: Panel
 
     var panel: ViewContent {
         PanelHeader("Dictionary", subtitle: "Define Word in the palette", symbol: "character.book.closed", theme: theme)
-        if recent.isEmpty {
+        TextField("Look up a word, then Return") { word in
+            await self.lookUp(word)
+            if let found = self.found { self.remember(found.word) }
+        }
+        if let found {
+            Card(found.word) {
+                Text(found.text.count > 600 ? String(found.text.prefix(599)) + "…" : found.text).style(.body)
+                HStack(spacing: Space.s) {
+                    ActionButton("Copy", symbol: "doc.on.doc", theme: theme) { Stackbar.copy(found.text) }
+                    ActionButton("Open in Dictionary", symbol: "character.book.closed", theme: theme) { try await self.openInDictionary(found.word) }
+                }
+            }
+        } else if !looked.isEmpty {
+            Banner(lookupError ?? "No definition for \"\(looked)\"")
+        }
+        if recent.isEmpty && found == nil && looked.isEmpty {
             EmptyState("Words, offline", symbol: "character.book.closed", message: "Open the palette and type Define Word, then the word. Definitions come from the Mac's own Dictionary.", theme: theme)
-        } else {
+        } else if !recent.isEmpty {
             List {
                 Section("Recent") {
-                    ForEach(recent.prefix(8)) { word in Row(word, symbol: "clock.arrow.circlepath", key: word) }
+                    ForEach(recent.prefix(8)) { word in
+                        Row(word, symbol: "clock.arrow.circlepath", key: word).action("Define") { await self.lookUp(word) }
+                    }
                 }
             }
         }

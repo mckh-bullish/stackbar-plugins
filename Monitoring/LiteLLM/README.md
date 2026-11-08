@@ -21,14 +21,23 @@ red at 90%.
   `https://litellm.example.com`, and the plugin can reach that host and no
   other. `LITELLM_API_KEY` is a LiteLLM key. Both are kept in the Keychain.
   Nothing is contacted until you enter the URL.
-- **Calls:** `/user/info` and `/user/daily/activity`, every two minutes for
-  the last 30 days and every six hours for the six months before that.
+- **Calls:** `/user/info` (and `/key/info` when your user has no budget of its own)
+  and `/user/daily/activity`, every two minutes for the last 30 days and every
+  six hours for the six months before that.
 - **Surfaces:** menu bar, panel, window, widget, settings.
 - **Settings:** what the menu bar shows, and notifications at 90% and 100% of
   the budget.
 - **Agent tool:** `usage_summary`.
 
 Ported from vee-plugins' `litellm-cost`.
+
+## What's new in 1.5.0
+
+- Switching to another proxy or user starts its history fresh instead of mixing in the old one's numbers.
+- A key with its own budget shows that budget when your user has none.
+- LiteLLM Spend lists your top models, says when the proxy can't be reached, and no longer refetches on every keystroke.
+- Without a key the panel asks for one instead of saying it can't reach the proxy.
+- Charts in the window draw faster, and a slow proxy holds up clicks for less time.
 
 ## What's new in 1.4.1
 

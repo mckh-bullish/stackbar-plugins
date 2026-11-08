@@ -13,7 +13,7 @@ final class AppSwitcher: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.app-switcher",
         name: "App Switcher",
-        version: "1.2.1",
+        version: "1.3.0",
         summary: "Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .apps, .every(.seconds(60))],
@@ -28,6 +28,16 @@ final class AppSwitcher: StackbarPlugin {
 
     static let previews: [PreviewScene<AppSwitcher>] = [
         PreviewScene("hero", "Hold Right ⌘ and press a letter") { plugin in
+            plugin.apps = sampleApps
+            plugin.pins = ["m": ["com.apple.mail"], "t": ["com.apple.Terminal"]]
+            plugin.pinNames = ["com.apple.mail": "Mail", "com.apple.Terminal": "Terminal"]
+        },
+        PreviewScene("pinned", "Pinned letters open apps that aren't running") { plugin in
+            plugin.apps = sampleApps.filter { $0.name != "Notes" }
+            plugin.pins = ["n": ["com.apple.Notes"], "m": ["com.apple.mail"], "t": ["com.apple.Terminal"]]
+            plugin.pinNames = ["com.apple.Notes": "Notes", "com.apple.mail": "Mail", "com.apple.Terminal": "Terminal"]
+        },
+        PreviewScene("settings", "Pick the key you hold", surface: .settings) { plugin in
             plugin.apps = sampleApps
             plugin.pins = ["m": ["com.apple.mail"], "t": ["com.apple.Terminal"]]
             plugin.pinNames = ["com.apple.mail": "Mail", "com.apple.Terminal": "Terminal"]
@@ -52,6 +62,8 @@ final class AppSwitcher: StackbarPlugin {
     @Stored("pins") var pins: [String: [String]] = [:]
     /// Names of pinned apps, for when they aren't running.
     @Stored("pinNames") var pinNames: [String: String] = [:]
+    /// Apps left out of the letters: they get no letter of their own (a pin still wins).
+    @Stored("skipped") var skipped: [String] = []
     @Stored("trigger") var trigger = KeyLayerTrigger.rightCommand.rawValue
     @Stored("secondPress") var secondPress = SecondPress.hide.rawValue
     @Stored("autoLetters") var autoLetters = true
@@ -67,6 +79,9 @@ final class AppSwitcher: StackbarPlugin {
     var notice: String?
     /// The layer last sent, so an unchanged map isn't sent again.
     var sent: KeyLayer?
+    /// When "Clear every pin" was last clicked: a second click within 10 seconds clears.
+    var clearArmedAt = Date.distantPast
+    var clearArmed: Bool { Date().timeIntervalSince(clearArmedAt) < 10 }
 
     func refresh() async throws {
         do {
@@ -85,7 +100,7 @@ final class AppSwitcher: StackbarPlugin {
     var assignKey: String { triggerKey == .rightOption ? "Right ⌘" : "Right ⌥" }
 
     var layer: KeyLayer {
-        KeyLayer(trigger: triggerKey, bindings: Self.bindings(running: apps, pins: pins, autoLetters: autoLetters, openPinned: openPinned), secondPress: secondPressMode, assignCommand: "assign", overlay: overlay)
+        KeyLayer(trigger: triggerKey, bindings: Self.bindings(running: apps, pins: pins, autoLetters: autoLetters, openPinned: openPinned, skipped: Set(skipped)), secondPress: secondPressMode, assignCommand: "assign", overlay: overlay)
     }
 
     /// The letter an app gets on its own: the first letter or digit of its
@@ -97,12 +112,13 @@ final class AppSwitcher: StackbarPlugin {
 
     /// Pinned apps first on their key (and opened when closed if
     /// `openPinned`), then running apps on their own letter in launch order.
-    /// A pinned app only lives on its pinned key.
-    static func bindings(running: [RunningApp], pins: [String: [String]], autoLetters: Bool, openPinned: Bool) -> [KeyBinding] {
+    /// A pinned app only lives on its pinned key, and an app left out of the
+    /// letters takes none of its own.
+    static func bindings(running: [RunningApp], pins: [String: [String]], autoLetters: Bool, openPinned: Bool, skipped: Set<String>) -> [KeyBinding] {
         let pinned = Set(pins.values.flatMap { $0 })
         var byKey: [String: [String]] = pins.filter { KeyBinding.isValidKey($0.key) && !$0.value.isEmpty }
         if autoLetters {
-            for app in running where !pinned.contains(app.id) {
+            for app in running where !pinned.contains(app.id) && !skipped.contains(app.id) {
                 guard let key = letter(for: app.name) else { continue }
                 if !(byKey[key] ?? []).contains(app.id) { byKey[key, default: []].append(app.id) }
             }
@@ -131,21 +147,28 @@ final class AppSwitcher: StackbarPlugin {
 
     // MARK: - Actions
 
-    /// Pins `key` to the app (from the chord: the app in front). Pinning the
-    /// same app to the same key again unpins it.
+    /// Pins `key` to the app (from the chord: the app in front), by bundle id
+    /// or by the name of an installed app. Pinning the same app to the same
+    /// key again unpins it.
     func assign(key rawKey: String, app id: String) async -> CommandResult {
         let key = rawKey.lowercased()
         guard KeyBinding.isValidKey(key) else { return .failure("Pin a letter or digit") }
-        guard !id.isEmpty else { return .failure("No app is in front") }
+        let typed = id.trimmingCharacters(in: .whitespaces)
+        guard !typed.isEmpty else { return .failure("No app is in front") }
         if let fresh = try? await Stackbar.runningApps() { apps = fresh }
-        let name = name(of: id)
-        if pins[key] == [id] {
+        let appID: String
+        if isRunning(typed) { appID = typed }
+        else if let found = try? await Stackbar.resolveApplication(typed) { appID = found }
+        else { return .failure("No app called \(typed) is installed. Type its name, like Safari, or its bundle id.") }
+        var name = name(of: appID)
+        if name == appID, let installed = try? await Stackbar.installedApps(), let match = installed.first(where: { $0.id == appID }) { name = match.name }
+        if pins[key] == [appID] {
             pins[key] = nil
             notice = "\(key.uppercased()) is no longer pinned to \(name)"
         } else {
-            for other in pins.keys where pins[other]?.contains(id) == true { pins[other] = nil }
-            pins[key] = [id]
-            pinNames[id] = name
+            for other in pins.keys where pins[other]?.contains(appID) == true { pins[other] = nil }
+            pins[key] = [appID]
+            pinNames[appID] = name
             notice = "\(triggerKey.title) \(key.uppercased()) now opens \(name)"
         }
         await apply()
@@ -162,6 +185,11 @@ final class AppSwitcher: StackbarPlugin {
     func set(_ change: () -> Void) async {
         change()
         await apply()
+    }
+
+    /// Brings the app forward (or opens it), and says in the panel why it can't.
+    func activate(_ id: String, launch: Bool = false) async {
+        do { try await Stackbar.activateApp(id, launch: launch) } catch { notice = "Couldn't open \(name(of: id)): \(error)" }
     }
 
     // MARK: - Surfaces
@@ -220,6 +248,7 @@ final class AppSwitcher: StackbarPlugin {
 
     private func row(_ binding: KeyBinding) -> ViewContent {
         let isPinned = pins[binding.key]?.isEmpty == false
+        let pinnedApps = Set(pins.values.flatMap { $0 })
         let names = binding.apps.map(name(of:))
         let running = binding.apps.filter(isRunning)
         var detail: [String] = []
@@ -230,12 +259,20 @@ final class AppSwitcher: StackbarPlugin {
             .appIcon(running.first ?? binding.apps.first)
             .badge(binding.key.uppercased(), role: .accent)
         if let first = running.first {
-            row = row.action("Switch") { try await Stackbar.activateApp(first) }
+            row = row.action("Switch") { await self.activate(first) }
         } else if let first = binding.apps.first {
-            row = row.action("Open") { try await Stackbar.activateApp(first, launch: true) }
+            row = row.action("Open") { await self.activate(first, launch: true) }
         }
         if isPinned {
             row = row.action("Unpin") { await self.unpin(binding.key) }
+        }
+        for appID in binding.apps where !pinnedApps.contains(appID) {
+            row = row.action("Leave Out \(name(of: appID))") {
+                await self.set {
+                    self.skipped.append(appID)
+                    self.pinNames[appID] = self.name(of: appID)
+                }
+            }
         }
         return [row]
     }
@@ -259,8 +296,21 @@ final class AppSwitcher: StackbarPlugin {
             Toggle("Give running apps their first letter", isOn: autoLetters) { value in await self.set { self.autoLetters = value } }
             Toggle("Open pinned apps that aren't running", isOn: openPinned) { value in await self.set { self.openPinned = value } }
             if !pins.isEmpty {
-                Button("Clear every pin", symbol: "pin.slash", role: .critical) {
+                Button(clearArmed ? "Click again to clear every pin" : "Clear every pin", symbol: "pin.slash", role: .critical, key: "clear-pins") {
+                    guard self.clearArmed else {
+                        self.clearArmedAt = Date()
+                        return
+                    }
+                    self.clearArmedAt = .distantPast
                     await self.set { self.pins = [:] }
+                }
+            }
+        }
+        if !skipped.isEmpty {
+            Section("Left out") {
+                ForEach(skipped) { id in
+                    Row(name(of: id), key: "skipped-\(id)")
+                        .action("Bring Back") { await self.set { self.skipped.removeAll { $0 == id } } }
                 }
             }
         }
@@ -276,11 +326,17 @@ final class AppSwitcher: StackbarPlugin {
             await self.assign(key: invocation["key"] ?? "", app: invocation["app"] ?? "")
         }
         .argument("key", placeholder: "Letter")
-        .argument("app", placeholder: "Bundle id, like com.apple.Safari")
-        Command("clear-pins", title: "Clear App Switcher Pins", subtitle: "Every letter goes back to its app's first letter", symbol: "pin.slash", keywords: ["app switcher", "pin", "letter"]) { _ in
-            await self.set { self.pins = [:] }
-            return .message("Cleared every pin")
-        }
+        .argument("app", placeholder: "App name or bundle id, like Safari")
+        Command("clear-pins", title: "Clear App Switcher Pins", subtitle: "Every letter goes back to its app's first letter", symbol: "pin.slash", keywords: ["app switcher", "pin", "letter"])
+            .view { _ in
+                List {
+                    Row("Clear Every Pin Now", subtitle: "\(self.pins.count) pinned \(self.pins.count == 1 ? "letter" : "letters") will go back to each app's first letter", symbol: "pin.slash", key: "confirm")
+                        .action("Clear", role: .critical) {
+                            await self.set { self.pins = [:] }
+                            self.notice = "Cleared every pin"
+                        }
+                }
+            }
     }
 
     var tools: [AgentTool] {

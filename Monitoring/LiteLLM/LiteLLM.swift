@@ -14,7 +14,7 @@ final class LiteLLM: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.litellm",
         name: "LiteLLM",
-        version: "1.4.1",
+        version: "1.5.0",
         summary: "Tokens, spend, budget and model mix from your LiteLLM proxy, with charts.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
@@ -104,6 +104,8 @@ final class LiteLLM: StackbarPlugin {
     @Stored("menuBarShows") var menuBarShows = MenuBarShows.spend.rawValue
     @Stored("notifyBudget") var notifyBudget = true
     @Stored("notified") var notified: [String: Double] = [:]
+    /// The proxy and user the stored numbers belong to, so another one starts its history fresh.
+    @Stored("source") var source = ""
 
     /// Today's health, from the latest fetch.
     struct Today: Codable, Equatable {
@@ -119,10 +121,17 @@ final class LiteLLM: StackbarPlugin {
     var proxy: String?
     /// When the last history fetch failed, to back off before trying again.
     var historyFailed: Date?
+    /// Whether the last refresh found no key, so the panel asks for one.
+    var needsKey = false
+    /// When the last refresh started, so the palette's Spend view doesn't ask on every keystroke.
+    var lastAttempt: Date?
+    /// When `/key/info` last gave no budget, so it isn't asked on every refresh.
+    var keyInfoMissed: Date?
 
     // MARK: - Fetching
 
     func refresh() async throws {
+        lastAttempt = Date()
         guard let url = try await Stackbar.secret("LITELLM_PROXY_URL")?.trimmingCharacters(in: .whitespacesAndNewlines), !url.isEmpty else {
             proxy = nil
             problem = "Enter your proxy's URL as LITELLM_PROXY_URL."
@@ -131,14 +140,21 @@ final class LiteLLM: StackbarPlugin {
         let base = url.hasSuffix("/") ? String(url.dropLast()) : url
         proxy = base
         guard let key = try await Stackbar.secret("LITELLM_API_KEY")?.trimmingCharacters(in: .whitespacesAndNewlines), !key.isEmpty else {
+            needsKey = true
             problem = "Enter a LiteLLM key as LITELLM_API_KEY."
             return
         }
+        needsKey = false
         do {
-            async let info = fetchBudget(base: base, key: key)
+            async let account = fetchBudget(base: base, key: key)
             async let month = fetchDays(base: base, key: key, from: Self.day(-30), to: Self.day(0))
-            let (newBudget, recent) = try await (info, month)
-            budget = newBudget
+            let (fetched, recent) = try await (account, month)
+            // Another proxy or user has other numbers: its history starts over
+            // rather than mixing in the old one's.
+            let current = base + "|" + (fetched.userID ?? "")
+            if !source.isEmpty, source != current { days = [:]; historyFetched = nil; historyFailed = nil; notified = [:]; todayDetail = nil }
+            if source != current { source = current }
+            budget = fetched.budget
             merge(recent.days)
             models = recent.models
             todayDetail = recent.today
@@ -163,17 +179,44 @@ final class LiteLLM: StackbarPlugin {
         }
     }
 
+    /// A refresh unless one started less than `maxAge` ago. The Spend view asks
+    /// on every keystroke, so it waits, and a failed proxy waits 30 s at least.
+    func refresh(maxAge: TimeInterval) async throws {
+        if let at = lastAttempt, Date().timeIntervalSince(at) < (problem == nil ? maxAge : max(maxAge, 30)) { return }
+        try await refresh()
+    }
+
     private func headers(_ key: String) -> [String: String] {
         ["Authorization": "Bearer \(key)", "Accept": "application/json"]
     }
 
-    private func fetchBudget(base: String, key: String) async throws -> Budget? {
-        let response = try await Stackbar.get(base + "/user/info", headers: headers(key))
+    /// The user's budget and id. A key can carry its own budget (virtual and
+    /// team keys often do) while its user has none, so that one is used then.
+    private func fetchBudget(base: String, key: String) async throws -> (budget: Budget?, userID: String?) {
+        let response = try await Stackbar.http(HTTPRequest(url: base + "/user/info", headers: headers(key), timeout: 15))
         try check(response, what: "/user/info")
-        let info = try JSONDecoder().decode(UserInfoResponse.self, from: response.body).user_info
-        guard let info else { return nil }
-        let max = info.max_budget?.value
-        return Budget(spend: info.spend?.value ?? 0, max: max.flatMap { $0 > 0 ? $0 : nil }, resetAt: info.budget_reset_at.flatMap(Self.parseDate))
+        let reply = try JSONDecoder().decode(UserInfoResponse.self, from: response.body)
+        var budget: Budget?
+        if let info = reply.user_info {
+            let max = info.max_budget?.value
+            budget = Budget(spend: info.spend?.value ?? 0, max: max.flatMap { $0 > 0 ? $0 : nil }, resetAt: info.budget_reset_at.flatMap(Self.parseDate))
+        }
+        if budget?.max == nil, keyInfoMissed.map({ Date().timeIntervalSince($0) > 3600 }) ?? true {
+            if let keyBudget = await fetchKeyBudget(base: base, key: key) {
+                return (keyBudget, reply.user_id)
+            }
+            keyInfoMissed = Date()
+        }
+        return (budget, reply.user_id)
+    }
+
+    /// The key's own budget from `/key/info`. Any failure, or no budget, is nil.
+    private func fetchKeyBudget(base: String, key: String) async -> Budget? {
+        guard let response = try? await Stackbar.http(HTTPRequest(url: base + "/key/info", headers: headers(key), timeout: 15)),
+              (200..<300).contains(response.status),
+              let info = (try? JSONDecoder().decode(KeyInfo.self, from: response.body))?.info,
+              let max = info.max_budget?.value, max > 0 else { return nil }
+        return Budget(spend: info.spend?.value ?? 0, max: max, resetAt: info.budget_reset_at.flatMap(Self.parseDate))
     }
 
     struct Fetched {
@@ -188,7 +231,7 @@ final class LiteLLM: StackbarPlugin {
         var byModel: [String: Model] = [:]
         var page = 1
         while page <= 20 {
-            let response = try await Stackbar.get(base + "/user/daily/activity?start_date=\(from)&end_date=\(to)&page=\(page)&page_size=100", headers: headers(key))
+            let response = try await Stackbar.http(HTTPRequest(url: base + "/user/daily/activity?start_date=\(from)&end_date=\(to)&page=\(page)&page_size=100", headers: headers(key), timeout: 15))
             try check(response, what: "/user/daily/activity")
             let activity = try JSONDecoder().decode(ActivityResponse.self, from: response.body)
             for result in activity.results ?? [] {
@@ -263,6 +306,8 @@ final class LiteLLM: StackbarPlugin {
             if proxy == nil {
                 EmptyState("Connect your LiteLLM proxy", symbol: "server.rack",
                            message: "Paste its URL as LITELLM_PROXY_URL and a key as LITELLM_API_KEY. Nothing is contacted until you do.", theme: theme)
+            } else if needsKey && days.isEmpty {
+                EmptyState("Add your LiteLLM key", symbol: "key.fill", message: "Enter a LiteLLM key as LITELLM_API_KEY. It stays in your Keychain.", theme: theme)
             } else if days.isEmpty, let problem {
                 EmptyState("Can't reach the proxy", symbol: "exclamationmark.triangle", message: problem, theme: .warning) {
                     ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme, prominent: true) { try await self.refresh() }
@@ -292,7 +337,7 @@ final class LiteLLM: StackbarPlugin {
                 budgetCard
                 trendCard
                 Card("Activity", detail: "\(activeDays(0...181)) active days in 6 months") {
-                    Chart(values: series(days: 182, measure: .tokens), kind: .heatmap, labels: dayLabels(182, format: "EEE d MMM"), unit: " tokens")
+                    Chart(values: series(days: 182, measure: .tokens), kind: .heatmap, labels: dayLabels(182, formatter: Self.longLabels), unit: " tokens")
                         .foreground(theme.solidPaint)
                 }
                 if !models.isEmpty {
@@ -391,9 +436,9 @@ final class LiteLLM: StackbarPlugin {
         let unit = measure == .tokens ? nil : "$"
         switch Range(rawValue: range) ?? .month {
         case .week:
-            Chart(values: series(days: 7, measure: measure), kind: .bar, labels: dayLabels(7, format: "EEE"), unit: unit, highlight: 6)
+            Chart(values: series(days: 7, measure: measure), kind: .bar, labels: dayLabels(7, formatter: Self.weekdayLabels), unit: unit, highlight: 6)
         case .month:
-            Chart(values: series(days: 30, measure: measure), kind: .area, labels: sparseLabels(dayLabels(30, format: "MMM d"), every: 7), unit: unit, highlight: 29)
+            Chart(values: series(days: 30, measure: measure), kind: .area, labels: sparseLabels(dayLabels(30, formatter: Self.monthDayLabels), every: 7), unit: unit, highlight: 29)
         case .halfYear:
             let weeks = weekly(measure: measure)
             Chart(values: weeks.values, kind: .area, labels: weeks.labels, unit: unit)
@@ -440,12 +485,19 @@ final class LiteLLM: StackbarPlugin {
     // MARK: Commands
 
     var commands: [Command] {
-        Command("spend", title: "LiteLLM Spend", subtitle: "Today, 7 and 30 days, and the budget", symbol: "gauge.with.dots.needle.50percent", keywords: ["litellm", "llm", "tokens", "spend", "cost", "budget"])
-            .view(search: { _ in try? await self.refresh() }) { _ in
+        Command("spend", title: "LiteLLM Spend", subtitle: "Today, 7 and 30 days, the budget and top models", symbol: "gauge.with.dots.needle.50percent", keywords: ["litellm", "llm", "tokens", "spend", "cost", "budget"])
+            .view(search: { _ in try? await self.refresh(maxAge: 30) }) { _ in
                 if self.proxy == nil {
                     ContentUnavailableView("Connect your LiteLLM proxy", symbol: "server.rack", message: "Set LITELLM_PROXY_URL and LITELLM_API_KEY in Stackbar's Settings.")
+                } else if self.needsKey && self.days.isEmpty {
+                    ContentUnavailableView("Add your LiteLLM key", symbol: "key.fill", message: "Set LITELLM_API_KEY in Stackbar's Settings.")
+                } else if let problem = self.problem, self.days.isEmpty {
+                    ContentUnavailableView("Can't reach the proxy", symbol: "exclamationmark.triangle", message: problem)
                 } else {
                     List {
+                        if let problem = self.problem {
+                            Row("Showing numbers from \(self.lastSuccess.map(Self.relative) ?? "earlier")", subtitle: problem, symbol: "exclamationmark.triangle", key: "spend-stale")
+                        }
                         self.spendRow("Today", 0...0)
                         self.spendRow("7 days", 0...6)
                         self.spendRow("30 days", 0...29)
@@ -453,6 +505,11 @@ final class LiteLLM: StackbarPlugin {
                             Row("Budget", subtitle: "\(Self.money(budget.spend, cents: true)) of \(Self.money(max))" + (budget.resetAt.map { ", resets \(Self.relative($0))" } ?? ""),
                                 symbol: "gauge.with.dots.needle.67percent", key: "spend-budget")
                                 .badge(self.budgetUsed.map { "\(Int($0))%" } ?? "", role: (self.budgetUsed ?? 0) >= 90 ? .critical : (self.budgetUsed ?? 0) >= 75 ? .warning : .secondary)
+                                .action("Copy Summary") { Stackbar.copy(self.summaryText) }
+                        }
+                        ForEach(Array(self.models.prefix(5))) { model in
+                            Row(model.name, subtitle: "\(Self.compact(model.tokens)) tokens · 30 days", symbol: "cpu", key: "spend-model-\(model.name)")
+                                .badge(Self.money(model.spend, cents: true))
                                 .action("Copy Summary") { Stackbar.copy(self.summaryText) }
                         }
                     }
@@ -517,11 +574,20 @@ final class LiteLLM: StackbarPlugin {
         }
     }
 
-    func dayLabels(_ count: Int, format: String) -> [String] {
+    /// Kept rather than built per call: a window asks for about 200 labels a render.
+    static let weekdayLabels = labelFormatter("EEE")
+    static let monthDayLabels = labelFormatter("MMM d")
+    static let longLabels = labelFormatter("EEE d MMM")
+
+    static func labelFormatter(_ format: String) -> DateFormatter {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = format
-        return (0..<count).reversed().map { formatter.string(from: Calendar.current.date(byAdding: .day, value: -$0, to: Date()) ?? Date()) }
+        return formatter
+    }
+
+    func dayLabels(_ count: Int, formatter: DateFormatter) -> [String] {
+        (0..<count).reversed().map { formatter.string(from: Calendar.current.date(byAdding: .day, value: -$0, to: Date()) ?? Date()) }
     }
 
     /// Keeps every `every`th label, counted back from the last, and blanks the
@@ -532,7 +598,7 @@ final class LiteLLM: StackbarPlugin {
 
     func weekly(measure: Measure) -> (values: [Double], labels: [String]) {
         let daily = series(days: 182, measure: measure)
-        let names = dayLabels(182, format: "MMM d")
+        let names = dayLabels(182, formatter: Self.monthDayLabels)
         var values: [Double] = []
         var labels: [String] = []
         for start in stride(from: daily.count % 7, to: daily.count, by: 7) {
@@ -631,7 +697,13 @@ final class LiteLLM: StackbarPlugin {
             var max_budget: Flexible?
             var budget_reset_at: String?
         }
+        var user_id: String?
         var user_info: Info?
+    }
+
+    /// `/key/info`: a key's own spend and budget, in the same fields as a user's.
+    struct KeyInfo: Decodable {
+        var info: UserInfoResponse.Info?
     }
 
     struct Metrics: Decodable {

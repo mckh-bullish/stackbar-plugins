@@ -6,11 +6,17 @@ comes first in the results; Return opens it, ⌘K copies its path or bundle id.
 The ones you open most rank higher. Search Applications lists them all.
 
 - **Needs:** the list of installed apps and opening them (`.apps`), and
-  opening System Settings panes by their link. Stackbar 0.20.0 or later.
+  opening System Settings panes by their link. Stackbar 0.31.0 or later.
 - **Surfaces:** panel (your most opened apps).
 - **Commands:** Search Applications, which also feeds the palette's results.
 - **Looks in:** /Applications (one folder deep), ~/Applications and the
   system's own apps, plus every pane System Settings lists.
+
+## What's new in 1.2.2
+
+- System Settings panes open again: picking Wi-Fi, Displays or any other pane brings it up.
+- Typing in the palette always answers straight away. The app list refreshes in the background every few minutes instead of making a keystroke wait.
+- Your most opened apps in the panel no longer show up a second time in the palette's results.
 
 ## What's new in 1.2.1
 

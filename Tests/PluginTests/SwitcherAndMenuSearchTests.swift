@@ -52,6 +52,19 @@ final class SwitcherAndMenuSearchTests: XCTestCase {
         await session.stop()
     }
 
+    func testMenuSearchForgivesTyposInitialsAndDots() async throws {
+        let host = Host(self)
+        let session = try await host.session("MenuSearch")
+        let opened = try await session.openView("search")
+        for (typed, first) in [("zom in", "Zoom In"), ("prvate", "New Private Window"), ("nw", "New Window"), ("export...", "Export as PDF…")] {
+            let view = try await session.updateView(opened.session, query: CommandQuery(text: typed))
+            XCTAssertEqual(view?.rows.first?.title, first, typed)
+        }
+        let dots = try await session.updateView(opened.session, query: CommandQuery(text: "..."))
+        XCTAssertEqual(dots?.rows.count, 0)
+        await session.stop()
+    }
+
     func testTypingReusesTheWindowListUntilTheViewReopens() async throws {
         let host = Host(self)
         let session = try await host.session("WindowSwitcher")

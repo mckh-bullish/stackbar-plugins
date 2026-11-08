@@ -10,7 +10,7 @@ final class SystemCommands: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.system-commands",
         name: "System Commands",
-        version: "1.0.1",
+        version: "1.0.2",
         summary: "Lock, sleep, restart, empty the Trash or switch to dark mode from the palette.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -20,6 +20,13 @@ final class SystemCommands: StackbarPlugin {
         accent: .graphite,
         symbol: "power.circle.fill"
     )
+
+    // MARK: Previews
+
+    static let previews: [PreviewScene<SystemCommands>] = [
+        PreviewScene("hero", "Lock, sleep or switch to dark mode by name") { plugin in plugin.armed = nil },
+        PreviewScene("asks-first", "Restart and Shut Down ask once more") { plugin in plugin.arm("restart") },
+    ]
 
     let theme = Theme.graphite
 
@@ -74,6 +81,11 @@ final class SystemCommands: StackbarPlugin {
         if let done = item.done { Stackbar.hud(done) }
     }
 
+    /// Runs it and says why when it can't: a click's error otherwise only reaches the log.
+    func run(_ item: Item) async {
+        do { try await perform(item) } catch { Stackbar.hud("\(error)", isError: true) }
+    }
+
     // MARK: Commands
 
     var commands: [Command] {
@@ -85,7 +97,7 @@ final class SystemCommands: StackbarPlugin {
                     .view { _ in
                         List {
                             Row("\(item.action.title) Now", subtitle: item.subtitle, symbol: item.symbol, key: "confirm")
-                                .action(item.action.title, role: .critical) { try await self.perform(item) }
+                                .action(item.action.title, role: .critical) { await self.run(item) }
                         }
                     }
             }
@@ -103,7 +115,7 @@ final class SystemCommands: StackbarPlugin {
         Card("Now", spacing: 0, padding: Space.s) {
             ForEach(Self.items.filter { !$0.action.isDestructive }) { item in
                 Row(item.action.title, subtitle: item.subtitle, symbol: item.symbol, key: item.id)
-                    .action(item.action.title) { try await self.perform(item) }
+                    .action(item.action.title) { await self.run(item) }
             }
         }
         Card("Asks first", spacing: 0, padding: Space.s) {
@@ -111,10 +123,14 @@ final class SystemCommands: StackbarPlugin {
                 if armedNow == item.id {
                     Row("Click again to \(item.action.title.lowercased())", subtitle: item.subtitle, symbol: item.symbol, key: item.id)
                         .action(item.action.title, role: .critical) {
-                            // A stale confirmation counts as a first click.
-                            guard self.armedNow == item.id else { return self.arm(item.id) }
+                            // A stale confirmation counts as a first click, and says so.
+                            guard self.armedNow == item.id else {
+                                self.arm(item.id)
+                                Stackbar.hud("Click again within 10 seconds to \(item.action.title.lowercased())")
+                                return
+                            }
                             self.armed = nil
-                            try await self.perform(item)
+                            await self.run(item)
                         }
                         .action("Cancel") { self.armed = nil }
                 } else {

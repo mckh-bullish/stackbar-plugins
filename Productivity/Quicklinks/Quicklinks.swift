@@ -19,7 +19,7 @@ final class Quicklinks: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.quicklinks",
         name: "Quicklinks",
-        version: "1.6.0",
+        version: "1.6.1",
         summary: "Open links and folders by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -43,6 +43,10 @@ final class Quicklinks: StackbarPlugin {
             plugin.usage = Dictionary(uniqueKeysWithValues: samples.enumerated().map { index, link in
                 (link.commandID, Usage(count: 40 - index * 4, last: Date().addingTimeInterval(-Double(index) * 3600)))
             })
+        },
+        PreviewScene("tags", "Filter by tag") { plugin in
+            plugin.links = samples
+            plugin.panelTag = "Dev"
         },
     ]
 
@@ -180,9 +184,11 @@ final class Quicklinks: StackbarPlugin {
         guard !fallbacksSeeded else { return }
         fallbacksSeeded = true
         let engines = Set(Self.library.filter { Self.fallbacks.contains($0.name) }.map(\.link))
-        for index in links.indices where links[index].fallback == nil && engines.contains(links[index].link) {
-            links[index].fallback = true
+        var all = links
+        for index in all.indices where all[index].fallback == nil && engines.contains(all[index].link) {
+            all[index].fallback = true
         }
+        if all != links { links = all }
     }
 
     @ViewBuilder func libraryView(tag: String?) -> ViewContent {
@@ -274,7 +280,7 @@ final class Quicklinks: StackbarPlugin {
         let digits = rest.prefix { $0.isASCII && $0.isNumber }
         guard (1...5).contains(digits.count), let port = Int(digits), (1...65535).contains(port) else { return false }
         let after = rest.dropFirst(digits.count)
-        return after.isEmpty || "/?#".contains(after.first!)
+        return after.first.map { "/?#".contains($0) } ?? true
     }
 
     /// A dev server or a box on the home network answers plain http:
@@ -291,9 +297,10 @@ final class Quicklinks: StackbarPlugin {
         name = name.split(separator: ":", omittingEmptySubsequences: false).first.map(String.init) ?? ""
         guard !name.isEmpty else { return false }
         if name == "localhost" || name.hasSuffix(".localhost") || name.hasSuffix(".local") || name.hasPrefix("127.") || name == "0.0.0.0" { return true }
-        let octets = name.split(separator: ".", omittingEmptySubsequences: false).map { Int($0) }
-        if octets.count == 4, octets.allSatisfy({ $0 != nil && (0...255).contains($0!) }) {
-            let o = octets.map { $0! }
+        let parts = name.split(separator: ".", omittingEmptySubsequences: false)
+        let octets = parts.compactMap { Int($0) }.filter { (0...255).contains($0) }
+        if octets.count == 4, parts.count == 4 {
+            let o = octets
             return o[0] == 10 || (o[0] == 172 && (16...31).contains(o[1])) || (o[0] == 192 && o[1] == 168) || (o[0] == 169 && o[1] == 254)
         }
         // A name with no dot can't be on the public internet.
@@ -491,7 +498,7 @@ final class Quicklinks: StackbarPlugin {
             ? row.navigate("Open", to: link.commandID)
             : row.action("Open") { try await self.open(link) }
         return row
-            .action("Copy Link", shortcut: "cmd+shift+c") {
+            .action(needsInput ? "Copy Link Template" : "Copy Link", shortcut: "cmd+shift+c") {
                 Stackbar.copy(needsInput ? link.link : ((try? await self.resolve(link, arguments: [:], context: nil)) ?? link.link))
             }
             .navigate("Edit", to: "create", arguments: ["id": link.id.uuidString], shortcut: "cmd+e")

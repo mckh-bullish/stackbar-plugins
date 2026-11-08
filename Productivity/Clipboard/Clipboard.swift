@@ -15,7 +15,7 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.11.0",
+        version: "1.12.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
@@ -274,6 +274,15 @@ final class Clipboard: StackbarPlugin {
     var lastError: String?
     /// A pattern typed in Settings that isn't a regex, shown where it was typed.
     var settingsError: String?
+    /// The clear button clicked once ("clear" or "clear-all"), waiting for a second click.
+    var armedClear: String?
+    private var armedClearAt = Date.distantPast
+    var armedClearNow: String? { armedClear.flatMap { Date().timeIntervalSince(armedClearAt) < 10 ? $0 : nil } }
+    func confirmClear(_ which: String, keepPinned: Bool) {
+        guard armedClearNow == which else { armedClear = which; armedClearAt = Date(); return }
+        armedClear = nil
+        clear(keepPinned: keepPinned)
+    }
 
     var entries: [Entry] {
         get {
@@ -508,6 +517,9 @@ final class Clipboard: StackbarPlugin {
         }
     }
 
+    /// The history newest first, whatever order the panel shows.
+    var newestFirst: [Entry] { entries.sorted { $0.lastCopied > $1.lastCopied } }
+
     // MARK: Surfaces
 
     var menuBar: ViewContent {
@@ -544,7 +556,7 @@ final class Clipboard: StackbarPlugin {
                 EmptyState("Nothing copied yet", symbol: "list.clipboard", message: "Copy something in any app and it shows up here.", theme: theme)
             }
         } else {
-            if let latest = history.first { lastCopied(latest) }
+            if let latest = history.max(by: { $0.lastCopied < $1.lastCopied }) { lastCopied(latest) }
             List(searchable: true) {
                 if !pinned.isEmpty {
                     Section("Pinned") {
@@ -567,7 +579,7 @@ final class Clipboard: StackbarPlugin {
             HStack(spacing: Space.s) {
                 IconTile(entry.symbol, theme: theme, size: 30).symbolEffect(.bounce)
                 VStack(spacing: 0) {
-                    Text("LAST COPIED").typography(.overline).foreground(theme.textPaint)
+                    Text("LAST COPIED").role(.secondary).typography(.overline)
                     Text([entry.appName, Self.relative(entry.lastCopied)].compactMap { $0 }.joined(separator: " · ")).role(.secondary).typography(.caption)
                 }
                 Spacer(minLength: Space.xs)
@@ -633,7 +645,7 @@ final class Clipboard: StackbarPlugin {
             }
             Toggle("Keep images", isOn: keepImages) { self.keepImages = $0 }
             Toggle("Find images by the text in them", isOn: readImageText) { self.readImageText = $0 }
-            Button("Clear history (keeps pinned)", symbol: "trash", role: .critical) { self.clear() }
+            Button(armedClearNow == "clear" ? "Click again to clear \(entries.filter { !$0.pinned }.count) items" : "Clear history (keeps pinned)", symbol: "trash", role: .critical, key: "clear") { self.confirmClear("clear", keepPinned: true) }
         }
         Section("Ignored apps") {
             ignoredAppsContent
@@ -650,7 +662,7 @@ final class Clipboard: StackbarPlugin {
             ignoredText
         }
         Section {
-            Button("Clear everything, including pinned", symbol: "trash.slash", role: .critical) { self.clear(keepPinned: false) }
+            Button(armedClearNow == "clear-all" ? "Click again to clear all \(entries.count) items" : "Clear everything, including pinned", symbol: "trash.slash", role: .critical, key: "clear-all") { self.confirmClear("clear-all", keepPinned: false) }
         }
     }
 
@@ -787,7 +799,8 @@ final class Clipboard: StackbarPlugin {
         // What you copied shows in the palette's results as you type.
         if inPalette { search.rootSearch() } else { search }
         Command("paste-plain", title: "Paste Last Copy as Plain Text", symbol: "doc.plaintext", keywords: ["clipboard", "format"]) { _ in
-            guard let latest = self.sorted.first(where: { !$0.pinned }) ?? self.sorted.first else { return .message("Nothing copied yet") }
+            // Pinned items move to the top when they are used again, so skip them: this is the last copy you made.
+            guard let latest = self.newestFirst.first(where: { !$0.pinned }) ?? self.newestFirst.first else { return .message("Nothing copied yet") }
             await self.use(latest, paste: true, plain: true)
             if let error = self.lastError { return .failure(error) }
             return .done
@@ -800,6 +813,21 @@ final class Clipboard: StackbarPlugin {
             self.ignoreNext = true
             return .message("The next copy won't be kept")
         }
+        Command("clear", title: "Clear Clipboard History", subtitle: "Keeps pinned items", symbol: "trash", keywords: ["clipboard", "clear", "delete", "history"])
+            .view { _ in
+                let all = self.entries
+                if all.isEmpty {
+                    ContentUnavailableView("Nothing to clear", symbol: "list.clipboard")
+                } else {
+                    List {
+                        let unpinned = all.filter { !$0.pinned }.count
+                        Row("Clear \(unpinned) item\(unpinned == 1 ? "" : "s")", subtitle: "Pinned items stay", symbol: "trash", key: "confirm")
+                            .action("Clear", role: .critical) { self.clear() }
+                        Row("Clear everything, including \(all.count - unpinned) pinned", symbol: "trash.slash", key: "confirm-all")
+                            .action("Clear Everything", role: .critical) { self.clear(keepPinned: false) }
+                    }
+                }
+            }
     }
 
     // MARK: Agents
@@ -807,18 +835,18 @@ final class Clipboard: StackbarPlugin {
     var tools: [AgentTool] {
         AgentTool("recent_clips", description: "The most recent clipboard items, newest first", parameters: [ToolParameter("count", .number, description: "How many (default 10)", required: false)]) { arguments in
             let count = Int(arguments.number("count") ?? 10)
-            return self.sorted.prefix(max(1, min(count, 50))).enumerated().map { "\($0.offset + 1). \($0.element.title)" }.joined(separator: "\n")
+            return self.newestFirst.prefix(max(1, min(count, 50))).enumerated().map { "\($0.offset + 1). \($0.element.title)" }.joined(separator: "\n")
         }
         .optIn()
         AgentTool("search_clips", description: "Clipboard items containing the text, newest first, in full", parameters: [ToolParameter("query", description: "Text to look for")]) { arguments in
             let query = arguments.string("query") ?? ""
-            let found = self.sorted.filter { $0.secret == nil && ($0.text ?? $0.recognized ?? "").localizedCaseInsensitiveContains(query) }.prefix(10)
+            let found = self.newestFirst.filter { $0.secret == nil && ($0.text ?? $0.recognized ?? "").localizedCaseInsensitiveContains(query) }.prefix(10)
             return found.isEmpty ? "Nothing in the history contains \"\(query)\"." : found.map { $0.text ?? $0.title }.joined(separator: "\n---\n")
         }
         .optIn()
         AgentTool("copy_clip", description: "Put a history item back on the clipboard, by its position in recent_clips", parameters: [ToolParameter("position", .number, description: "1 is the newest")]) { arguments in
             let position = Int(arguments.number("position") ?? 0)
-            let items = self.sorted
+            let items = self.newestFirst
             guard position >= 1, position <= items.count else { return "There is no item \(position)." }
             await self.use(items[position - 1], paste: false)
             return "Copied \(items[position - 1].title)"

@@ -14,12 +14,12 @@ final class Jira: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.jira",
         name: "Jira",
-        version: "1.5.1",
+        version: "1.6.0",
         summary: "Your assigned Jira issues: change status, assign, comment and watch, with alerts and new issues from the palette.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("*.atlassian.net"), .secret(name: "JIRA_API_TOKEN"), .userServer(secret: "JIRA_SERVER_URL")],
-        minimumStackbar: "0.21.0",
+        minimumStackbar: "0.22.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Jira",
         accent: .blue,
         symbol: "ticket.fill"
@@ -115,10 +115,15 @@ final class Jira: StackbarPlugin {
     /// until the first good refresh, which notifies nothing.
     @Stored("seen") var seen: [String] = []
     @Stored("seenReady") var seenReady = false
+    /// The site and user the seen keys belong to, so a switch to another
+    /// account starts over instead of announcing its whole list as new.
+    @Stored("account") var account = ""
     /// The Data Center server's base URL, read from JIRA_SERVER_URL.
     var server: String?
     /// The signed-in user: accountId on Cloud, the username on Data Center.
     var me: String?
+    /// The server and token the last request used; a change means another account.
+    var credentials: String?
     /// Workflow transitions of an issue, by key, for the status command.
     var transitions: [String: [Transition]] = [:]
     /// When each issue's transitions were loaded: a workflow changed by
@@ -134,6 +139,8 @@ final class Jira: StackbarPlugin {
     var keyMisses: [String: Date] = [:]
     var keyProblem: String?
     var found: [Issue] = []
+    /// The text `found` answers, so typing it again asks Jira nothing.
+    var foundText: String?
     /// Why the last search failed, shown instead of an empty list.
     var searchProblem: String?
     /// Your issues that moved to Done in the last week. The panel JQL leaves
@@ -141,6 +148,8 @@ final class Jira: StackbarPlugin {
     var doneThisWeek: [Issue] = []
     var problem: String?
     var loaded = false
+    /// When the projects were last listed, so ones created since show up.
+    var projectsLoaded: Date?
     var formError: String?
     var created: String?
 
@@ -201,10 +210,15 @@ final class Jira: StackbarPlugin {
             authorization = "Basic " + Data("\(email):\(token)".utf8).base64EncodedString()
             where_ = "https://\(host)"
         }
+        let current = authorization + "|" + where_
+        if let credentials, credentials != current {
+            me = nil; transitions = [:]; transitionsLoadedAt = [:]; keyed = [:]; keyMisses = [:]; projects = []; found = []; foundText = nil
+        }
+        credentials = current
         let host = URL(string: where_)?.host ?? where_
         let response = try await Stackbar.http(HTTPRequest(url: "\(where_)/rest/api/\(apiVersion)\(path)", method: method, headers: [
             "Authorization": authorization, "Accept": "application/json", "Content-Type": "application/json",
-        ], body: try body.map { try JSONSerialization.data(withJSONObject: $0, options: .fragmentsAllowed) }))
+        ], body: try body.map { try JSONSerialization.data(withJSONObject: $0, options: .fragmentsAllowed) }, timeout: 15))
         switch response.status {
         case 200..<300: return response.body
         case 401: throw HostError(isDataCenter ? "Jira rejected the access token (401)" : "Jira rejected the email or API token (401)")
@@ -256,7 +270,7 @@ final class Jira: StackbarPlugin {
     var refreshed: Date?
 
     func refresh(maxAge: TimeInterval) async throws {
-        if problem == nil, loaded, let at = refreshed, Date().timeIntervalSince(at) < maxAge { return }
+        if loaded, let at = refreshed, Date().timeIntervalSince(at) < (problem == nil ? maxAge : max(maxAge, 30)) { return }
         try await refresh()
     }
 
@@ -269,10 +283,22 @@ final class Jira: StackbarPlugin {
         }
         do {
             assigned = try await searchAll(jql: jql)
+            // Without a user (a failed lookup), keep the account as it was.
+            if let user = try? await myself() {
+                let who = base + "|" + user
+                if !account.isEmpty, account != who { seenReady = false }
+                if account != who { account = who }
+            }
             noticeNewAssignments()
             // Only a stat, so a site that rejects this query keeps the rest of the panel.
             doneThisWeek = (try? await searchAll(jql: Self.doneJQL)) ?? []
-            if projects.isEmpty { try await loadProjects() }
+            if projects.isEmpty {
+                try await loadProjects()
+                projectsLoaded = Date()
+            } else if projectsLoaded.map({ Date().timeIntervalSince($0) > 3600 }) ?? true {
+                try? await loadProjects()
+                projectsLoaded = Date()
+            }
             problem = nil
         } catch {
             problem = "\(error)"
@@ -291,19 +317,25 @@ final class Jira: StackbarPlugin {
         }
     }
 
-    /// A key like `ABC-123` is looked up directly; anything else is a text search.
+    /// A key or a pasted issue link opens that issue; anything else is a text
+    /// search. The search waits for a pause in typing, and retyping the text
+    /// it last found asks Jira nothing.
     func find(_ text: String) async {
         let term = text.trimmingCharacters(in: .whitespaces)
-        guard term.count >= 2 else { found = []; searchProblem = nil; return }
+        guard term.count >= 2 else { found = []; searchProblem = nil; foundText = nil; return }
+        if term == foundText, searchProblem == nil { return }
+        try? await Task.sleep(for: .milliseconds(250))
         let escaped = term.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-        let isKey = term.range(of: #"^[A-Za-z][A-Za-z0-9_]+-\d+$"#, options: .regularExpression) != nil
-        let query = isKey ? "key = \"\(escaped.uppercased())\"" : "text ~ \"\(escaped)\" ORDER BY updated DESC"
+        let query: String
+        if let key = Self.key(in: term) { query = "key = \"\(key)\"" } else { query = "text ~ \"\(escaped)\" ORDER BY updated DESC" }
         do {
             found = try await search(jql: query, limit: 25)
             searchProblem = nil
+            foundText = term
         } catch {
             found = []
             searchProblem = "\(error)"
+            foundText = nil
         }
     }
 
@@ -375,6 +407,16 @@ final class Jira: StackbarPlugin {
     /// Whether `text` is a whole issue key (`ABC-123`) and not the start of one.
     static func isKey(_ text: String) -> Bool {
         text.range(of: #"^[A-Za-z][A-Za-z0-9_]*-\d+$"#, options: .regularExpression) != nil
+    }
+
+    /// The issue a typed key or a pasted issue link names, or nil for other text.
+    static func key(in text: String) -> String? {
+        if isKey(text) { return text.uppercased() }
+        for pattern in [#"/browse/([A-Za-z][A-Za-z0-9_]*-\d+)"#, #"selectedIssue=([A-Za-z][A-Za-z0-9_]*-\d+)"#] {
+            if let r = text.range(of: pattern, options: .regularExpression),
+               let k = text[r].range(of: #"[A-Za-z][A-Za-z0-9_]*-\d+"#, options: .regularExpression) { return text[r][k].uppercased() }
+        }
+        return nil
     }
 
     func loadTransitions(_ key: String) async {
@@ -630,9 +672,9 @@ final class Jira: StackbarPlugin {
                     List(self.assigned, searchable: true) { issue in self.row(issue) }
                 }
             }
-        Command("search", title: "Search Jira", subtitle: "Text, or a key like ABC-123", symbol: "magnifyingglass", keywords: ["jira", "issue", "find", "ticket"])
+        Command("search", title: "Search Jira", subtitle: "Text, a key like ABC-123, or a link", symbol: "magnifyingglass", keywords: ["jira", "issue", "find", "ticket"])
             .view(search: { invocation in await self.find(invocation.text) }) { invocation in
-                if invocation.text.count < 2 {
+                if invocation.text.trimmingCharacters(in: .whitespaces).count < 2 {
                     ContentUnavailableView("Type to search, or paste a key", symbol: "magnifyingglass")
                 } else if let problem = self.searchProblem {
                     ContentUnavailableView("Can't search Jira", symbol: "exclamationmark.triangle", message: problem)

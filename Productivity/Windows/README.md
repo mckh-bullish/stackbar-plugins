@@ -16,17 +16,27 @@ can uninstall it from its page in Settings.
   Stackbar 0.25.0 or later.
 - **Surfaces:** menu bar (off by default), panel, settings.
 - **Snapping:** halves, the four quarters, First / Center / Last Third,
-  First / Last Two Thirds, Maximize, Almost Maximize, Center, Next Display and
-  Undo Snap, which puts the window back where it was before its last snap.
+  First / Last Two Thirds, Maximize, Almost Maximize, Center, Next Display,
+  Previous Display (palette only) and Undo Snap, which puts the window back
+  where it was before its last snap. Pressing Left, Right, Top or Bottom Half
+  again cycles through two thirds and one third.
 - **Settings:** the gap left around snapped windows, bring back the starred
-  layout when displays change, open apps that aren't running, and the menu
-  bar icon.
+  layout when displays change, open apps that aren't running, cycle sizes on
+  repeated halves, and the menu bar icon.
 - **Commands:** one per snap, Save Window Layout, Restore Window Layout, and
   one Restore command per layout, so each layout can have its own hotkey or
   alias.
 - **Agent tools:** `snap`, `layouts`, `save_layout` and `restore_layout`.
 - **Not covered:** windows in full screen and on other Spaces, and browser
   tabs.
+
+## What's new in 2.1.0
+
+- Snap buttons in the panel now say when nothing could move, for example "Only one display" or when an app won't let its window move.
+- Restoring a layout saved with a display that's no longer connected keeps every window on a screen you have.
+- Deleting a layout, or all of them, asks you to click again first.
+- Pressing Left, Right, Top or Bottom Half again cycles the window through two thirds and one third. You can turn this off in Settings.
+- New Previous Display command.
 
 ## What's new in 2.0.0
 

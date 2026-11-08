@@ -9,11 +9,19 @@ Edge and Vivaldi keep, and opens one in its browser.
 - **Needs:** running `osascript` to read and switch tabs (macOS asks once to
   let Stackbar control each browser), `cat` to read each Chromium browser's
   `Bookmarks` file in its profile folder, and the list of running apps, so a
-  browser that isn't open is never started. Stackbar 0.22.0 or later.
+  browser that isn't open is never started. Stackbar 0.31.0 or later.
 - **Surfaces:** panel (the open tabs).
 - **Commands:** Search Browser Tabs, Search Bookmarks.
 - **Leaves out:** Safari's bookmarks, which macOS keeps behind Full Disk
   Access, and browser profiles other than the default one.
+
+## What's new in 1.1.0
+
+- Switching to or closing a tab checks that it's still the same page first. After you rearrange tabs, Close no longer closes a different tab, and a tab that has gone says so.
+- Copy as Markdown Link on every tab and bookmark.
+- When a browser doesn't answer, or its bookmarks can't be read, the panel says which one instead of showing nothing.
+- Tabs from the panel no longer show up in the palette's results with out-of-date titles.
+- A page title with a tab in it no longer breaks that tab's address.
 
 ## What's new in 1.0.1
 

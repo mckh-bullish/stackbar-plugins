@@ -7,11 +7,20 @@ keys, and press Return to paste the emoji where you were typing. ⌘K copies it
 instead. The panel keeps your frequent ones a click from the clipboard.
 
 - **Needs:** the clipboard, to paste (your clipboard is put back afterwards).
-  Stackbar 0.20.0 or later, which draws grids in the palette.
-- **Surfaces:** panel.
+  Stackbar 0.21.0 or later, which draws grids in the palette.
+- **Surfaces:** panel, settings.
+- **Settings:** a skin tone for hands and people.
 - **Commands:** Search Emoji. Give it a hotkey in Settings › Commands.
-- **Data:** Unicode's Emoji 15.1 list and English names, without skin-tone
-  variants. Nothing leaves your Mac.
+- **Data:** Unicode's Emoji 15.1 list and English names, with your chosen skin
+  tone applied. Nothing leaves your Mac.
+
+## What's new in 1.2.0
+
+- Pick a skin tone in Settings, and hands and people paste in it.
+- Everyday words find their emoji: happy, lol, love, yes, thanks, party, fire and more.
+- Accents and apostrophes no longer get in the way: "pinata" finds 🪅, "cote" finds Côte d’Ivoire, "oclock" finds the clocks.
+- Paste an emoji into the search to find it and its name.
+- At the palette's root, :thumbs-up and :100 work.
 
 ## What's new in 1.1.1
 

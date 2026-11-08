@@ -13,7 +13,7 @@ another snippet.
 - **Surfaces:** panel, settings. Hotkey ⌃⌥S opens Search Snippets.
 - **Settings:** your snippets, importing from Raycast, TextExpander, Espanso or
   Apple's Text Replacements, and whether
-  keywords are expanding.
+  keywords are expanding, and keywords that would stop another from expanding.
 - **Commands:** Search Snippets, Create Snippet, Import Snippets, Export
   Snippets (a file Raycast reads too), plus one command per snippet.
 - **Keywords:** type a snippet's keyword, like `;sig`, in any app and it is
@@ -34,7 +34,13 @@ Import Snippets reads:
 - **Text Replacements:** select them in System Settings > Keyboard > Text
   Replacements and drag them to the Desktop, then import the plist.
 
-Duplicates are skipped, and keywords already taken are left off.
+Duplicates are skipped, and keywords already taken, or that would clash, are left off.
+
+## What's new in 1.6.0
+
+- A keyword that starts another one, like ;sig and ;sign, is refused when you save it and left off when you import (the snippet is kept), because the shorter one would always expand first. Settings points out any you already have.
+- Create Snippet starts with the text you had selected.
+- Copy on a snippet that asks for input is now called Copy Template, since it copies the snippet with its placeholders.
 
 ## What's new in 1.5.1
 

@@ -15,6 +15,11 @@ Give any of them an alias or a hotkey in Settings › Commands.
   Dark Mode, Hide Other Apps, Eject All Disks, Empty Trash, Quit Other Apps,
   Log Out, Restart, Shut Down.
 
+## What's new in 1.0.2
+
+- When an action can't run (for example, Stackbar isn't allowed to control System Events, or there's no disk to eject), it now says why instead of doing nothing.
+- Clicking a confirmation that has run out now tells you to click again within 10 seconds.
+
 ## What's new in 1.0.1
 
 - Restart, Shut Down, Log Out, Empty Trash and Quit Other Apps in the panel forget their first click after 10 seconds, so a click out of habit later can't run one on its own.

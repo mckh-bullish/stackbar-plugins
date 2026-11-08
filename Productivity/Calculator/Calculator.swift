@@ -11,7 +11,7 @@ final class Calculator: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.calculator",
         name: "Calculator",
-        version: "1.5.0",
+        version: "1.6.0",
         summary: "Sums, units, currencies and time zones answered right in the command palette.",
         surfaces: [.panel, .settings],
         // Exchange rates are fetched at launch, on wake and every six hours
@@ -30,6 +30,13 @@ final class Calculator: StackbarPlugin {
                 Entry(expression: "12*(3+4)", result: "84", display: "84"),
                 Entry(expression: "5 km → mi", result: "3.106855961", display: "3.106855961 mi"),
                 Entry(expression: "72 °F → °C", result: "22.22222222", display: "22.22222222 °C"),
+            ]
+        },
+        PreviewScene("conversions", "Currencies and time zones too") { plugin in
+            plugin.history = [
+                Entry(expression: "100 USD → EUR · rates of 2026-11-06", result: "89.57", display: "89.57 EUR"),
+                Entry(expression: "5:00 PM London → Tokyo (next day)", result: "2:00 AM", display: "2:00 AM in Tokyo"),
+                Entry(expression: "60 mph → km/h", result: "96.56064", display: "96.56064 km/h"),
             ]
         },
     ]
@@ -100,16 +107,26 @@ final class Calculator: StackbarPlugin {
     var commands: [Command] {
         Command("calculate", title: "Calculate", subtitle: "Sums, units, currencies and time zones", symbol: "equal.square", keywords: ["math", "sum", "convert", "units", "currency", "time zone"])
             .view { invocation in
+                let typed = invocation.text.trimmingCharacters(in: .whitespaces)
                 if let answer = Math.answer(invocation.text, rates: self.currency ? self.rates : nil) {
                     List {
                         // The title starts with what was typed, so the
                         // answer leads the palette's results.
-                        Row("\(invocation.text.trimmingCharacters(in: .whitespaces)) = \(answer.display)", subtitle: answer.expression, symbol: "equal", key: "answer")
+                        Row("\(typed) = \(answer.display)", subtitle: answer.expression, symbol: "equal", key: "answer")
                             .action("Copy Answer") { self.copy(answer) }
-                            .action("Paste Answer", shortcut: "cmd+return") {
-                                self.copy(answer)
-                                try await Stackbar.paste(.text(answer.result), restoringClipboard: true)
+                    }
+                } else if (self.rates == nil || !self.currency) && Math.Rates.looksLikeMoney(invocation.text) {
+                    ContentUnavailableView("No exchange rates", symbol: "dollarsign.arrow.circlepath", message: self.currency ? "Calculator couldn't reach api.frankfurter.dev yet. It tries again in a few minutes." : "Currency conversion is off in Calculator's settings.")
+                } else if Math.undefined(invocation.text) {
+                    ContentUnavailableView("No answer", symbol: "divide", message: "That divides by zero or has no real answer.")
+                } else if typed.isEmpty, !self.history.isEmpty {
+                    List {
+                        Section("Recent answers") {
+                            ForEach(self.history) { entry in
+                                Row(entry.display, subtitle: entry.expression, symbol: "clock.arrow.circlepath", key: "history-" + entry.expression)
+                                    .action("Copy Answer") { Stackbar.copy(entry.result) }
                             }
+                        }
                     }
                 } else {
                     ContentUnavailableView("Type a sum", symbol: "equal.square", message: "Like 12*(3+4), 15% * 80, 3h in min, 100 usd in eur or 5pm london in tokyo.")
@@ -183,11 +200,25 @@ final class Calculator: StackbarPlugin {
             return Answer(expression: text, result: result, display: result)
         }
 
+        /// A sum that has an operator but no real answer, like `1/0`.
+        static func undefined(_ query: String) -> Bool {
+            let text = query.trimmingCharacters(in: .whitespaces)
+            var parser = Parser(text)
+            guard let value = parser.parse(), parser.sawOperator else { return false }
+            return !value.isFinite
+        }
+
         // MARK: Numbers
 
         /// Up to ten significant digits, no trailing zeros, no exponent for
         /// everyday sizes.
-        static func format(_ value: Double) -> String {
+        static func format(_ value: Double, decimalComma: Bool = Math.localeUsesDecimalComma) -> String {
+            let text = point(value)
+            return decimalComma && !text.contains("e") ? text.replacingOccurrences(of: ".", with: ",") : text
+        }
+
+        /// `format` with a point as the decimal mark.
+        private static func point(_ value: Double) -> String {
             let value = value == 0 ? 0 : value // no "-0"
             if value.rounded() == value, abs(value) < 1e15 { return String(Int64(value)) }
             var text = String(format: "%.10g", value)
@@ -261,6 +292,9 @@ final class Calculator: StackbarPlugin {
             private let characters: [Character]
             private var index = 0
             private(set) var sawOperator = false
+            /// Whether the last product was a bare percent (`10%`), which a sum
+            /// adds or takes as a share of the amount before it.
+            private var lastWasBarePercent = false
 
             private let decimalComma: Bool
 
@@ -288,26 +322,40 @@ final class Calculator: StackbarPlugin {
 
             private mutating func sum() -> Double? {
                 guard var value = product() else { return nil }
+                // `100 + 10%` adds a tenth of 100, but `10% + 5%` is 15%, not a
+                // share of 10%: a bare percent on the left is already a fraction.
+                var leftIsPercent = lastWasBarePercent
                 while let sign = take(["+", "-", "−"]) {
                     sawOperator = true
                     guard let next = product() else { return nil }
-                    value = sign == "+" ? value + next : value - next
+                    let delta = lastWasBarePercent && !leftIsPercent ? value * next : next
+                    value = sign == "+" ? value + delta : value - delta
+                    leftIsPercent = false
                 }
                 return value
             }
 
             private mutating func product() -> Double? {
                 guard var value = unary() else { return nil }
+                // Only a number and its % signs is a bare percent: in `200 + 100 * 10%`
+                // the percent takes the product, so it is a plain 10.
+                var sawPercent = false
+                var sawMultiplication = false
                 while true {
                     if take(["%"]) != nil {
                         // `15%` alone is 0.15; `10 % 3` would read as a modulo
                         // nobody types here, so % is always a percent.
                         sawOperator = true
+                        sawPercent = true
                         value /= 100
                         continue
                     }
-                    guard let sign = take(["*", "/", "×", "÷", "x"]) else { return value }
+                    guard let sign = take(["*", "/", "×", "÷", "x"]) else {
+                        lastWasBarePercent = sawPercent && !sawMultiplication
+                        return value
+                    }
                     sawOperator = true
+                    sawMultiplication = true
                     guard let next = unary() else { return nil }
                     value = (sign == "/" || sign == "÷") ? value / next : value * next
                 }
@@ -344,6 +392,7 @@ final class Calculator: StackbarPlugin {
                     return value.squareRoot()
                 }
                 if word("pi") || word("π") { return .pi }
+                if constant("e") { return M_E }
                 return number()
             }
 
@@ -352,6 +401,15 @@ final class Calculator: StackbarPlugin {
                 let letters = Array(name)
                 guard index + letters.count <= characters.count, Array(characters[index..<index + letters.count]) == letters else { return false }
                 index += letters.count
+                return true
+            }
+
+            /// A one-letter constant, unless letters follow it (`exp` is not `e`).
+            private mutating func constant(_ letter: Character) -> Bool {
+                skipSpaces()
+                guard index < characters.count, characters[index] == letter else { return false }
+                guard index + 1 >= characters.count || !characters[index + 1].isLetter else { return false }
+                index += 1
                 return true
             }
 
@@ -414,6 +472,10 @@ final class Calculator: StackbarPlugin {
             add("volume", "fl oz", 0.0295735295625, ["floz"])
             add("volume", "cup", 0.2365882365, ["cups"])
             add("volume", "gal", 3.785411784, ["gallon", "gallons"])
+            add("speed", "m/s", 1, ["mps"])
+            add("speed", "km/h", 1 / 3.6, ["kph", "kmh", "kmph"])
+            add("speed", "mph", 0.44704, [])
+            add("speed", "kn", 0.514444, ["knot", "knots", "kt"])
             add("temperature", "°C", 1, ["c", "celsius", "°c"])
             add("temperature", "°F", 1, ["f", "fahrenheit", "°f"])
             add("temperature", "K", 1, ["kelvin"])
@@ -519,6 +581,14 @@ final class Calculator: StackbarPlugin {
                 "yuan": "CNY", "rmb": "CNY", "kr": "SEK", "zł": "PLN",
             ]
 
+            /// The currencies the bank publishes, so a sum in one of them is known even without rates.
+            static let knownCodes: Set<String> = ["AUD", "BGN", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK", "EUR", "GBP", "HKD", "HUF", "IDR", "ILS", "INR", "ISK", "JPY", "KRW", "MXN", "MYR", "NOK", "NZD", "PHP", "PLN", "RON", "SEK", "SGD", "THB", "TRY", "USD", "ZAR"]
+
+            /// Whether `text` converts between currencies, whether or not there are rates.
+            static func looksLikeMoney(_ text: String) -> Bool {
+                Rates(perEuro: Dictionary(uniqueKeysWithValues: knownCodes.map { ($0, 1.0) }), date: "", fetched: .distantPast).convert(text) != nil
+            }
+
             func code(_ word: String) -> String? {
                 let word = word.trimmingCharacters(in: .whitespaces).lowercased()
                 if let code = Self.names[word], perEuro[code] != nil { return code }
@@ -559,9 +629,9 @@ final class Calculator: StackbarPlugin {
             }
 
             /// Two decimals, or more for tiny amounts, with no exponent.
-            static func money(_ value: Double) -> String {
-                if abs(value) >= 1 || value == 0 { return String(format: "%.2f", value) }
-                return Math.format(value)
+            static func money(_ value: Double, decimalComma: Bool = Math.localeUsesDecimalComma) -> String {
+                let text = abs(value) >= 1 || value == 0 ? String(format: "%.2f", value) : Math.format(value, decimalComma: false)
+                return decimalComma && !text.contains("e") ? text.replacingOccurrences(of: ".", with: ",") : text
             }
         }
 
@@ -596,9 +666,11 @@ final class Calculator: StackbarPlugin {
             }()
 
             static func zone(_ name: String) -> (TimeZone, String)? {
-                let key = name.trimmingCharacters(in: .whitespaces).lowercased()
+                // Accents fold for the lookup only, so "são paulo" finds São Paulo and is shown as typed.
+                let typed = name.trimmingCharacters(in: .whitespaces).lowercased()
+                let key = typed.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
                 guard !key.isEmpty, let identifier = cities[key], let zone = TimeZone(identifier: identifier) else { return nil }
-                let shown = key.count <= 4 ? key.uppercased() : key.split(separator: " ").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
+                let shown = typed.count <= 4 ? typed.uppercased() : typed.split(separator: " ").map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
                 return (zone, shown)
             }
 

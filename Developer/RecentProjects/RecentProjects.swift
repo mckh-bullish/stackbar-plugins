@@ -64,10 +64,10 @@ final class RecentProjects: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.recent-projects",
         name: "Recent Projects",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Open the projects you used lately in VS Code, Cursor, Windsurf or VSCodium from the palette.",
         surfaces: [.panel, .settings],
-        triggers: [.launch],
+        triggers: [.launch, .minutes(5), .wake],
         capabilities: [
             .run(commands: ["sqlite3"]),
             .files(paths: editors.map(\.folder)),
@@ -90,9 +90,19 @@ final class RecentProjects: StackbarPlugin {
                 Project(path: "/Users/you/code/site/site.code-workspace", kind: .workspace, editor: "VS Code"),
                 Project(path: "/Users/you/code/notes", kind: .folder, editor: "Windsurf"),
             ]
+            plugin.found = ["VS Code", "Cursor", "Windsurf"]
+            plugin.loadedAt = Date()
+        },
+        PreviewScene("editors", "Open projects in the editor you prefer", surface: .settings) { plugin in
+            plugin.installed = ["com.microsoft.VSCode", "com.todesktop.230313mzl4w4u92", "dev.zed.Zed", "com.apple.dt.Xcode"]
+            plugin.defaultEditor = "dev.zed.Zed"
             plugin.loadedAt = Date()
         },
     ]
+
+    /// What the panel and the palette say while VS Code keeps its list where
+    /// this version can't read it.
+    static let vsCodeMovedText = "VS Code 1.118 and later keep recent projects where this version can't read them yet."
 
     let theme = Theme.blue
 
@@ -112,6 +122,8 @@ final class RecentProjects: StackbarPlugin {
             guard parts.count >= 2, parts[0] == "Users" else { return path }
             return "~/" + parts.dropFirst(2).joined(separator: "/")
         }
+        /// What Show in Finder opens: a folder itself, or a workspace's folder.
+        var folder: String { kind == .workspace ? (path as NSString).deletingLastPathComponent : path }
     }
 
     var projects: [Project] = []
@@ -125,6 +137,12 @@ final class RecentProjects: StackbarPlugin {
     @Stored("defaultEditor") var defaultEditor = ""
     /// The bundle ids of the `apps` installed on this Mac.
     var installed: Set<String> = []
+    /// Editors whose list couldn't be read, and why: a locked database, say.
+    var problems: [String] = []
+
+    /// VS Code is installed but its list wasn't found where this version
+    /// looks: it moved the list in 1.118.
+    var vsCodeMoved: Bool { installed.contains("com.microsoft.VSCode") && !found.contains("VS Code") && !problems.contains { $0.hasPrefix("VS Code") } }
 
     // MARK: Reading
 
@@ -132,11 +150,21 @@ final class RecentProjects: StackbarPlugin {
         if !force, let loadedAt, Date().timeIntervalSince(loadedAt) < 60 { return }
         var all: [Project] = []
         var seen: [String] = []
+        var failures: [String] = []
         for editor in Self.editors {
-            // An editor that isn't installed has no folder: the run is
-            // refused and it is skipped.
-            guard let result = try? await Stackbar.run("sqlite3", ["-readonly", "state.vscdb", "SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'"], workingDirectory: editor.folder, timeout: .seconds(10)),
-                  result.succeeded else { continue }
+            let result: RunResult
+            do {
+                result = try await Stackbar.run("sqlite3", ["-readonly", "state.vscdb", "SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'"], workingDirectory: editor.folder, timeout: .seconds(10))
+            } catch {
+                // An editor that isn't installed has no folder: the run is
+                // refused and it is skipped. Any other refusal is a failed read.
+                if !"\(error)".contains("is not a folder") { failures.append("\(editor.name): \(error)") }
+                continue
+            }
+            guard result.succeeded else {
+                failures.append("\(editor.name): " + (result.errorText.split(separator: "\n").first.map(String.init) ?? "sqlite3 failed (\(result.status))"))
+                continue
+            }
             let list = Self.parse(result.text, editor: editor.name)
             if !list.isEmpty { seen.append(editor.name) }
             all += list.prefix(perEditor)
@@ -146,9 +174,16 @@ final class RecentProjects: StackbarPlugin {
         var paths = Set<String>()
         projects = all.filter { paths.insert($0.path).inserted }
         found = seen
+        problems = failures
         if let list = try? await Stackbar.installedApps() {
             let ids = Set(list.map(\.id))
             installed = Set(Self.apps.map(\.bundleID).filter(ids.contains))
+        }
+        // Counts for projects that have left every list are dropped. Not
+        // after a failed read, which would lose the counts of its projects.
+        if problems.isEmpty {
+            let kept = opens.filter { paths.contains($0.key) }
+            if kept.count != opens.count { opens = kept }
         }
         loadedAt = Date()
     }
@@ -254,6 +289,7 @@ final class RecentProjects: StackbarPlugin {
             row = row.action("Open in \(other.name)") { await self.open(project, in: other) }
         }
         return row
+            .action("Show in Finder", shortcut: "cmd+shift+f") { try await Stackbar.open(project.folder, with: "com.apple.finder") }
             .action("Copy Path", shortcut: "cmd+shift+c") { Stackbar.copy(project.path) }
             .badge(project.editor, role: .secondary)
     }
@@ -283,11 +319,13 @@ final class RecentProjects: StackbarPlugin {
     var commands: [Command] {
         Command("search", title: "Search Recent Projects", subtitle: "Open a folder or workspace in your editor", symbol: "folder.badge.gearshape", keywords: ["project", "vscode", "code", "cursor", "windsurf", "recent", "open"])
             .view(search: { invocation in
-                await self.load()
+                // Typing answers from the list read at launch, and again on the
+                // timer or at wake, rather than reading every editor's list per keystroke.
+                if self.loadedAt == nil { await self.load(force: true) }
                 self.results = self.matches(invocation.text)
             }) { _ in
                 if self.projects.isEmpty {
-                    ContentUnavailableView("No recent projects", symbol: "folder", message: "Open a folder in VS Code, Cursor, Windsurf or VSCodium and it shows up here.")
+                    ContentUnavailableView("No recent projects", symbol: "folder", message: self.vsCodeMoved ? Self.vsCodeMovedText : "Open a folder in VS Code, Cursor, Windsurf or VSCodium and it shows up here.")
                 } else if self.results.isEmpty {
                     ContentUnavailableView("No project matches", symbol: "magnifyingglass", message: "Type part of a project's name or path.")
                 } else {
@@ -303,12 +341,12 @@ final class RecentProjects: StackbarPlugin {
 
     var panel: ViewContent {
         PanelHeader("Recent Projects", subtitle: found.isEmpty ? "No editor found yet" : found.joined(separator: " · "), symbol: "folder.badge.gearshape", theme: theme)
+        if vsCodeMoved { Banner(Self.vsCodeMovedText, symbol: "info.circle", theme: .info) }
+        if let first = problems.first { Banner("Couldn't read " + first, theme: .warning) }
         if projects.isEmpty {
             EmptyState("Open a project in your editor", symbol: "folder", message: "Folders and workspaces you open in VS Code, Cursor, Windsurf or VSCodium show up here and in the palette.", theme: theme)
         } else {
-            Card("Latest", spacing: 0, padding: Space.s) {
-                ForEach(Array(projects.prefix(8))) { project in self.row(project) }
-            }
+            List(projects, searchable: projects.count > 8) { project in self.row(project) }
         }
     }
 }

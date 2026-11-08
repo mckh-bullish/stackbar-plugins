@@ -11,7 +11,8 @@ rank higher, and they show up in the palette's own results too.
   keep their recently opened list in `state.vscdb` under
   `~/Library/Application Support/<Editor>/User/globalStorage`. The plugin
   reads its `history.recentlyOpenedPathsList` entry, up to 30 from each editor,
-  and lists each folder or workspace once.
+  and lists each folder or workspace once. VS Code 1.118 and later keep this
+  list in a new place that this version can't read yet.
 - **Settings:** the default editor. "Where it was last opened" (the
   default) keeps each project in the editor it came from; or pick any
   installed editor: the VS Code family, Zed, Xcode, Sublime Text, Nova,
@@ -23,10 +24,17 @@ rank higher, and they show up in the palette's own results too.
   Support, opening links and folders in any app (to hand a folder to your
   default editor), and the list of installed apps (to show which editors
   you have). Stackbar 0.22.0 or later.
-- **Surfaces:** panel (the latest projects) and settings.
+- **Surfaces:** panel (your recent projects, searchable) and settings.
 - **Commands:** Search Recent Projects, which also feeds the palette's
   results.
 - **Leaves out:** single files and remote (SSH, container) projects.
+
+## What's new in 1.2.0
+
+- Show in Finder on every project.
+- The panel lists all your recent projects, with search, not only the latest 8.
+- If VS Code's projects are missing because VS Code moved its list, or an editor's list can't be read, the panel says so instead of looking empty.
+- Typing in the palette answers from the list read in the last few minutes, so results show faster.
 
 ## What's new in 1.1.0
 

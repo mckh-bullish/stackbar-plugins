@@ -13,9 +13,10 @@ all here, with the same `GITHUB_TOKEN`.
 - **Needs:** network access to `api.github.com` only, and a `GITHUB_TOKEN`
   secret kept in the Keychain. A fine-grained token with read access to pull
   requests, issues and metadata covers everything except creating issues,
-  which needs write access to issues. On GitHub Enterprise Server, turn it
-  on in Settings and enter the server as `GITHUB_ENTERPRISE_URL`; the plugin
-  then reaches that server and no other.
+  which needs write access to issues. Approving needs write access to pull
+  requests. On GitHub Enterprise Server, turn it on in Settings and enter the
+  server as `GITHUB_ENTERPRISE_URL`; the plugin then reaches that server and
+  no other.
 - **Surfaces:** menu bar, panel (To review, Mine, Issues and an optional
   Inbox), window, widget, settings.
 - **Settings:** include team review requests, include drafts, how recently a
@@ -26,7 +27,8 @@ all here, with the same `GITHUB_TOKEN`.
   GitHub Repositories (yours first, recently opened on top, then GitHub
   search; each row opens the repository, its pull requests, issues or
   Actions, copies the clone URL, or starts a new issue), My GitHub Issues,
-  Create GitHub Issue, Refresh Pull Requests.
+  GitHub Inbox (with Mark All as Read), Create GitHub Issue, Refresh Pull
+  Requests.
 - **Agent tools:** `review_queue`, `my_pull_requests` and `my_issues`.
 
 ## Highlights
@@ -44,9 +46,25 @@ a notification the moment that changes.
 Search your repositories (recently opened first), jump to their pull
 requests, issues or Actions, copy a clone URL, or start a new issue.
 
+### Everything in one window
+Both lists side by side, what merged or closed in the last two days, and
+how long reviews have waited.
+<!-- preview: dashboard -->
+
 ### On your desktop too
 A widget keeps the review queue in view.
 <!-- preview: widget -->
+
+## What's new in 1.9.0
+
+- GitHub Inbox in the palette, and Mark All as Read there and in the panel's Inbox tab (press twice to confirm).
+- Approve a pull request straight from your review queue.
+- Approve asks for a second press within 10 seconds, so a stray click doesn't approve anything.
+- Switching to another GitHub token no longer announces everything on the new account as new, and its repositories replace the old ones at once.
+- Many merges or mentions at once arrive as one notification instead of a burst.
+- The window shows how to connect GitHub instead of empty lists, and a failed Mark as Read says so.
+- The review and Mine lists say when they show only the 40 most recent.
+- Agent tools report a missing token instead of "nothing waiting", and pull request search gives up on a slow GitHub sooner.
 
 ## What's new in 1.8.1
 

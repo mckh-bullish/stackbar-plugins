@@ -11,7 +11,7 @@ final class Ports: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.ports",
         name: "Ports",
-        version: "1.4.1",
+        version: "1.4.2",
         summary: "Which process is listening on which port, and a way to stop it.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .every(.seconds(30))],
@@ -26,17 +26,26 @@ final class Ports: StackbarPlugin {
 
     static let previews: [PreviewScene<Ports>] = [
         PreviewScene("hero", "What's listening, and one click to stop it") { plugin in
-            plugin.listeners = [
-                Listener(port: 3000, address: "127.0.0.1", pid: 48211, process: "node", user: "you"),
-                Listener(port: 5173, address: "[::1]", pid: 48390, process: "vite", user: "you"),
-                Listener(port: 5432, address: "127.0.0.1", pid: 712, process: "postgres", user: "you"),
-                Listener(port: 6379, address: "127.0.0.1", pid: 733, process: "redis-server", user: "you"),
-                Listener(port: 8080, address: "*", pid: 51022, process: "java", user: "you"),
-                Listener(port: 9229, address: "127.0.0.1", pid: 48211, process: "node", user: "you"),
-                Listener(port: 11434, address: "127.0.0.1", pid: 1880, process: "ollama", user: "you"),
-            ]
+            plugin.listeners = samples
             plugin.loaded = true
         },
+        PreviewScene("confirm", "Asks before it stops anything") { plugin in
+            plugin.listeners = samples
+            plugin.loaded = true
+            plugin.arm("stop:48211:127.0.0.1:3000")
+            plugin.notice = "Press Stop Process again within 10 s to stop node (pid 48211)"
+            plugin.noticeOK = false
+        },
+    ]
+
+    static let samples: [Listener] = [
+        Listener(port: 3000, address: "127.0.0.1", pid: 48211, process: "node", user: "you"),
+        Listener(port: 5173, address: "[::1]", pid: 48390, process: "vite", user: "you"),
+        Listener(port: 5432, address: "127.0.0.1", pid: 712, process: "postgres", user: "you"),
+        Listener(port: 6379, address: "127.0.0.1", pid: 733, process: "redis-server", user: "you"),
+        Listener(port: 8080, address: "*", pid: 51022, process: "java", user: "you"),
+        Listener(port: 9229, address: "127.0.0.1", pid: 48211, process: "node", user: "you"),
+        Listener(port: 11434, address: "127.0.0.1", pid: 1880, process: "ollama", user: "you"),
     ]
 
     struct Listener: Equatable, Identifiable {
@@ -57,6 +66,12 @@ final class Ports: StackbarPlugin {
     var problem: String?
     var notice: String?
     var noticeOK = true
+    /// The stop or force quit pressed once, waiting for a second press.
+    var armed: String?
+    var armedAt = Date.distantPast
+    static let armWindow: TimeInterval = 10
+    var armedNow: String? { armed.flatMap { Date().timeIntervalSince(armedAt) < Self.armWindow ? $0 : nil } }
+    func arm(_ id: String) { armed = id; armedAt = Date() }
 
     @Stored("hideSystem") var hideSystem = true
     @Stored("minimumPort") var minimumPort = 1024
@@ -112,6 +127,12 @@ final class Ports: StackbarPlugin {
         loaded = true
     }
 
+    /// For views that ask on every keystroke: a list read in the last ten
+    /// seconds is as good as a new one.
+    func loadIfStale() async {
+        if loadedAt.map({ Date().timeIntervalSince($0) > 10 }) ?? true { await load() }
+    }
+
     /// Parses `lsof -F pcLn` output; one entry per process and port.
     static func parse(_ output: String) -> [Listener] {
         var found: [Listener] = []
@@ -133,7 +154,13 @@ final class Ports: StackbarPlugin {
                 guard let colon = value.lastIndex(of: ":"), let port = Int(value[value.index(after: colon)...]) else { continue }
                 let address = String(value[..<colon])
                 let listener = Listener(port: port, address: address == "*" ? "all interfaces" : address, pid: pid, process: command, user: user)
-                if !found.contains(where: { $0.pid == pid && $0.port == port }) { found.append(listener) }
+                // A process on both 127.0.0.1 and *:port is reachable from the network,
+                // so keep its non-local listener when it has one.
+                if let index = found.firstIndex(where: { $0.pid == pid && $0.port == port }) {
+                    if found[index].isLocalOnly && !listener.isLocalOnly { found[index] = listener }
+                } else {
+                    found.append(listener)
+                }
             default: break
             }
         }
@@ -141,17 +168,25 @@ final class Ports: StackbarPlugin {
     }
 
     func stop(_ listener: Listener, force: Bool) async throws -> String {
+        // The row may be older than the process it shows: act only if the same
+        // process still holds that port.
+        await load()
+        if let problem { throw HostError("Couldn't check \(listener.process) first: \(problem)") }
+        guard listeners.contains(where: { $0.pid == listener.pid && $0.port == listener.port && $0.process == listener.process }) else {
+            throw HostError("\(listener.process) is no longer listening on :\(listener.port)")
+        }
         let result = try await Stackbar.run("kill", [force ? "-KILL" : "-TERM", "\(listener.pid)"], timeout: .seconds(10))
         guard result.succeeded else {
             let reason = result.errorText.contains("not permitted") ? "it belongs to another user" : result.errorText.trimmingCharacters(in: .whitespacesAndNewlines)
             throw HostError("Couldn't stop \(listener.process) (\(listener.pid)): \(reason)")
         }
-        try? await Task.sleep(for: .milliseconds(400))
+        unchangedScans = 0
         await load()
         let stillThere = listeners.contains { $0.pid == listener.pid }
-        let message = stillThere ? "Asked \(listener.process) to stop; it is still listening" : "Stopped \(listener.process) on :\(listener.port)"
+        let message = !stillThere ? "Stopped \(listener.process) on :\(listener.port)"
+            : force ? "Force quit \(listener.process); it is still listening" : "Asked \(listener.process) to stop"
         notice = message
-        noticeOK = !stillThere
+        noticeOK = !(stillThere && force)
         return message
     }
 
@@ -201,8 +236,30 @@ final class Ports: StackbarPlugin {
         if !listener.isLocalOnly { row = row.badge("LAN", role: .warning) }
         return row
             .action("Open in Browser") { Stackbar.open("http://localhost:\(listener.port)") }
-            .action("Stop Process", shortcut: "cmd+.", role: .critical) { _ = try await self.stop(listener, force: false) }
-            .action("Force Quit Process", shortcut: "cmd+shift+.", role: .critical) { _ = try await self.stop(listener, force: true) }
+            .action("Stop Process", shortcut: "cmd+.", role: .critical) {
+                guard self.armedNow == "stop:\(listener.id)" else {
+                    let prompt = "Press Stop Process again within 10 s to stop \(listener.process) (pid \(listener.pid))"
+                    self.arm("stop:\(listener.id)")
+                    self.notice = prompt
+                    self.noticeOK = false
+                    Stackbar.hud(prompt)
+                    return
+                }
+                self.armed = nil
+                _ = try await self.stop(listener, force: false)
+            }
+            .action("Force Quit Process", shortcut: "cmd+shift+.", role: .critical) {
+                guard self.armedNow == "kill:\(listener.id)" else {
+                    let prompt = "Press Force Quit Process again within 10 s to force quit \(listener.process) (pid \(listener.pid))"
+                    self.arm("kill:\(listener.id)")
+                    self.notice = prompt
+                    self.noticeOK = false
+                    Stackbar.hud(prompt)
+                    return
+                }
+                self.armed = nil
+                _ = try await self.stop(listener, force: true)
+            }
             .action("Copy PID", shortcut: "cmd+shift+c") { Stackbar.copy("\(listener.pid)") }
     }
 
@@ -218,38 +275,55 @@ final class Ports: StackbarPlugin {
     // MARK: Commands
 
     var commands: [Command] {
-        Command("kill-port", title: "Kill Port", subtitle: "Stop whatever is listening on a port", symbol: "xmark.octagon", keywords: ["port", "kill", "lsof", "free"]) { invocation in
-            guard let port = Int(invocation["port"] ?? "") else { return .failure("Give a port number, like 3000") }
-            await self.load()
-            let holders = self.listeners.filter { $0.port == port }
-            guard !holders.isEmpty else { return .message("Nothing is listening on \(port)") }
-            let force = invocation["signal"] == "KILL"
-            var messages: [String] = []
-            for holder in Dictionary(grouping: holders, by: \.pid).values.compactMap(\.first) {
-                messages.append(try await self.stop(holder, force: force))
+        // Shows what holds the port and stops each holder only on Return, so
+        // the palette never ends a process the user hasn't seen.
+        Command("kill-port", title: "Kill Port", subtitle: "Stop whatever is listening on a port", symbol: "xmark.octagon", keywords: ["port", "kill", "lsof", "free"])
+            .argument("port", placeholder: "3000")
+            .argument("signal", required: false, default: "TERM", options: ["TERM", "KILL"])
+            .view(search: { _ in
+                // A "Press again" from the panel doesn't belong in this view.
+                self.notice = nil
+                await self.loadIfStale()
+            }) { invocation in
+                let force = invocation["signal"] == "KILL"
+                if let notice = self.notice { Banner(notice, symbol: self.noticeOK ? "checkmark.circle.fill" : "exclamationmark.triangle.fill", theme: self.noticeOK ? .success : .warning) }
+                if let problem = self.problem {
+                    ContentUnavailableView("Can't list ports", symbol: "exclamationmark.triangle", message: problem)
+                } else if let port = Self.port(invocation["port"]) {
+                    let holders = Dictionary(grouping: self.listeners.filter { $0.port == port }, by: \.pid).values.compactMap(\.first).sorted { $0.pid < $1.pid }
+                    if holders.isEmpty {
+                        ContentUnavailableView("Nothing is listening on \(port)", symbol: "checkmark.circle")
+                    } else {
+                        List(holders) { holder in
+                            Row("\(force ? "Force quit" : "Stop") \(holder.process) on :\(port)", subtitle: "pid \(holder.pid) · Return to confirm", symbol: "xmark.octagon", key: "confirm-\(holder.pid)")
+                                .action(force ? "Force Quit" : "Stop", role: .critical) { _ = try await self.stop(holder, force: force) }
+                        }
+                    }
+                } else {
+                    ContentUnavailableView("Give a port number, like 3000", symbol: "number")
+                }
             }
-            return .message(messages.joined(separator: "; "))
-        }
-        .argument("port", placeholder: "3000")
-        .argument("signal", required: false, default: "TERM", options: ["TERM", "KILL"])
         // Typing a port number (3000 or :3000) at the palette's root shows
         // what holds it; other text never reaches the plugin.
         Command("port", title: "Find Port", symbol: "network", keywords: ["port"])
-            .view(search: { _ in
-                if self.loadedAt.map({ Date().timeIntervalSince($0) > 10 }) ?? true { await self.load() }
-            }) { invocation in
+            .view(search: { _ in await self.loadIfStale() }) { invocation in
                 List(Self.matching(self.listeners, invocation.text)) { listener in self.row(listener) }
             }
             .rootSearch(section: "Ports", matching: #":?\d{2,5}"#)
             .stackbarOnly()
         Command("ports", title: "Listening Ports", symbol: "network", keywords: ["port", "lsof", "listen", "server"])
-            .view(search: { _ in await self.load() }) { _ in
+            .view(search: { _ in await self.loadIfStale() }) { _ in
                 if let problem = self.problem {
                     ContentUnavailableView("Can't list ports", symbol: "exclamationmark.triangle", message: problem)
                 } else {
                     List(self.shown, searchable: true) { listener in self.row(listener) }
                 }
             }
+    }
+
+    /// The port a typed argument names: `3000` or `:3000`.
+    static func port(_ text: String?) -> Int? {
+        Int((text ?? "").trimmingCharacters(in: CharacterSet(charactersIn: ": "))).flatMap { (1...65535).contains($0) ? $0 : nil }
     }
 
     /// Listeners whose port starts with the typed digits, exact first.

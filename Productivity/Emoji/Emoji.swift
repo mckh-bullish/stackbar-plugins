@@ -10,9 +10,9 @@ final class Emoji: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.emoji",
         name: "Emoji",
-        version: "1.1.1",
+        version: "1.2.0",
         summary: "Search every emoji by name in a grid, and paste it where you were typing.",
-        surfaces: [.panel],
+        surfaces: [.panel, .settings],
         triggers: [.launch],
         capabilities: [.clipboard],
         minimumStackbar: "0.21.0",
@@ -27,12 +27,19 @@ final class Emoji: StackbarPlugin {
         PreviewScene("hero", "Every emoji, a few letters away") { plugin in
             plugin.uses = ["👍": 9, "🎉": 7, "😂": 6, "🙏": 4, "🔥": 3, "✅": 3, "👀": 2, "❤️": 2]
         },
+        PreviewScene("skin-tone", "Your skin tone, every time") { plugin in
+            plugin.skinTone = "Medium"
+            plugin.uses = ["👍": 9, "👋": 7, "🙏": 6, "👏": 4, "💪": 3, "🎉": 3, "🤞": 2, "👌": 2]
+        },
+        PreviewScene("first-run", "Every emoji, grouped") { _ in },
     ]
 
     let theme = Theme.amber
 
     /// How often each emoji was picked, so favourites come first.
     @Stored("uses") var uses: [String: Int] = [:]
+    /// The skin tone for hands and people, by name ("None" leaves them plain).
+    @Stored("skinTone") var skinTone = "None"
     var notice: String?
 
     struct Item: Identifiable, Sendable {
@@ -52,11 +59,31 @@ final class Emoji: StackbarPlugin {
     }
 
     /// Words are runs of letters and digits: "left-facing fist" is "left", "facing", "fist".
+    /// Accents and apostrophes fold away too, so "pinata" finds "piñata" and "cote" finds "Côte d’Ivoire".
     nonisolated static func words(in text: String) -> [String] {
-        text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+            .replacingOccurrences(of: "’", with: "").replacingOccurrences(of: "'", with: "")
+            .split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
     }
 
     static let groupSymbols: [String: String] = ["Smileys & Emotion": "face.smiling", "People & Body": "hand.wave", "Animals & Nature": "pawprint", "Food & Drink": "fork.knife", "Travel & Places": "car", "Activities": "soccerball", "Objects": "lightbulb", "Symbols": "heart", "Flags": "flag"]
+
+    /// Words people type for an emoji, beside Unicode's names (which have no
+    /// "lol" or "love"). Every key is an emoji in `table`.
+    static let keywords: [String: [String]] = [
+        "😀": ["happy", "smile"], "😂": ["lol", "laugh"], "🤣": ["lol", "laugh", "rofl"], "😊": ["happy", "blush"],
+        "😍": ["love", "crush"], "🥰": ["love"], "😘": ["kiss"], "😢": ["sad", "cry"], "😭": ["sad", "cry", "sob"],
+        "😡": ["angry", "mad"], "😠": ["angry", "mad"], "🤔": ["hmm", "think"], "🙄": ["eyeroll"], "😴": ["sleep", "tired"],
+        "🤯": ["mindblown"], "🥳": ["party", "celebrate", "birthday"], "😎": ["cool"], "😅": ["phew", "nervous"],
+        "😬": ["awkward", "yikes"], "🤗": ["hug"], "🤦": ["facepalm"], "🤷": ["shrug", "idk"],
+        "👍": ["yes", "ok", "like", "approve", "agree"], "👎": ["no", "dislike"], "👏": ["clap", "applause", "bravo"],
+        "🙏": ["thanks", "please", "pray"], "👋": ["hi", "hello", "bye", "wave"], "💪": ["strong", "flex"], "👀": ["look", "see"],
+        "❤️": ["love"], "💔": ["heartbreak"], "🔥": ["lit", "hot"], "✨": ["magic", "sparkle"],
+        "🎉": ["party", "celebrate", "congrats", "tada"], "✅": ["done", "yes", "ok"], "❌": ["no", "wrong"], "⚠️": ["caution"],
+        "💯": ["perfect", "100"], "🚀": ["launch", "ship"], "💡": ["idea"], "🐛": ["bug"], "🤝": ["deal"],
+        "🙌": ["hooray", "praise"], "😱": ["shock", "scream"], "🤞": ["luck", "hope"], "👌": ["ok", "perfect"],
+        "☕": ["coffee"], "🍻": ["cheers"], "💩": ["poop"],
+    ]
 
     /// Every emoji in Unicode's order, read once from `table`.
     static let all: [Item] = {
@@ -68,7 +95,9 @@ final class Emoji: StackbarPlugin {
                 continue
             }
             guard let space = line.firstIndex(of: " ") else { continue }
-            items.append(Item(emoji: String(line[..<space]), name: String(line[line.index(after: space)...]), group: group))
+            var item = Item(emoji: String(line[..<space]), name: String(line[line.index(after: space)...]), group: group)
+            item.parts += words(in: keywords[item.emoji]?.joined(separator: " ") ?? "")
+            items.append(item)
         }
         return items
     }()
@@ -88,6 +117,13 @@ final class Emoji: StackbarPlugin {
     /// Every typed word must start a word of the name ("thu up" finds
     /// thumbs up); the most used come first, then Unicode's order.
     static func matches(_ query: String, in items: [Item] = all, uses: [String: Int] = [:]) -> [Item] {
+        // A pasted emoji finds itself, with or without its variation selector or skin tone.
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        let plain = String(String.UnicodeScalarView(trimmed.unicodeScalars.filter { !(0x1F3FB...0x1F3FF).contains($0.value) }))
+        if let item = byEmoji[plain] ?? byEmoji[plain.replacingOccurrences(of: "\u{FE0F}", with: "")] ?? byEmoji[plain + "\u{FE0F}"],
+           items.contains(where: { $0.emoji == item.emoji }) {
+            return [item]
+        }
         // Split like the names are, so "left-facing" and "heart-eyes" match.
         let words = Self.words(in: query)
         // Nothing typed lists everything; only separators (":", "-") match nothing.
@@ -109,6 +145,30 @@ final class Emoji: StackbarPlugin {
 
     func picked(_ item: Item) {
         uses[item.emoji, default: 0] += 1
+    }
+
+    // MARK: Skin tones
+
+    static let toneNames = ["None", "Light", "Medium-Light", "Medium", "Medium-Dark", "Dark"]
+    static let tones: [String: String] = ["Light": "\u{1F3FB}", "Medium-Light": "\u{1F3FC}", "Medium": "\u{1F3FD}", "Medium-Dark": "\u{1F3FE}", "Dark": "\u{1F3FF}"]
+    /// Family, bunny-eared pairs and wrestlers: marked as modifier bases, yet with no tone variants.
+    static let untoned: Set<Unicode.Scalar> = ["\u{1F46A}", "\u{1F46F}", "\u{1F93C}"]
+
+    /// `emoji` in the chosen skin tone. Only an emoji with exactly one person
+    /// or hand gets it, so families and couples stay as they are.
+    static func toned(_ emoji: String, _ tone: String) -> String {
+        guard let modifier = tones[tone] else { return emoji }
+        let scalars = Array(emoji.unicodeScalars)
+        if scalars.contains(where: { untoned.contains($0) }) { return emoji }
+        let bases = scalars.indices.filter { scalars[$0].properties.isEmojiModifierBase }
+        guard bases.count == 1, let at = bases.first else { return emoji }
+        var out = String.UnicodeScalarView()
+        for (i, scalar) in scalars.enumerated() {
+            if i == at + 1, scalar == "\u{FE0F}" { continue }
+            out.append(scalar)
+            if i == at { out.append(contentsOf: modifier.unicodeScalars) }
+        }
+        return String(out)
     }
 
     // MARK: Commands
@@ -149,7 +209,7 @@ final class Emoji: StackbarPlugin {
                     }
                 }
             }
-            .rootSearch(section: "Emoji", matching: #":[A-Za-z][A-Za-z ]*"#)
+            .rootSearch(section: "Emoji", matching: #":[A-Za-z0-9][A-Za-z0-9 _-]*"#)
             .stackbarOnly()
     }
 
@@ -162,15 +222,16 @@ final class Emoji: StackbarPlugin {
     }
 
     func row(_ item: Item, key: String) -> Row {
-        Row(item.emoji, subtitle: item.name, key: key)
-            .preview(text: item.emoji + "  " + item.name, caption: item.group)
+        let shown = Self.toned(item.emoji, skinTone)
+        return Row(shown, subtitle: item.name, key: key)
+            .preview(text: shown + "  " + item.name, caption: item.group)
             .action("Paste") {
                 self.picked(item)
-                try await Stackbar.paste(.text(item.emoji), restoringClipboard: true)
+                try await Stackbar.paste(.text(shown), restoringClipboard: true)
             }
             .action("Copy", shortcut: "cmd+shift+c") {
                 self.picked(item)
-                Stackbar.copy(item.emoji)
+                Stackbar.copy(shown)
             }
     }
 
@@ -184,14 +245,24 @@ final class Emoji: StackbarPlugin {
             Grid(columns: Self.columns, spacing: Space.xs) {
                 ForEach(shown) { item in
                     Button(key: "copy-" + item.emoji, action: {
+                        let emoji = Self.toned(item.emoji, self.skinTone)
                         self.picked(item)
-                        Stackbar.copy(item.emoji)
-                        self.notice = "Copied \(item.emoji) \(item.name)"
+                        Stackbar.copy(emoji)
+                        self.notice = "Copied \(emoji) \(item.name)"
                     }) {
-                        Text(item.emoji).font(size: 22)
+                        Text(Self.toned(item.emoji, self.skinTone)).font(size: 22)
                     }
                 }
             }
+        }
+    }
+
+    // MARK: Settings
+
+    var settings: ViewContent {
+        Section("Skin tone") {
+            Picker("Skin tone", options: Self.toneNames, selection: skinTone) { self.skinTone = $0 }
+            Text("Used for hands and people that come in skin tones.").role(.secondary)
         }
     }
 

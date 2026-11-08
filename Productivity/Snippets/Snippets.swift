@@ -20,7 +20,7 @@ final class Snippets: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.snippets",
         name: "Snippets",
-        version: "1.5.1",
+        version: "1.6.0",
         summary: "Paste text by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -40,6 +40,10 @@ final class Snippets: StackbarPlugin {
     static let previews: [PreviewScene<Snippets>] = [
         PreviewScene("hero", "Text you type often, a keystroke away") { plugin in
             plugin.snippets = samples
+        },
+        PreviewScene("tags", "Filter by tag, paste in one click") { plugin in
+            plugin.snippets = samples
+            plugin.panelTag = "Work"
         },
     ]
 
@@ -250,7 +254,7 @@ final class Snippets: StackbarPlugin {
         Command("create", title: "Create Snippet", symbol: "text.badge.plus", keywords: ["snippet", "new", "add"])
             .argument("id", placeholder: "Snippet", required: false)
             .stackbarOnly()
-            .view { invocation in self.form(editing: invocation["id"].flatMap(UUID.init(uuidString:))) }
+            .view { invocation in self.form(editing: invocation["id"].flatMap(UUID.init(uuidString:)), selection: invocation.context?.selectedText) }
         Command("import", title: "Import Snippets", subtitle: "From Raycast, TextExpander, Espanso or Text Replacements", symbol: "square.and.arrow.down", keywords: ["snippet", "raycast", "textexpander", "espanso", "text replacements"]) { _ in
             .message(try await self.importSnippets())
         }
@@ -312,7 +316,7 @@ final class Snippets: StackbarPlugin {
             ? row.navigate("Paste", to: snippet.commandID)
             : row.action("Paste") { try await self.paste(snippet) }
         return row
-            .action("Copy", shortcut: "cmd+c") {
+            .action(needsInput ? "Copy Template" : "Copy", shortcut: "cmd+c") {
                 let text = needsInput ? snippet.text : ((try? await self.render(snippet, arguments: [:], context: nil).text) ?? snippet.text)
                 Stackbar.copy(text)
             }
@@ -332,11 +336,11 @@ final class Snippets: StackbarPlugin {
 
     // MARK: Creating and editing
 
-    @ViewBuilder func form(editing id: UUID?) -> ViewContent {
+    @ViewBuilder func form(editing id: UUID?, selection: String? = nil) -> ViewContent {
         let existing = id.flatMap { id in snippets.first { $0.id == id } }
         Form(submit: existing == nil ? "Create Snippet" : "Save", key: id?.uuidString ?? "new") {
             FormField.text("Name", name: "name", value: existing?.name ?? "", placeholder: "Signature", error: draft.nameError)
-            FormField.multiline("Snippet", name: "text", value: existing?.text ?? "", placeholder: "Thanks,\n{argument name=\"name\" default=\"Nav\"}", error: draft.textError)
+            FormField.multiline("Snippet", name: "text", value: existing?.text ?? selection.map { String($0.prefix(Self.maxLength)) } ?? "", placeholder: "Thanks,\n{argument name=\"name\" default=\"Nav\"}", error: draft.textError)
             FormField.text("Keyword", name: "keyword", value: existing?.keyword ?? "", placeholder: ";sig (expands as you type it)", error: draft.keywordError)
             FormField.text("Tags", name: "tags", value: existing?.tags.joined(separator: ", ") ?? "", placeholder: "work, email")
         } onSubmit: { values in
@@ -357,6 +361,12 @@ final class Snippets: StackbarPlugin {
         draft.keywordError = Self.problem(withKeyword: keyword)
         if draft.keywordError == nil, !keyword.isEmpty, snippets.contains(where: { $0.keyword == keyword && $0.id != id }) {
             draft.keywordError = "Another snippet has the keyword \(keyword)"
+        }
+        let unchanged = id.flatMap { id in snippets.first { $0.id == id } }?.keyword == keyword
+        if draft.keywordError == nil, !keyword.isEmpty, !unchanged, let clash = snippets.first(where: { $0.id != id && Self.clashes($0.keyword, keyword) })?.keyword {
+            draft.keywordError = keyword.hasPrefix(clash)
+                ? "Typing \(keyword) would expand \(clash) first"
+                : "\(keyword) would expand before you finish typing \(clash)"
         }
         guard draft.nameError == nil, draft.textError == nil, draft.keywordError == nil else { return }
         let tags = (values.string("tags") ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
@@ -398,6 +408,12 @@ final class Snippets: StackbarPlugin {
             return "A keyword has no spaces, quotes or backticks"
         }
         return keyword.count > TextExpansion.maxKeywordLength ? "A keyword is at most \(TextExpansion.maxKeywordLength) characters" : nil
+    }
+
+    /// Whether two keywords trip over each other: the shorter expands before the longer is typed.
+    static func clashes(_ other: String?, _ keyword: String) -> Bool {
+        guard let other, !other.isEmpty, !keyword.isEmpty, other != keyword else { return false }
+        return other.hasPrefix(keyword) || keyword.hasPrefix(other)
     }
 
     // MARK: Import and export
@@ -461,7 +477,7 @@ final class Snippets: StackbarPlugin {
                 continue
             }
             var keyword = item.keyword.flatMap { $0.isEmpty ? nil : $0 }
-            if let candidate = keyword, Self.problem(withKeyword: candidate) != nil || all.contains(where: { $0.keyword == candidate }) {
+            if let candidate = keyword, Self.problem(withKeyword: candidate) != nil || all.contains(where: { $0.keyword == candidate }) || all.contains(where: { Self.clashes($0.keyword, candidate) }) {
                 droppedKeywords.append(candidate)
                 keyword = nil
             }
@@ -472,7 +488,7 @@ final class Snippets: StackbarPlugin {
         var summary = "Imported \(imported)"
         if duplicates > 0 { summary += ", skipped \(duplicates) duplicate\(duplicates == 1 ? "" : "s")" }
         if !problems.isEmpty { summary += ", skipped \(problems.count) that didn't parse (\(problems.prefix(3).joined(separator: "; ")))" }
-        if !droppedKeywords.isEmpty { summary += "; left out keywords already taken or not allowed: " + droppedKeywords.prefix(5).joined(separator: ", ") }
+        if !droppedKeywords.isEmpty { summary += "; left out keywords already taken, would clash with another, or not allowed: " + droppedKeywords.prefix(5).joined(separator: ", ") }
         notice = summary
         return summary
     }
@@ -773,6 +789,15 @@ final class Snippets: StackbarPlugin {
         return text
     }
 
+    /// Keywords that expand before another can be typed, as (shorter, longer), at most three.
+    /// Sorted, a keyword that starts another is followed by one that starts with it, so neighbours are enough.
+    var keywordClashes: [(String, String)] {
+        let sorted = expansions.map(\.keyword).sorted()
+        var found: [(String, String)] = []
+        for (a, b) in zip(sorted, sorted.dropFirst()) where b.hasPrefix(a) && found.count < 3 { found.append((a, b)) }
+        return found
+    }
+
     /// One line short enough for a tile, so tiles in a row match.
     static func clip(_ text: String, _ limit: Int) -> String {
         text.count > limit ? String(text.prefix(limit - 1)) + "…" : text
@@ -802,6 +827,9 @@ final class Snippets: StackbarPlugin {
         }
         Section("Keywords") {
             Text(expansionSummary).style(.caption)
+            ForEach(keywordClashes.map { "\($0.0) expands before \($0.1) can be typed in full; change one of them." }) { line in
+                Text(line).style(.caption).role(.warning)
+            }
             Text("Type a snippet's keyword anywhere and it is replaced with the snippet. Turn this off, or skip apps, in Stackbar Settings › Privacy & Secrets.").style(.caption)
         }
     }

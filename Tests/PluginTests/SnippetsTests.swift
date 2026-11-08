@@ -198,16 +198,87 @@ final class SnippetsTests: XCTestCase {
     func testImportingManySnippetsKeepsEachOneAndItsKeyword() async throws {
         let host = host()
         let session = try await host.session("Snippets")
-        let items = (0..<300).map { #"{"name": "Snippet \#($0)", "text": "Body \#($0)\#($0 == 0 ? "" : " {snippet name=\\\"Snippet 0\\\"}")", "keyword": ";s\#($0)"}"# }
+        let items = (0..<300).map { #"{"name": "Snippet \#($0)", "text": "Body \#($0)\#($0 == 0 ? "" : " {snippet name=\\\"Snippet 0\\\"}")", "keyword": ";k\#($0)x"}"# }
         host.system.simulate(chosenFile: ChosenFile(name: "many.json", data: Data(("[" + items.joined(separator: ",") + "]").utf8)))
         guard case .message(let summary?) = try await session.runCommand("import") else { return XCTFail("import") }
         XCTAssertTrue(summary.hasPrefix("Imported 300"), summary)
         let all = await snippets(session)
         XCTAssertEqual(all.count, 300)
         let last = try await command(session, titled: "Snippet 299")
-        XCTAssertTrue(last.keywords.contains(";s299"))
+        XCTAssertTrue(last.keywords.contains(";k299x"))
         let result = try await session.runCommand(last.id)
         XCTAssertEqual(result, .paste("Body 299 Body 0", cursorFromEnd: 0), "one level of inclusion")
+        await session.stop()
+    }
+
+    func testAKeywordThatStartsAnotherIsRefused() async throws {
+        let host = host()
+        let session = try await host.session("Snippets")
+        try await importSample(host, session)
+        let opened = try await session.openView("create")
+        let submit = ActionID("view/\(opened.session)/form/new")
+        func errors(_ fields: [String: String]) async throws -> [String: String] {
+            try await session.event(submit, value: .fields(fields.mapValues { .text($0) }))
+            return await session.commandView(opened.session)?.form?.errors ?? [:]
+        }
+        let longer = try await errors(["name": "Sign", "text": "x", "keyword": ";sign"])
+        XCTAssertEqual(Set(longer.keys), ["keyword"], "typing ;sign would expand ;sig first")
+        let shorter = try await errors(["name": "S", "text": "x", "keyword": ";s"])
+        XCTAssertEqual(Set(shorter.keys), ["keyword"], ";s would expand before ;sig is typed")
+        let unrelated = try await errors(["name": "Other", "text": "x", "keyword": ";other"])
+        XCTAssertEqual(unrelated, [:])
+        await session.stop()
+    }
+
+    func testAnImportLeavesOutAKeywordThatWouldClash() async throws {
+        let host = host()
+        let session = try await host.session("Snippets")
+        try await importSample(host, session)
+        host.system.simulate(chosenFile: ChosenFile(name: "more.json", data: Data(#"[{"name": "Sign off", "text": "Best", "keyword": ";sign"}]"#.utf8)))
+        guard case .message(let summary?) = try await session.runCommand("import") else { return XCTFail("import") }
+        XCTAssertTrue(summary.contains(";sign"), "the keyword is named as left out: \(summary)")
+        let imported = try await command(session, titled: "Sign off")
+        XCTAssertFalse(imported.keywords.contains(";sign"), "the snippet is kept without it")
+        await session.stop()
+    }
+
+    func testCreateStartsFromTheSelection() async throws {
+        let host = host()
+        let session = try await host.session("Snippets")
+        let opened = try await session.openView("create", context: InvocationContext(selectedText: "Kind regards,\nSam"))
+        let form = await session.commandView(opened.session)?.form ?? opened.root?.form
+        let text = form?.fields.first { $0.name == "text" }
+        XCTAssertEqual(text?.value, .text("Kind regards,\nSam"), "the snippet starts with what was selected")
+        await session.stop()
+    }
+
+    func testSettingsPointsOutKeywordsThatAlreadyClash() async throws {
+        let host = host()
+        let id = "io.navbytes.stackbar.snippets"
+        let saved = #"[{"id":"5A1B0000-0000-4000-8000-000000000001","name":"Sig","text":"x","keyword":";sig","tags":[]},{"id":"5A1B0000-0000-4000-8000-000000000002","name":"Sign","text":"y","keyword":";sign","tags":[]}]"#
+        try await host.services.storage.set("snippets", saved, for: id)
+        let supervisor = try await host.start("Snippets")
+        let settings = await supervisor.views[.settings]?.plainText ?? ""
+        XCTAssertTrue(settings.contains(";sig expands before ;sign can be typed in full"), settings)
+        await supervisor.stop()
+    }
+
+    func testSavingAnEditThatKeepsAClashingKeywordStillWorks() async throws {
+        let host = host()
+        let id = "io.navbytes.stackbar.snippets"
+        let sign = "5A1B0000-0000-4000-8000-000000000002"
+        let saved = #"[{"id":"5A1B0000-0000-4000-8000-000000000001","name":"Sig","text":"x","keyword":";sig","tags":[]},{"id":"\#(sign)","name":"Sign","text":"y","keyword":";sign","tags":[]}]"#
+        try await host.services.storage.set("snippets", saved, for: id)
+        let session = try await host.session("Snippets")
+        let opened = try await session.openView("create", query: CommandQuery(arguments: ["id": sign]))
+        try await session.event(ActionID("view/\(opened.session)/form/\(sign)"), value: .fields([
+            "name": .text("Sign"), "text": .text("Changed"), "keyword": .text(";sign"), "tags": .text(""),
+        ]))
+        let errors = await session.commandView(opened.session)?.form?.errors ?? [:]
+        XCTAssertEqual(errors, [:], "a clash that was already there doesn't block an edit that keeps the keyword")
+        let edited = try await command(session, titled: "Sign")
+        let result = try await session.runCommand(edited.id)
+        XCTAssertEqual(result, .paste("Changed", cursorFromEnd: 0), "the new text is saved")
         await session.stop()
     }
 }

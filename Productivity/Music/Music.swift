@@ -5,7 +5,8 @@ import Foundation
 /// pause; the panel has the track, previous, next and volume.
 ///
 /// It asks the player over AppleScript (`osascript`, run by Stackbar every 5
-/// seconds) and never opens a player that isn't running, unless you press
+/// seconds while something plays, less when it's paused or closed) and never
+/// opens a player that isn't running, unless you press
 /// Play with nothing playing. macOS asks once whether Stackbar may control
 /// Music or Spotify.
 @main
@@ -13,7 +14,7 @@ final class Music: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.music",
         name: "Music",
-        version: "1.4.1",
+        version: "1.5.0",
         summary: "What's playing in Music or Spotify, with play, pause, skip and volume.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(5)), .wake],
@@ -22,7 +23,7 @@ final class Music: StackbarPlugin {
         // Album art: Spotify names its own image URL; for Music the cover
         // is looked up in the iTunes catalog by artist and album.
         capabilities: [.run(commands: ["osascript"]), .network("itunes.apple.com", "*.mzstatic.com", "i.scdn.co")],
-        minimumStackbar: "0.21.0",
+        minimumStackbar: "0.22.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Music",
         accent: .pink,
         symbol: "music.note"
@@ -74,20 +75,25 @@ final class Music: StackbarPlugin {
 
     @Stored("preferred") var preferred = "Whichever is playing"
     @Stored("showInMenuBar") var showInMenuBar = "Title and artist"
+    /// Off by default: a notification for each new track is opt-in.
+    @Stored("announce") var announce = false
 
     /// One line for the player if it is running: state, name, artist,
     /// album, duration (seconds), position (seconds), volume (0-100),
-    /// tab-separated. Each player gets its own script, because AppleScript
-    /// can't compile one that names an app that isn't installed.
+    /// cover. The fields are joined by the unit separator (character 31),
+    /// since a title can hold a tab or a line break. Each player gets its
+    /// own script, because AppleScript can't compile one that names an app
+    /// that isn't installed.
     static func statusScript(for player: Player) -> String {
         let duration = player == .spotify ? "((duration of t) / 1000)" : "(duration of t)"
         let artwork = player == .spotify ? "(artwork url of t)" : "\"\""
         return """
         if application "\(player.rawValue)" is running then
             tell application "\(player.rawValue)"
+                set d to (character id 31)
                 if player state is not stopped then
                     set t to current track
-                    return "\(player.rawValue)" & tab & (player state as text) & tab & (name of t) & tab & (artist of t) & tab & (album of t) & tab & \(duration) & tab & player position & tab & sound volume & tab & \(artwork)
+                    return "\(player.rawValue)" & d & (player state as text) & d & (name of t) & d & (artist of t) & d & (album of t) & d & \(duration) & d & player position & d & sound volume & d & \(artwork)
                 end if
             end tell
         end if
@@ -96,14 +102,18 @@ final class Music: StackbarPlugin {
     }
 
     /// Whether the last check found no player running, and when it ran.
-    /// Each check is two osascript launches, so with nothing open the timer
-    /// slows from every 5 seconds to every 30; a player showing up, or any
-    /// click, brings the 5 seconds back.
+    /// Each check is two osascript launches, so the timer backs off: every 5
+    /// seconds while something plays, every 15 while it's paused and every 30
+    /// with no player open. A click checks at once.
     var idle = false
     var lastCheck = Date.distantPast
+    /// The track last announced, as its name, a unit separator and its artist.
+    /// It isn't cleared when nothing plays, so a relaunch doesn't repeat the song.
+    var lastAnnounced: String?
 
     func refresh() async throws {
-        if idle, Stackbar.refreshReason == .interval, Date().timeIntervalSince(lastCheck) < 25 { return }
+        let wait: TimeInterval = idle ? 25 : (track?.playing == false ? 14 : 0)
+        if Stackbar.refreshReason == .interval, Date().timeIntervalSince(lastCheck) < wait { return }
         await check()
     }
 
@@ -127,6 +137,7 @@ final class Music: StackbarPlugin {
                 failed = player
             }
         }
+        let firstCheck = !checked
         checked = true
         idle = tracks.isEmpty && failed == nil && !denied
         if denied && tracks.isEmpty {
@@ -139,6 +150,17 @@ final class Music: StackbarPlugin {
         track = Self.choose(tracks, preferred: Player(rawValue: preferred))
         // A drag still being applied shows the thumb, not the player's older value.
         if let volumeTarget { track?.volume = Double(volumeTarget) }
+        // Each new track is announced once. The first check only remembers
+        // what is playing, so starting Stackbar doesn't announce it.
+        if let track, track.playing {
+            let key = "\(track.name)\u{1F}\(track.artist)"
+            if key != lastAnnounced {
+                if announce, !firstCheck {
+                    Stackbar.notify(track.name, body: [track.artist, track.album].filter { !$0.isEmpty }.joined(separator: " — "))
+                }
+                lastAnnounced = key
+            }
+        }
         // The catalog lookup runs on its own, so a slow answer doesn't hold
         // up the ticks and clicks queued behind this check; the cover shows
         // from the next one.
@@ -165,9 +187,11 @@ final class Music: StackbarPlugin {
             let found = try await Stackbar.getJSON(url, as: CatalogResults.self)
             // "" is a catalog with no cover: that stays. A failed request
             // is asked again in a minute.
+            if covers.count >= 200 { covers.removeAll() }
             covers[key] = found.results.first?.artworkUrl100.map(Self.largeCover) ?? ""
             coverRetryAt[key] = nil
         } catch {
+            if coverRetryAt.count >= 200 { coverRetryAt.removeAll() }
             coverRetryAt[key] = Date().addingTimeInterval(60)
         }
     }
@@ -190,14 +214,19 @@ final class Music: StackbarPlugin {
         text.count > limit ? String(text.prefix(limit - 1)) + "…" : text
     }
 
+    /// One record from `statusScript`. Its fields are split on the unit
+    /// separator, and a line break or tab inside a field becomes a space.
     static func parse(_ output: String) -> [Track] {
-        output.split(separator: "\n").compactMap { line in
-            let fields = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
-            guard fields.count >= 8, let player = Player(rawValue: fields[0]) else { return nil }
-            func number(_ text: String) -> Double { Double(text.replacingOccurrences(of: ",", with: ".")) ?? 0 }
-            let artwork = fields.count > 8 && fields[8].hasPrefix("https://") ? fields[8] : nil
-            return Track(player: player, playing: fields[1] == "playing", name: fields[2], artist: fields[3], album: fields[4], duration: number(fields[5]), position: number(fields[6]), volume: number(fields[7]), artworkURL: artwork)
+        let record = output.trimmingCharacters(in: .newlines)
+        guard !record.isEmpty else { return [] }
+        let fields = record.split(separator: "\u{1F}", omittingEmptySubsequences: false).map { field -> String in
+            let text = field.replacingOccurrences(of: "\r\n", with: " ").replacingOccurrences(of: "\r", with: " ").replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\t", with: " ")
+            return text == "missing value" ? "" : text
         }
+        guard fields.count >= 8, let player = Player(rawValue: fields[0]) else { return [] }
+        func number(_ text: String) -> Double { Double(text.replacingOccurrences(of: ",", with: ".")) ?? 0 }
+        let artwork = fields.count > 8 && fields[8].hasPrefix("https://") ? fields[8] : nil
+        return [Track(player: player, playing: fields[1] == "playing", name: fields[2], artist: fields[3], album: fields[4], duration: number(fields[5]), position: number(fields[6]), volume: number(fields[7]), artworkURL: artwork)]
     }
 
     /// The preferred player if it has a track, else the one playing, else any.
@@ -208,9 +237,14 @@ final class Music: StackbarPlugin {
 
     /// Sends a command, then checks what the player is doing now.
     func tell(_ command: String) async throws {
+        let wasPlaying = track?.playing
         try await send(command)
-        try? await Task.sleep(for: .milliseconds(250))
         await check()
+        // The player may not have switched yet, so show the click now and let
+        // the next tick confirm.
+        if command == "playpause", let wasPlaying, track?.playing == wasPlaying { track?.playing = !wasPlaying }
+        // The next tick checks again, even while paused.
+        lastCheck = .distantPast
     }
 
     /// The volume the player should have once the sends catch up, while a
@@ -244,9 +278,9 @@ final class Music: StackbarPlugin {
 
     func send(_ command: String) async throws {
         let player = track?.player ?? Player(rawValue: preferred) ?? .music
-        // Fixed commands only: playpause, next track, previous track, set
-        // sound volume to a number. With nothing running, playpause opens
-        // the preferred player and plays its last track.
+        // Fixed commands only: playpause, next track, previous track, the two
+        // 15-second skips and set sound volume to a number. With nothing
+        // running, playpause opens the preferred player and plays its last track.
         let script = track == nil && command == "playpause"
             ? "tell application \"\(player.rawValue)\" to playpause"
             : "if application \"\(player.rawValue)\" is running then tell application \"\(player.rawValue)\" to \(command)"
@@ -430,6 +464,9 @@ final class Music: StackbarPlugin {
             Picker("Show", options: ["Title and artist", "Title", "Icon only"], selection: showInMenuBar, style: .segmented) { self.showInMenuBar = $0 }
             Text("Click the menu-bar item to play or pause; right-click for the panel.").style(.caption)
         }
+        Section("Notifications") {
+            Toggle("Announce each new track", isOn: announce) { self.announce = $0 }
+        }
     }
 
     // MARK: Commands
@@ -448,6 +485,14 @@ final class Music: StackbarPlugin {
         Command("previous", title: "Previous Track", symbol: "backward.fill", keywords: ["music", "spotify", "back"]) { _ in
             await self.check()
             try await self.tell("previous track")
+            return .done
+        }
+        Command("skip-forward", title: "Skip Forward 15 Seconds", symbol: "goforward.15", keywords: ["music", "spotify", "podcast", "seek"]) { _ in
+            try await self.tell("set player position to (player position + 15)")
+            return .done
+        }
+        Command("skip-back", title: "Skip Back 15 Seconds", symbol: "gobackward.15", keywords: ["music", "spotify", "podcast", "seek"]) { _ in
+            try await self.tell("set player position to (player position - 15)")
             return .done
         }
         Command("copy-track", title: "Copy Current Track", symbol: "doc.on.doc", keywords: ["music", "spotify", "song", "share"]) { _ in

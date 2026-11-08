@@ -8,11 +8,16 @@ shortcut, so you learn them as you go. The items you choose most rank
 higher for that app.
 
 - **Needs:** reading the menus of the app you were in and choosing an item
-  (`.menus`), which uses Accessibility access. Stackbar 0.25.0 or later.
-- **Surfaces:** panel (how to use it).
+  (`.menus`), which uses Accessibility access. Stackbar 0.31.0 or later.
+- **Surfaces:** panel (your most chosen menu items).
 - **Commands:** Search Menu Items.
 - **Leaves out:** the Apple menu, submenu titles and separators. Dimmed
   items show at the bottom and can't be chosen.
+
+## What's new in 1.1.0
+
+- Typos, initials and dots are forgiven: "zom in" finds Zoom In, "nw" finds New Window and "export..." finds Export as PDF….
+- The panel lists the menu items you choose most, across your apps. Click one to choose it again.
 
 ## What's new in 1.0.1
 

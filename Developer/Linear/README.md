@@ -7,13 +7,14 @@ groups everything assigned to you by state, ordered by priority.
 
 - **Needs:** `api.linear.app` and the secret `LINEAR_API_KEY`, a personal API
   key from Linear (Settings > Security & access).
-- **Surfaces:** menu bar, panel, settings.
+- **Surfaces:** menu bar, panel, widget, settings.
 - **On each issue:** Open, Start Work (moves it to In Progress, assigns it to
   you and copies the branch name), Change Status, Set Priority, Comment, Copy
   Branch Name (Linear's own, so the branch links back to the issue), Copy
   Link, Copy ID.
 - **Inbox:** assignments, mentions and comments, with a notification for each
-  new one. Open marks it read.
+  new one. Open marks it read, and Mark All as Read clears the lot (press
+  twice to confirm).
 - **Commands:** My Linear Issues, Search Linear Issues (by title, or paste an
   ID like `ENG-123` or an issue link), Linear Inbox, Change Linear Issue
   Status, Set Linear Issue Priority, Comment on Linear Issue, Create Linear
@@ -21,6 +22,13 @@ groups everything assigned to you by state, ordered by priority.
 - **Settings:** what the menu-bar number counts, inbox notifications, and the
   default team for new issues.
 - **Agent tool:** `assigned` lists your open issues with their branch names.
+
+## What's new in 1.6.0
+
+- Mark everything in your Linear inbox as read at once, from the panel or Linear Inbox (press twice to confirm).
+- Switching to an API key for another account no longer announces its whole inbox as new.
+- Without an API key the menu bar stays quiet and the widget offers to connect, instead of showing an error.
+- Searching issue titles waits until you pause typing, and a slow Linear holds up clicks for less time.
 
 ## What's new in 1.5.1
 

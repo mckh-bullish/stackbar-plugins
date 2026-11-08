@@ -41,7 +41,7 @@ let plugins: [(category: String, name: String, target: String)] = categories.fla
 }
 
 /// The plugins Tests/PluginTests runs.
-let testedPlugins = ["AppSwitcher", "Calculator", "Clipboard", "Emoji", "MenuSearch", "PRCockpit", "Pomodoro", "Quicklinks", "RecentProjects", "Snippets", "StayAwake", "SystemCommands", "Timers", "Todo", "UpNext", "WindowSwitcher", "Windows"]
+let testedPlugins = ["AppSwitcher", "Applications", "Calculator", "Clipboard", "ColorPicker", "Dictionary", "Emoji", "FileSearch", "Jira", "KillProcess", "Linear", "LiteLLM", "MenuSearch", "Music", "PRCockpit", "Pomodoro", "Ports", "Quicklinks", "RecentProjects", "Snippets", "StayAwake", "SystemCommands", "SystemMonitor", "Timers", "Todo", "Translate", "UpNext", "WindowSwitcher", "Windows"]
 
 let stackbar: Package.Dependency = ProcessInfo.processInfo.environment["STACKBAR_PATH"].map { .package(name: "stackbar", path: $0) }
     ?? .package(url: "https://github.com/navbytes/stackbar", revision: stackbarRevision)

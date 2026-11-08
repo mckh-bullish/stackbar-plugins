@@ -12,11 +12,11 @@ letter. A pinned letter opens the app even when it isn't running. Hold Right
 
 - **Needs:** `.keyLayer` and `.apps`. Stackbar listens to the keyboard and
   switches apps for the plugin, so Stackbar asks for Accessibility access
-  the first time. Stackbar 0.16.0 or later.
+  the first time. Stackbar 0.21.0 or later.
 - **Surfaces:** menu bar, panel, settings.
 - **Settings:** the key you hold (Right ⌘, ⌥, ⌃ or ⇧), what pressing the
-  letter of the app in front does, the letter map, automatic letters, and
-  opening pinned apps.
+  letter of the app in front does, the letter map, automatic letters,
+  opening pinned apps, and apps left out of the letters.
 - **Commands:** Pin a Letter to an App, Clear App Switcher Pins.
 - **Agent tools:** `letters`.
 - **Not covered:** jumping between Spaces and a window grid. To find an app
@@ -38,6 +38,13 @@ app even when it isn't running.
 ### Stays out of your way
 Letters with no app pass straight through, so Right ⌘ C still copies. Hold
 Right ⌘ on its own to see the whole letter map.
+
+## What's new in 1.3.0
+
+- Pin a Letter to an App takes an app's name, like Slack, and says so when no such app is installed, instead of pinning a letter that does nothing.
+- Clearing every pin asks you to click again first, in Settings and in the palette.
+- Leave an app out of the letters from its row's menu, and bring it back in Settings.
+- If a pinned app can't be opened, the panel says why.
 
 ## What's new in 1.2.1
 

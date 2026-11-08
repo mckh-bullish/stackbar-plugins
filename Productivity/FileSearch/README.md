@@ -13,6 +13,12 @@ are left out.
 - **Surfaces:** panel (what you opened lately).
 - **Commands:** Search Files, which also feeds the palette's results.
 
+## What's new in 1.0.2
+
+- Opening a file and Show in Finder work again. Before, picking a file did nothing.
+- The files you opened lately stay in the panel after Stackbar restarts.
+- Going back over a search you just typed answers straight away instead of asking Spotlight again.
+
 ## What's new in 1.0.1
 
 - A Spotlight error no longer lingers when you clear the search back to a short query.

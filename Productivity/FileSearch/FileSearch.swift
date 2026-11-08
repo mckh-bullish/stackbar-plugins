@@ -10,7 +10,7 @@ final class FileSearch: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.file-search",
         name: "File Search",
-        version: "1.0.1",
+        version: "1.0.2",
         summary: "Find files and folders by name from the command palette, most recently used first.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -26,14 +26,20 @@ final class FileSearch: StackbarPlugin {
         PreviewScene("hero", "Any file, a few letters away") { plugin in
             plugin.recent = try await Stackbar.findFiles("plan")
         },
+        PreviewScene("folders", "Folders too, with their Finder icons") { plugin in
+            plugin.recent = try await Stackbar.findFiles("plan").filter(\.isFolder) + (try await Stackbar.findFiles("readme"))
+        },
     ]
 
     let theme = Theme.cyan
 
     var results: [FoundFile] = []
     var problem: String?
+    /// Recent searches and their results, so going back over one doesn't ask
+    /// Spotlight again. Errors aren't kept.
+    var cache: [String: (at: Date, files: [FoundFile])] = [:]
     /// What was opened from here lately, for the panel.
-    var recent: [FoundFile] = []
+    @Stored("recent") var recent: [FoundFile] = []
 
     /// Shorter text matches half the disk.
     static let minimumLength = 3
@@ -45,18 +51,28 @@ final class FileSearch: StackbarPlugin {
             problem = nil
             return
         }
+        let key = text.lowercased()
+        if let cached = cache[key], Date().timeIntervalSince(cached.at) < 30 {
+            results = cached.files
+            problem = nil
+            return
+        }
         do {
             results = try await Stackbar.findFiles(text, limit: limit)
             problem = nil
+            cache[key] = (Date(), results)
+            if cache.count > 20, let oldest = cache.min(by: { $0.value.at < $1.value.at }) {
+                cache[oldest.key] = nil
+            }
         } catch {
             results = []
             problem = "Spotlight didn't answer: \(error)"
         }
     }
 
-    func open(_ file: FoundFile) {
+    func open(_ file: FoundFile) async throws {
+        try await Stackbar.open(file.path, with: nil)
         recent = Array(([file] + recent.filter { $0.path != file.path }).prefix(8))
-        Stackbar.open(file.path)
     }
 
     static func folder(of file: FoundFile) -> String {
@@ -66,8 +82,8 @@ final class FileSearch: StackbarPlugin {
     func row(_ file: FoundFile) -> Row {
         Row(file.name, subtitle: file.folder, symbol: file.isFolder ? "folder" : "doc", key: file.path)
             .fileIcon(file.path)
-            .action("Open") { self.open(file) }
-            .action("Show in Finder", shortcut: "cmd+return") { Stackbar.open(Self.folder(of: file)) }
+            .action("Open") { try await self.open(file) }
+            .action("Show in Finder", shortcut: "cmd+return") { try await Stackbar.open(Self.folder(of: file), with: nil) }
             .action("Copy Path", shortcut: "cmd+shift+c") { Stackbar.copy(file.path) }
     }
 

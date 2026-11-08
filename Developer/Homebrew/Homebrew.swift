@@ -14,12 +14,12 @@ final class Homebrew: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.homebrew",
         name: "Homebrew",
-        version: "1.5.0",
+        version: "1.6.0",
         summary: "Outdated formulae and casks, with upgrades a click away.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(60), .wake],
         capabilities: [.run(commands: ["brew"])],
-        minimumStackbar: "0.21.0",
+        minimumStackbar: "0.26.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Homebrew",
         accent: .amber,
         symbol: "mug.fill"
@@ -85,6 +85,28 @@ final class Homebrew: StackbarPlugin {
         let casks: [Item]
     }
 
+    /// One line of `brew services list --json`. Each field is read on its own,
+    /// so an odd value (a null status, a code sent as text) doesn't drop the line.
+    struct Service: Decodable, Equatable, Identifiable {
+        let name: String
+        let status: String
+        let exit_code: Int?
+        var id: String { name }
+        private enum K: String, CodingKey { case name, status, exit_code }
+        init(from d: Decoder) throws {
+            let c = try d.container(keyedBy: K.self)
+            name = try c.decode(String.self, forKey: .name)
+            status = (try? c.decodeIfPresent(String.self, forKey: .status)) ?? "unknown"
+            exit_code = (try? c.decodeIfPresent(Int.self, forKey: .exit_code)) ?? (try? c.decodeIfPresent(String.self, forKey: .exit_code)).flatMap { Int($0) }
+        }
+    }
+
+    /// A list entry that doesn't decode is skipped, not a reason to drop the list.
+    private struct Lossy: Decodable {
+        let value: Service?
+        init(from d: Decoder) { value = try? Service(from: d) }
+    }
+
     var packages: [Package] = []
     var checked: Date?
     var problem: String?
@@ -92,6 +114,9 @@ final class Homebrew: StackbarPlugin {
     var busy: String?
     var lastResult: String?
     var lastFailed = false
+    var services: [Service] = []
+    var servicesLoadedAt: Date?
+    var servicesProblem: String?
 
     @Stored("includeCasks") var includeCasks = true
     @Stored("hidePinned") var hidePinned = true
@@ -120,7 +145,7 @@ final class Homebrew: StackbarPlugin {
         // right away; the next hourly or wake check fetches first.
         if autoUpdate, busy == nil, checked != nil, indexIsStale() {
             // Quietly: a failed fetch (offline, say) still leaves the last list to show.
-            _ = try? await fetchIndex(label: "Fetching the latest formulae")
+            _ = try? await fetchIndex(label: "Fetching the latest formulae", announce: false)
         }
         await check()
     }
@@ -141,7 +166,8 @@ final class Homebrew: StackbarPlugin {
                 let known = Set(packages.map(\.id))
                 let new = fresh.filter { !known.contains($0.id) && (includeCasks || !$0.isCask) }
                 if !new.isEmpty {
-                    Stackbar.notify("Homebrew: \(new.count) new update\(new.count == 1 ? "" : "s")", body: new.prefix(5).map(\.name).joined(separator: ", "))
+                    Stackbar.notify("Homebrew: \(new.count) new update\(new.count == 1 ? "" : "s")", body: new.prefix(5).map(\.name).joined(separator: ", "),
+                                    actions: [NotificationAction("Upgrade All", command: "upgrade-all")])
                 }
             }
             packages = fresh.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
@@ -150,6 +176,12 @@ final class Homebrew: StackbarPlugin {
         } catch {
             problem = Self.explain(error)
         }
+    }
+
+    /// For views that ask on every keystroke: a list checked in the last minute
+    /// is as good as a new one, and a failed check is tried again.
+    func checkIfStale() async {
+        if problem != nil || checked.map({ Date().timeIntervalSince($0) > 60 }) ?? true { await check() }
     }
 
     /// No auto-update, hints or analytics noise in the output.
@@ -163,30 +195,58 @@ final class Homebrew: StackbarPlugin {
         return text
     }
 
-    static func failure(_ result: RunResult, doing what: String) -> String {
-        if result.timedOut { return "\(what) took too long" }
+    /// What went wrong in a run that finished, without naming what it was for.
+    static func detail(_ result: RunResult) -> String {
+        if result.timedOut { return "took too long" }
         let message = result.errorText.split(separator: "\n").last { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.map(String.init)
-        return "\(what) failed (\(result.status))" + (message.map { ": \($0)" } ?? "")
+        return "failed (\(result.status))" + (message.map { ": \($0)" } ?? "")
+    }
+
+    static func failure(_ result: RunResult, doing what: String) -> String {
+        "\(what) \(detail(result))"
     }
 
     // MARK: Actions
 
-    func upgrade(_ names: [String], label: String) async throws {
+    /// Formulae and casks go in separate calls, so a name that is both a
+    /// formula and a cask upgrades the right one. A failure in one group
+    /// doesn't stop the other.
+    func upgrade(_ packages: [Package], label: String) async throws {
         guard busy == nil else { throw HostError("\(busy!) is still running") }
         busy = label
         defer { busy = nil }
-        let result = try await Stackbar.run("brew", ["upgrade"] + names, environment: Self.quiet, timeout: .seconds(600))
-        lastResult = result.succeeded ? "\(label): done" : Self.failure(result, doing: label)
-        lastFailed = !result.succeeded
+        Stackbar.hud("\(label)… this can take a few minutes")
+        let formulae = packages.filter { !$0.isCask }.map(\.name)
+        let casks = packages.filter(\.isCask).map(\.name)
+        var outcomes: [String] = []
+        var failed = false
+        for (kind, flag, names) in [("formulae", "--formula", formulae), ("casks", "--cask", casks)] where !names.isEmpty {
+            do {
+                let result = try await Stackbar.run("brew", ["upgrade", flag] + names, environment: Self.quiet, timeout: .seconds(600))
+                if result.succeeded {
+                    outcomes.append("\(kind): done")
+                } else {
+                    failed = true
+                    outcomes.append("\(kind): \(Self.detail(result))")
+                }
+            } catch {
+                failed = true
+                outcomes.append("\(kind): \(Self.explain(error))")
+            }
+        }
+        lastResult = failed ? outcomes.joined(separator: "; ") : "\(label): done"
+        lastFailed = failed
         await check()
-        if !result.succeeded { throw HostError(lastResult!) }
+        if failed { throw HostError(lastResult!) }
     }
 
-    /// Runs `brew update` and records when it worked.
-    func fetchIndex(label: String) async throws {
+    /// Runs `brew update` and records when it worked. A background fetch
+    /// stays quiet; one the user asked for says it may take a while.
+    func fetchIndex(label: String, announce: Bool = true) async throws {
         guard busy == nil else { throw HostError("\(busy!) is still running") }
         busy = label
         defer { busy = nil }
+        if announce { Stackbar.hud("\(label)… this can take a few minutes") }
         let result = try await Stackbar.run("brew", ["update"], environment: ["HOMEBREW_NO_ENV_HINTS": "1", "HOMEBREW_NO_COLOR": "1"], timeout: .seconds(300))
         guard result.succeeded else { throw HostError(Self.failure(result, doing: "brew update")) }
         indexUpdated = Date()
@@ -198,6 +258,32 @@ final class Homebrew: StackbarPlugin {
         lastResult = "Homebrew updated; \(shown.count) outdated"
         lastFailed = false
         return lastResult!
+    }
+
+    /// The background services launchd runs for formulae, like postgresql.
+    /// Reused for half a minute, so searching the view doesn't re-run brew;
+    /// a failure is kept for that long too.
+    func loadServices(force: Bool = false) async {
+        if !force, let at = servicesLoadedAt, Date().timeIntervalSince(at) < 30 { return }
+        defer { servicesLoadedAt = Date() }
+        do {
+            let result = try await Stackbar.run("brew", ["services", "list", "--json"], environment: Self.quiet, timeout: .seconds(60))
+            guard result.succeeded else {
+                servicesProblem = Self.failure(result, doing: "brew services")
+                return
+            }
+            services = try result.stdout.isEmpty ? [] : JSONDecoder().decode([Lossy].self, from: result.stdout).compactMap(\.value)
+            servicesProblem = nil
+        } catch {
+            servicesProblem = Self.explain(error)
+        }
+    }
+
+    func service(_ verb: String, _ name: String) async throws {
+        let result = try await Stackbar.run("brew", ["services", verb, name], environment: Self.quiet, timeout: .seconds(60))
+        guard result.succeeded else { throw HostError(Self.failure(result, doing: "brew services \(verb) \(name)")) }
+        Stackbar.hud("\(name) \(["start": "started", "stop": "stopped", "restart": "restarted"][verb] ?? verb)")
+        await loadServices(force: true)
     }
 
     // MARK: Surfaces
@@ -233,7 +319,7 @@ final class Homebrew: StackbarPlugin {
                     IconButton("arrow.down.circle", label: "Update Homebrew", theme: theme, prominence: .tinted) { _ = try await self.update() }
                     if upgradable.count >= 2 {
                         ActionButton("Upgrade All", theme: theme, prominent: true) {
-                            try await self.upgrade(self.upgradable.map(\.name), label: "Upgrading everything")
+                            try await self.upgrade(self.upgradable, label: "Upgrading everything")
                         }
                     }
                 }
@@ -280,7 +366,7 @@ final class Homebrew: StackbarPlugin {
                     Button("Check", symbol: "arrow.clockwise", key: "widget-check") { await self.check() }
                 } else {
                     Button("Upgrade All", symbol: "arrow.up.circle", key: "widget-upgrade") {
-                        try await self.upgrade(self.upgradable.map(\.name), label: "Upgrading everything")
+                        try await self.upgrade(self.upgradable, label: "Upgrading everything")
                     }
                 }
             }
@@ -309,17 +395,46 @@ final class Homebrew: StackbarPlugin {
         return "\(minutes / 1440)d ago"
     }
 
+    /// Casks report a build number after a comma (`4.98.0,245422`); the
+    /// version people know is the part before it.
+    static func display(_ version: String) -> String {
+        version.split(separator: ",").first.map(String.init) ?? version
+    }
+
     func row(_ package: Package) -> Row {
-        var row = Row(package.name, subtitle: "\(package.installed) → \(package.current)", symbol: package.isCask ? "macwindow" : "terminal", key: package.id)
-        if package.pinned { row = row.badge("pinned", role: .warning) }
-        return row
-            .action("Upgrade") { try await self.upgrade([package.name], label: "Upgrading \(package.name)") }
-            .action("Open Homepage", shortcut: "cmd+o") {
-                Stackbar.open("https://formulae.brew.sh/\(package.isCask ? "cask" : "formula")/\(package.name)")
-            }
-            .action("Copy Upgrade Command", shortcut: "cmd+shift+c") {
+        var row = Row(package.name, subtitle: "\(Self.display(package.installed)) → \(Self.display(package.current))", symbol: package.isCask ? "macwindow" : "terminal", key: package.id)
+        if package.pinned {
+            // brew refuses to upgrade a pinned formula, so offer the way out instead.
+            row = row.badge("pinned", role: .warning)
+                .action("Copy Unpin Command") { Stackbar.copy("brew unpin \(package.name)") }
+        } else {
+            row = row.action("Upgrade") { try await self.upgrade([package], label: "Upgrading \(package.name)") }
+        }
+        row = row.action("Open Homepage", shortcut: "cmd+o") {
+            Stackbar.open("https://formulae.brew.sh/\(package.isCask ? "cask" : "formula")/\(package.name)")
+        }
+        if !package.pinned {
+            row = row.action("Copy Upgrade Command", shortcut: "cmd+shift+c") {
                 Stackbar.copy("brew upgrade \(package.isCask ? "--cask " : "")\(package.name)")
             }
+        }
+        return row
+    }
+
+    func serviceRow(_ service: Service) -> Row {
+        let started = service.status == "started"
+        var row = Row(service.name, subtitle: started ? "Running" : service.status == "error" ? "Failed (exit \(service.exit_code ?? 0))" : "Not running",
+                      symbol: started ? "circle.fill" : "circle", key: "service:\(service.name)")
+        if service.status == "error" { row = row.badge("error", role: .critical) }
+        // Stopping a service is undone by Start, so it takes one click.
+        if started {
+            row = row
+                .action("Restart", shortcut: "cmd+r") { try await self.service("restart", service.name) }
+                .action("Stop", shortcut: "cmd+.") { try await self.service("stop", service.name) }
+        } else {
+            row = row.action("Start", shortcut: "cmd+return") { try await self.service("start", service.name) }
+        }
+        return row
     }
 
     var settings: ViewContent {
@@ -345,16 +460,16 @@ final class Homebrew: StackbarPlugin {
     var commands: [Command] {
         Command("upgrade-all", title: "Upgrade All Homebrew Packages", symbol: "arrow.up.circle", keywords: ["brew", "homebrew", "upgrade"]) { _ in
             await self.check()
-            let names = self.shown.filter { !$0.pinned }.map(\.name)
-            guard !names.isEmpty else { return .message("Everything is up to date") }
-            try await self.upgrade(names, label: "Upgrading \(names.count) package\(names.count == 1 ? "" : "s")")
-            return .message("Upgraded \(names.count)")
+            let packages = self.shown.filter { !$0.pinned }
+            guard !packages.isEmpty else { return .message("Everything is up to date") }
+            try await self.upgrade(packages, label: "Upgrading \(packages.count) package\(packages.count == 1 ? "" : "s")")
+            return .message("Upgraded \(packages.count)")
         }
         Command("update", title: "Update Homebrew", symbol: "arrow.down.circle", keywords: ["brew", "homebrew"]) { _ in
             .message(try await self.update())
         }
         Command("outdated", title: "Outdated Homebrew Packages", symbol: "mug", keywords: ["brew", "homebrew"])
-            .view(search: { _ in await self.check() }) { _ in
+            .view(search: { _ in await self.checkIfStale() }) { _ in
                 if let problem = self.problem {
                     ContentUnavailableView("Can't check Homebrew", symbol: "exclamationmark.triangle", message: problem)
                 } else if self.shown.isEmpty {
@@ -363,11 +478,21 @@ final class Homebrew: StackbarPlugin {
                     List(self.shown, searchable: true) { package in self.row(package) }
                 }
             }
+        Command("services", title: "Homebrew Services", symbol: "gearshape.2", keywords: ["brew", "homebrew", "services", "launchd", "postgres", "redis"])
+            .view(search: { _ in await self.loadServices() }) { _ in
+                if let problem = self.servicesProblem {
+                    ContentUnavailableView("Can't list services", symbol: "exclamationmark.triangle", message: problem)
+                } else if self.services.isEmpty {
+                    ContentUnavailableView("No services", symbol: "gearshape.2", message: "Formulae that run in the background, like postgresql or redis, show here.")
+                } else {
+                    List(self.services, searchable: true) { service in self.serviceRow(service) }
+                }
+            }
     }
 
     var tools: [AgentTool] {
         AgentTool("outdated", description: "Homebrew formulae and casks with updates, as name installed -> current") { _ in
-            self.shown.isEmpty ? "Everything is up to date" : self.shown.map { "\($0.name) \($0.installed) -> \($0.current)\($0.isCask ? " (cask)" : "")" }.joined(separator: "\n")
+            self.shown.isEmpty ? "Everything is up to date" : self.shown.map { "\($0.name) \(Self.display($0.installed)) -> \(Self.display($0.current))\($0.isCask ? " (cask)" : "")" }.joined(separator: "\n")
         }
     }
 }

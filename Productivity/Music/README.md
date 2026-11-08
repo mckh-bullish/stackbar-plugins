@@ -6,16 +6,25 @@ pause; right-click for the panel with the track, Previous, Next and volume.
 - **Needs:** to run `osascript`, the only way to talk to Music and Spotify.
   The install sheet warns that osascript can run any program; this plugin
   only sends the fixed scripts in its source. macOS asks once whether
-  Stackbar may control Music or Spotify.
+  Stackbar may control Music or Spotify. Stackbar 0.22.0 or later.
 - **Surfaces:** menu bar, panel, widget, settings.
-- **How it checks:** every 5 seconds, and only players that are already
-  running; it never opens one.
+- **How it checks:** every 5 seconds while playing, 15 while paused and 30
+  with no player open, and only players that are already running; it never
+  opens one.
 - **Settings:** which player to follow (whichever is playing, Music or
   Spotify) and what the menu bar shows (title and artist, title, or just
-  the icon).
+  the icon), and whether to announce each new track.
 - **Commands:** Play or Pause Music, Next Track, Previous Track, Copy
-  Current Track.
+  Current Track, Skip Forward 15 Seconds and Skip Back 15 Seconds.
 - **Agent tool:** `now_playing` describes the current track.
+
+## What's new in 1.5.0
+
+- Songs and streams whose titles contain line breaks or tabs now show up, instead of "Nothing playing".
+- Play, Pause and Skip respond faster.
+- With the player paused, it checks every 15 seconds instead of every 5. Any click still updates it right away.
+- New commands: Skip Forward 15 Seconds and Skip Back 15 Seconds.
+- You can choose to get a notification for each new track (Settings › Notifications).
 
 ## What's new in 1.4.1
 

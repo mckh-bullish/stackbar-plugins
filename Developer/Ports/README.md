@@ -10,13 +10,22 @@ whatever holds it is asked to stop.
 - **In the panel:** every listening port with its process and pid, marked
   local (127.0.0.1 or ::1 only) or open (all interfaces). Each row can open
   `http://localhost:<port>`, stop the process (SIGTERM), force quit it
-  (SIGKILL) or copy its pid.
+  (SIGKILL) or copy its pid. Stop and Force Quit ask for a second press.
 - **Settings:** hide ports below 1024 (or 3000).
-- **Commands:** Kill Port (port, and TERM or KILL), Listening Ports.
+- **Commands:** Kill Port (port, and TERM or KILL): shows what holds the port;
+  Return stops it. Listening Ports.
 - **Agent tool:** `listening` lists ports with their processes.
 
 Processes owned by another user, like system services, can't be stopped
 from here.
+
+## What's new in 1.4.2
+
+- Kill Port shows which process holds the port and stops it only when you press Return, so you see what you're about to end.
+- Stop Process and Force Quit in the panel ask for a second press within 10 seconds.
+- Stopping a process no longer makes the plugin pause for a moment.
+- A process listening on both localhost and all interfaces is marked as reachable from the network.
+- Searching Listening Ports reuses the list from the last few seconds.
 
 ## What's new in 1.4.1
 

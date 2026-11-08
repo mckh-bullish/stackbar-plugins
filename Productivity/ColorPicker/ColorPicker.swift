@@ -10,7 +10,7 @@ final class ColorPicker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.color-picker",
         name: "Color Picker",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Pick a color from anywhere on screen and copy it as hex, RGB or HSL.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -21,10 +21,23 @@ final class ColorPicker: StackbarPlugin {
         symbol: "eyedropper"
     )
 
+    // MARK: Previews
+
+    static let previews: [PreviewScene<ColorPicker>] = [
+        PreviewScene("hero", "Any pixel, copied as hex, RGB or HSL") { plugin in
+            let now = Date()
+            plugin.history = ["#0A60C8", "#FF5FA2", "#34C759", "#FFB020", "#1C1C1E", "#8E7CFF"].enumerated().map { Picked(hex: $1, at: now.addingTimeInterval(Double(-$0) * 900)) }
+        },
+        PreviewScene("rgb", "Copy in the format your code wants") { plugin in
+            plugin.history = ["#0A60C8", "#FF5FA2", "#34C759"].map { Picked(hex: $0, at: Date()) }
+            plugin.format = "RGB"
+        },
+    ]
+
     let theme = Theme.pink
 
     enum Format: String, CaseIterable {
-        case hex = "Hex", rgb = "RGB", hsl = "HSL"
+        case hex = "Hex", rgb = "RGB", hsl = "HSL", swiftUI = "SwiftUI"
     }
 
     struct Picked: Codable, Equatable, Identifiable {
@@ -37,12 +50,18 @@ final class ColorPicker: StackbarPlugin {
     @Stored("history") var history: [Picked] = []
     @Stored("format") var format = Format.hex.rawValue
     static let historyLimit = 30
+    /// When Clear Picked Colors was first clicked; a second click within 10 seconds clears.
+    var armedClearAt: Date?
+    var clearArmed: Bool { armedClearAt.map { Date().timeIntervalSince($0) < 10 } ?? false }
+    /// The hex color typed into Convert Color, if it reads as one.
+    var converted: PickedColor?
 
     static func text(_ color: PickedColor, as format: Format) -> String {
         switch format {
         case .hex: return color.hex
         case .rgb: return color.rgb
         case .hsl: return color.hsl
+        case .swiftUI: return String(format: "Color(red: %.3f, green: %.3f, blue: %.3f)", color.red, color.green, color.blue)
         }
     }
 
@@ -65,8 +84,8 @@ final class ColorPicker: StackbarPlugin {
         guard let color = PickedColor(hex: picked.hex) else { return Row(picked.hex) }
         var row = Row(Self.text(color, as: chosenFormat), subtitle: Format.allCases.filter { $0 != chosenFormat }.map { Self.text(color, as: $0) }.joined(separator: " · "), symbol: "circle.fill", key: picked.hex)
             .preview(text: "\(color.hex)\n\(color.rgb)\n\(color.hsl)", caption: picked.at.formatted(date: .abbreviated, time: .shortened))
-        // The chosen format first, so Return copies it; ⌘1-3 always mean hex, RGB, HSL.
-        let shortcuts: [Format: String] = [.hex: "cmd+1", .rgb: "cmd+2", .hsl: "cmd+3"]
+        // The chosen format first, so Return copies it. ⌘1 to ⌘9 belong to the host (they pick a row), so these use ⌘⇧ letters.
+        let shortcuts: [Format: String] = [.hex: "cmd+shift+x", .rgb: "cmd+shift+r", .hsl: "cmd+shift+l", .swiftUI: "cmd+shift+s"]
         for format in [chosenFormat] + Format.allCases.filter({ $0 != chosenFormat }) {
             row = row.action("Copy \(format.rawValue)", shortcut: shortcuts[format]) { Stackbar.copy(Self.text(color, as: format)) }
         }
@@ -90,6 +109,23 @@ final class ColorPicker: StackbarPlugin {
                     }
                 }
             }
+        Command("convert", title: "Convert Color", subtitle: "Type a hex color to copy it as RGB, HSL or SwiftUI", symbol: "swatchpalette", keywords: ["color", "colour", "hex", "rgb", "hsl", "convert"])
+            .view(search: { invocation in
+                self.converted = PickedColor(hex: invocation.text.trimmingCharacters(in: .whitespaces))
+            }) { _ in
+                if let color = self.converted {
+                    List {
+                        ForEach(Format.allCases.map(\.rawValue)) { name in
+                            let format = Format(rawValue: name) ?? .hex
+                            Row(Self.text(color, as: format), subtitle: name, symbol: "circle.fill", key: "convert-\(name)")
+                                .action("Copy \(name)") { Stackbar.copy(Self.text(color, as: format)) }
+                        }
+                    }
+                } else {
+                    ContentUnavailableView("Type a hex color", symbol: "swatchpalette", message: "Like #0A60C8 or #FA0.")
+                }
+            }
+            .rootSearch(section: "Color", matching: #"#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})"#)
     }
 
     // MARK: Surfaces
@@ -113,7 +149,11 @@ final class ColorPicker: StackbarPlugin {
             Picker("Copy as", options: Format.allCases.map(\.rawValue), selection: format) { self.format = $0 }
         }
         Section("History") {
-            Button("Clear Picked Colors", symbol: "trash", role: .critical) { self.history = [] }
+            Button(clearArmed ? "Click again to clear \(history.count) colors" : "Clear Picked Colors", symbol: "trash", role: .critical, key: "clear") {
+                guard self.clearArmed else { self.armedClearAt = Date(); return }
+                self.armedClearAt = nil
+                self.history = []
+            }
         }
     }
 }

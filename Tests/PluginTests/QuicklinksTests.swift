@@ -205,4 +205,19 @@ final class QuicklinksTests: XCTestCase {
         XCTAssertEqual(loop, .open(url: "http://[::1]:3000", app: nil))
         await session.stop()
     }
+
+    func testSearchEnginesSavedBeforeFallbacksBecomeFallbacks() async throws {
+        let host = Host(self)
+        let id = "io.navbytes.stackbar.quicklinks"
+        let saved = #"[{"id":"6B2C0000-0000-4000-8000-000000000001","name":"Google","link":"https://www.google.com/search?q={argument name=\"query\"}","tags":[]},{"id":"6B2C0000-0000-4000-8000-000000000002","name":"Maps","link":"https://maps.google.com/?q={argument name=\"place\"}","tags":[]}]"#
+        try await host.services.storage.set("quicklinks", saved, for: id)
+        let session = try await host.session("Quicklinks")
+        let google = try await command(session, titled: "Google")
+        XCTAssertTrue(google.fallback, "a search engine saved before fallbacks is offered under the results")
+        let maps = try await command(session, titled: "Maps")
+        XCTAssertFalse(maps.fallback, "other links are not")
+        let offered = await session.commands().map(\.id)
+        XCTAssertFalse(offered.contains("web-search"), "a saved search engine is a fallback now, so the built-in Search Google isn't offered too")
+        await session.stop()
+    }
 }

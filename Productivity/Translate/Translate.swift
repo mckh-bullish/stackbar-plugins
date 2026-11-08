@@ -19,7 +19,7 @@ final class Translate: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.translate",
         name: "Translate",
-        version: "1.6.1",
+        version: "1.7.0",
         summary: "Translate the selected text in place, on your Mac or with Google or DeepL.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -41,6 +41,14 @@ final class Translate: StackbarPlugin {
             plugin.result = (source: "Können wir das Meeting auf Donnerstag verschieben? Ich schicke dir vorher die Folien.",
                              text: "Can we move the meeting to Thursday? I'll send you the slides beforehand.",
                              detected: "German", target: "English", by: "On your Mac")
+        },
+        PreviewScene("deepl", "DeepL, formal or informal") { plugin in
+            plugin.storedEngine = "DeepL"
+            plugin.formality = "Formal"
+            plugin.target = "Japanese"
+            plugin.result = (source: "Could you send me the signed contract by Friday?",
+                             text: "金曜日までに署名済みの契約書をお送りいただけますか？",
+                             detected: "EN", target: "Japanese", by: "DeepL")
         },
     ]
 
@@ -126,6 +134,18 @@ final class Translate: StackbarPlugin {
         }
     }
 
+    /// The text's language as the Mac guesses it, when it's fairly sure; nil elsewhere.
+    static func localLanguage(_ text: String) -> String? {
+        #if canImport(Translation)
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(text)
+        guard let best = recognizer.languageHypotheses(withMaximum: 1).first, best.value >= 0.8 else { return nil }
+        return best.key.rawValue
+        #else
+        return nil
+        #endif
+    }
+
     /// Translates on the Mac, with nothing sent anywhere, when Apple's
     /// Translation has this language pair downloaded. Nil means it can't
     /// (another OS, an unknown source language, or the pair isn't installed).
@@ -153,8 +173,12 @@ final class Translate: StackbarPlugin {
     func google(_ text: String, to language: Language) async throws -> (text: String, detected: String?) {
         var allowed = CharacterSet.urlQueryAllowed
         allowed.remove(charactersIn: "&+=?#")
-        let query = String(text.prefix(Self.maxCharacters)).addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
-        let response = try await Stackbar.http(HTTPRequest(url: "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=\(language.google)&dt=t&q=\(query)"))
+        let encoded = String(text.prefix(Self.maxCharacters)).addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+        let response = try await Stackbar.http(HTTPRequest(
+            url: "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=\(language.google)&dt=t",
+            method: "POST",
+            headers: ["Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"],
+            body: Data(("q=" + encoded).utf8)))
         guard (200..<300).contains(response.status) else {
             throw HostError(response.status == 429 ? "Google Translate is busy; try again in a moment" : "Google Translate answered \(response.status)")
         }
@@ -190,7 +214,7 @@ final class Translate: StackbarPlugin {
 
     /// Translates with DeepL. A key ending in `:fx` is a free-plan key.
     func deepL(_ text: String, to language: Language) async throws -> (text: String, detected: String?) {
-        guard let key = try await Stackbar.secret("DEEPL_API_KEY"), !key.isEmpty else {
+        guard let key = try await Stackbar.secret("DEEPL_API_KEY")?.trimmingCharacters(in: .whitespacesAndNewlines), !key.isEmpty else {
             throw HostError("Add your DeepL API key (DEEPL_API_KEY), or switch to Google Translate in Settings")
         }
         let host = key.hasSuffix(":fx") ? "api-free.deepl.com" : "api.deepl.com"
@@ -201,7 +225,7 @@ final class Translate: StackbarPlugin {
         ], body: try JSONSerialization.data(withJSONObject: body)))
         switch response.status {
         case 200..<300: break
-        case 403: throw HostError("DeepL rejected the key (403); check DEEPL_API_KEY")
+        case 403: throw HostError("DeepL rejected the key at \(host) (403). Free-plan keys end in :fx; check DEEPL_API_KEY")
         case 456: throw HostError("Your DeepL quota for this month is used up")
         case 429: throw HostError("DeepL is busy; try again in a moment")
         default: throw HostError("DeepL answered \(response.status)")
@@ -219,8 +243,9 @@ final class Translate: StackbarPlugin {
     /// the second language, so one command goes both ways.
     func translate(_ text: String, to name: String?) async throws {
         var language = Self.language(name ?? target)
+        if name == nil, Self.same(Self.localLanguage(text), language) { language = Self.language(second) }
         var translated = try await run(text, to: language)
-        if name == nil, Self.same(translated.detected, language) {
+        if name == nil, language.name == target, Self.same(translated.detected, language) {
             language = Self.language(second)
             translated = try await run(text, to: language)
         }
@@ -250,6 +275,18 @@ final class Translate: StackbarPlugin {
         translateCommand("translate-typed", title: "Translate", subtitle: "What you typed")
             .fallback()
             .stackbarOnly()
+        // Only the selection: the translation replaces it, so the clipboard is never read.
+        Command("translate-replace", title: "Translate and Replace Selection", subtitle: "Pastes the translation over the selected text", symbol: "character.bubble.fill", keywords: ["translate", "replace", "paste", "deepl", "language"]) { invocation in
+            guard let text = invocation.context?.selectedText, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return .failure("Select some text first")
+            }
+            guard self.inPlace else { return .failure("Translate and Replace needs the Automatic or DeepL engine; change it in Settings") }
+            try await self.translate(text, to: invocation["to"])
+            if self.cutAt != nil { return .failure("Only the first \(Self.maxCharacters) characters can be translated; select less text") }
+            guard let result = self.result, !result.text.isEmpty else { return .failure("Couldn't translate it") }
+            return .paste(result.text, cursorFromEnd: 0)
+        }
+        .argument("to", placeholder: "Into", required: false, options: Self.languages.map(\.name))
         Command("translate-screen", title: "Translate Text on Screen", subtitle: "Drag over any text, even in an image", symbol: "text.viewfinder", keywords: ["translate", "screen", "ocr", "image", "capture"]) { invocation in
             guard let read = try await Stackbar.captureScreenText() else { return .done }
             let text = read.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -390,7 +427,7 @@ final class Translate: StackbarPlugin {
             HeroCard(theme: theme, look: .glow, spacing: Space.s) {
                 HStack(spacing: Space.xs) {
                     Image(systemName: "sparkles").font(size: 10, weight: .bold).foreground(theme.textPaint).symbolEffect(.bounce)
-                    Text(result.target.uppercased()).typography(.overline).foreground(theme.textPaint)
+                    Text(result.target.uppercased()).role(.secondary).typography(.overline)
                 }
                 Text(result.text).typography(Typography(size: 17, weight: .semibold))
                 HStack(spacing: Space.s) {

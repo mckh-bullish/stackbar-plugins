@@ -8,7 +8,10 @@ of its own. Links use Raycast's template syntax:
 `{date format="yyyy-MM-dd"}` gives today's date.
 
 - **Needs:** opening links and folders (in the app each quicklink names), the
-  clipboard, and what you had selected, for `{clipboard}` and `{selection}`.
+  clipboard, and what you had selected, for `{clipboard}` and `{selection}`,
+  and DuckDuckGo's icon service (`icons.duckduckgo.com`) for site icons, which
+  are off until you turn them on in Settings and then see the domain of each
+  web link in the launcher.
 - **Surfaces:** panel, settings.
 - **Getting started:** an empty panel offers eight everyday links in one
   click, and Browse Quicklink Library has 40 ready-made searches, sites and
@@ -21,11 +24,10 @@ of its own. Links use Raycast's template syntax:
   Import Quicklinks, Export Quicklinks (a file Raycast reads too), plus one
   command per quicklink.
 
-## What's new in 1.5.1
+## What's new in 1.6.1
 
-- Links written as host:port, like localhost:3000 or example.com:8080/path, now open: local servers over http, other hosts over https.
-- Importing a big export saves once instead of once per link.
-- Links to a box on your network open over plain http too: nas:5000, 192.168.x.x, 10.x.x.x, 172.16-31.x.x, 169.254.x.x and [::1].
+- Copy Link on a quicklink that asks for input is now called Copy Link Template, since it copies the link with its placeholders.
+- The store page says that site icons come from DuckDuckGo and are off until you turn them on, and shows the tag filter.
 
 ## What's new in 1.6.0
 
@@ -34,6 +36,12 @@ of its own. Links use Raycast's template syntax:
   anything you type. Make any search quicklink a fallback to replace it.
 - **Site icons are off until you turn them on** in Settings. They come from
   DuckDuckGo's icon service, which sees the domain of each web link shown.
+
+## What's new in 1.5.1
+
+- Links written as host:port, like localhost:3000 or example.com:8080/path, now open: local servers over http, other hosts over https.
+- Importing a big export saves once instead of once per link.
+- Links to a box on your network open over plain http too: nas:5000, 192.168.x.x, 10.x.x.x, 172.16-31.x.x, 169.254.x.x and [::1].
 
 ## What's new in 1.5.0
 
