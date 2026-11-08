@@ -24,7 +24,7 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.12.0",
+        version: "1.13.0",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(20)), .wake],
@@ -115,10 +115,20 @@ final class PRCockpit: StackbarPlugin {
         let comments: Count?
         /// OPEN, CLOSED or MERGED.
         let state: String?
+        /// The GraphQL id, for merging, auto-merge and ready for review.
+        var nodeID: String? = nil
+        /// Set while GitHub merges it by itself once it can.
+        var autoMergeRequest: AutoMerge? = nil
+
+        struct AutoMerge: Decodable, Equatable { let enabledAt: Date? }
 
         struct Count: Decodable, Equatable { let totalCount: Int }
 
-        struct Repository: Decodable, Equatable { let nameWithOwner: String }
+        struct Repository: Decodable, Equatable {
+            let nameWithOwner: String
+            /// MERGE, SQUASH or REBASE: what this repository's merge button does for you.
+            var viewerDefaultMergeMethod: String? = nil
+        }
         struct Author: Decodable, Equatable { let login: String }
         struct Commits: Decodable, Equatable {
             struct Node: Decodable, Equatable {
@@ -140,6 +150,16 @@ final class PRCockpit: StackbarPlugin {
         /// Approved (or needing no review), checks green, no conflicts.
         var readyToMerge: Bool {
             !isDraft && (reviewDecision == "APPROVED" || reviewDecision == nil) && checks == "SUCCESS" && mergeable == "MERGEABLE"
+        }
+        /// How this repository merges, as GitHub's merge button does.
+        var mergeMethod: String { repository.viewerDefaultMergeMethod ?? "MERGE" }
+        /// "squash and merge", "rebase and merge" or "merge", for prompts.
+        var mergeVerb: String {
+            switch mergeMethod {
+            case "SQUASH": "squash and merge"
+            case "REBASE": "rebase and merge"
+            default: "merge"
+            }
         }
     }
 
@@ -285,8 +305,8 @@ final class PRCockpit: StackbarPlugin {
     }
 
     static let fragment = """
-    fragment pr on PullRequest { number title url isDraft updatedAt state repository { nameWithOwner } author { login } \
-    reviewDecision mergeable headRefName additions deletions comments { totalCount } commits(last: 1) { nodes { commit { statusCheckRollup { state } } } } }
+    fragment pr on PullRequest { nodeID: id number title url isDraft updatedAt state repository { nameWithOwner viewerDefaultMergeMethod } author { login } \
+    autoMergeRequest { enabledAt } reviewDecision mergeable headRefName additions deletions comments { totalCount } commits(last: 1) { nodes { commit { statusCheckRollup { state } } } } }
     """
 
     var toReview: [PullRequest] = []
@@ -590,6 +610,16 @@ final class PRCockpit: StackbarPlugin {
         }
     }
 
+    /// Takes a thread out of GitHub's inbox, as Done does on github.com.
+    func markDone(_ item: InboxItem) async {
+        do {
+            _ = try await rest("/notifications/threads/\(item.id)", method: "DELETE", timeout: Self.refreshTimeout)
+            inbox.removeAll { $0.id == item.id }
+        } catch {
+            Stackbar.hud("Couldn't mark it as done: \(error)", isError: true)
+        }
+    }
+
     func inboxRow(_ item: InboxItem) -> Row {
         var row = Row(item.subject.title, subtitle: [item.repository.full_name, item.reasonText, Self.ago(item.updated_at)].joined(separator: " · "), symbol: item.symbol, key: "inbox-\(item.id)")
         if item.unread { row = row.badge("Unread", role: .accent) }
@@ -599,6 +629,7 @@ final class PRCockpit: StackbarPlugin {
             await self.markRead(item)
         }
         .action("Mark as read", shortcut: "cmd+u") { await self.markRead(item) }
+        .action("Mark as done", shortcut: "cmd+e") { await self.markDone(item) }
         .action("Copy link") { Stackbar.copy(item.webURL) }
     }
 
@@ -735,6 +766,144 @@ final class PRCockpit: StackbarPlugin {
         } catch {
             Stackbar.hud("\(error)", isError: true)
         }
+    }
+
+    // MARK: Merging and drafts
+
+    /// Merges one of your pull requests the way its repository's merge
+    /// button does (squash, rebase or a merge commit).
+    func merge(_ pr: PullRequest) async {
+        do {
+            let body = try JSONSerialization.data(withJSONObject: ["merge_method": pr.mergeMethod.lowercased()])
+            _ = try await rest("/repos/\(pr.repo)/pulls/\(pr.number)/merge", method: "PUT", body: body, timeout: Self.refreshTimeout)
+            Stackbar.hud("Merged \(pr.id)")
+            try? await refresh()
+        } catch {
+            Stackbar.hud("\(error)", isError: true)
+        }
+    }
+
+    /// Turns auto-merge on (GitHub merges once reviews and checks allow it)
+    /// or off.
+    func setAutoMerge(_ pr: PullRequest, on: Bool) async {
+        do {
+            guard let id = pr.nodeID else { throw HostError("Refresh first, then try again") }
+            if on {
+                try await mutate("enablePullRequestAutoMerge(input: {pullRequestId: \(Self.quoted(id)), mergeMethod: \(pr.mergeMethod)}) { clientMutationId }")
+                Stackbar.hud("\(pr.id) merges by itself once it can")
+            } else {
+                try await mutate("disablePullRequestAutoMerge(input: {pullRequestId: \(Self.quoted(id))}) { clientMutationId }")
+                Stackbar.hud("Auto-merge is off for \(pr.id)")
+            }
+            try? await refresh()
+        } catch {
+            Stackbar.hud("\(error)", isError: true)
+        }
+    }
+
+    /// Takes one of your drafts out of draft, which asks its reviewers.
+    func markReady(_ pr: PullRequest) async {
+        do {
+            guard let id = pr.nodeID else { throw HostError("Refresh first, then try again") }
+            try await mutate("markPullRequestReadyForReview(input: {pullRequestId: \(Self.quoted(id))}) { clientMutationId }")
+            Stackbar.hud("\(pr.id) is ready for review")
+            try? await refresh()
+        } catch {
+            Stackbar.hud("\(error)", isError: true)
+        }
+    }
+
+    /// A JSON string literal, which is also a GraphQL one.
+    static func quoted(_ text: String) -> String {
+        (try? JSONEncoder().encode(text)).map { String(decoding: $0, as: UTF8.self) } ?? "\"\""
+    }
+
+    /// Runs one GraphQL mutation, turning GitHub's errors into a message.
+    func mutate(_ field: String) async throws {
+        guard try await loadEnterpriseServer() else { throw HostError("Enter your GitHub Enterprise server as GITHUB_ENTERPRISE_URL") }
+        guard let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else {
+            throw HostError("Add a GitHub token (GITHUB_TOKEN) first")
+        }
+        let body = try JSONEncoder().encode(["query": "mutation { \(field) }"])
+        let response = try await Stackbar.http(HTTPRequest(url: graphqlURL, method: "POST", headers: [
+            "Authorization": "Bearer \(token)", "Content-Type": "application/json", "Accept": "application/json",
+        ], body: body, timeout: Self.refreshTimeout))
+        guard (200..<300).contains(response.status) else {
+            throw HostError(response.status == 401 ? "GitHub rejected the token (401); set a new GITHUB_TOKEN" : "GitHub answered \(response.status)")
+        }
+        struct Reply: Decodable {
+            struct Problem: Decodable { let message: String }
+            let errors: [Problem]?
+        }
+        if let problem = (try? JSONDecoder().decode(Reply.self, from: response.body))?.errors?.first {
+            throw HostError("GitHub said: \(problem.message)")
+        }
+    }
+
+    // MARK: Files changed
+
+    /// One file a pull request changes (REST).
+    struct ChangedFile: Decodable, Equatable {
+        let filename: String
+        let status: String
+        let additions: Int
+        let deletions: Int
+        let patch: String?
+        let previous_filename: String?
+    }
+
+    /// Files changed, by pull request URL, and when they were fetched.
+    var changedFiles: [String: (files: [ChangedFile], at: Date)] = [:]
+    var filesProblem: [String: String] = [:]
+
+    /// Fetches the files a pull request changes, up to 300 (three pages).
+    func loadFiles(_ url: String, maxAge: TimeInterval = 60) async {
+        if let cached = changedFiles[url], Date().timeIntervalSince(cached.at) < maxAge { return }
+        guard let parts = Self.parts(of: url) else { return }
+        do {
+            var files: [ChangedFile] = []
+            for page in 1...3 {
+                let data = try await rest("/repos/\(parts.owner)/\(parts.name)/pulls/\(parts.number)/files?per_page=100&page=\(page)", timeout: Self.refreshTimeout)
+                let found = try Self.restDecoder.decode([ChangedFile].self, from: data)
+                files += found
+                if found.count < 100 { break }
+            }
+            changedFiles[url] = (files, Date())
+            filesProblem[url] = nil
+        } catch {
+            filesProblem[url] = "\(error)"
+        }
+    }
+
+    @ViewBuilder func filesView(_ url: String) -> ViewContent {
+        if let problem = filesProblem[url] {
+            ContentUnavailableView("Couldn't load the files", symbol: "exclamationmark.triangle", message: problem)
+        } else if let files = changedFiles[url]?.files {
+            if files.isEmpty {
+                ContentUnavailableView("No files changed", symbol: "doc")
+            } else {
+                List {
+                    ForEach(Array(files.enumerated())) { entry in
+                        self.fileRow(entry.element, index: entry.offset, url: url)
+                    }
+                }
+            }
+        } else {
+            ContentUnavailableView("Loading the files…", symbol: "hourglass")
+        }
+    }
+
+    func fileRow(_ file: ChangedFile, index: Int, url: String) -> Row {
+        let words = ["added": ("Added", Role.success), "removed": ("Deleted", Role.critical), "renamed": ("Renamed", Role.secondary)]
+        let subtitle = [file.previous_filename.map { "from \($0)" }, "+\(file.additions) −\(file.deletions)"].compactMap { $0 }.joined(separator: " · ")
+        let name = file.filename.split(separator: "/").last.map(String.init) ?? file.filename
+        let folder = String(file.filename.dropLast(name.count).dropLast())
+        var row = Row(name, subtitle: [folder, subtitle].filter { !$0.isEmpty }.joined(separator: " · "), symbol: "doc.text", key: "file-\(index)")
+        if let word = words[file.status] { row = row.badge(word.0, role: word.1) }
+        row = row.preview(text: file.patch ?? "No diff to show (a binary or very large file).", caption: file.filename)
+        return row.action("Open on GitHub", shortcut: "cmd+return") { Stackbar.open(url + "/files") }
+            .action("Copy path") { Stackbar.copy(file.filename) }
+            .action("Copy diff") { Stackbar.copy(file.patch ?? "") }
     }
 
     // MARK: Issues and repositories (REST)
@@ -967,11 +1136,13 @@ final class PRCockpit: StackbarPlugin {
         return "\(Int(seconds / 86400))d"
     }
 
-    func row(_ pr: PullRequest, showAuthor: Bool, palette: Bool = false) -> Row {
+    /// `place` keeps the window's copy of a row apart from the panel's, so
+    /// each one's actions (and their confirmations) have ids of their own.
+    func row(_ pr: PullRequest, showAuthor: Bool, palette: Bool = false, place: String = "") -> Row {
         let size = pr.additions.map { "+\($0) −\(pr.deletions ?? 0)" }
         let comments = (pr.comments?.totalCount ?? 0) >= 5 ? "\(pr.comments?.totalCount ?? 0) comments" : nil
         let subtitle = [pr.id, showAuthor ? pr.author.map { "by \($0.login)" } : nil, size, comments, Self.ago(pr.updatedAt)].compactMap { $0 }.joined(separator: " · ")
-        var row = Row(pr.title, subtitle: subtitle, symbol: isNew(pr) ? "circle.fill" : pr.isDraft ? "pencil.circle" : "arrow.triangle.pull", key: pr.url)
+        var row = Row(pr.title, subtitle: subtitle, symbol: isNew(pr) ? "circle.fill" : pr.isDraft ? "pencil.circle" : "arrow.triangle.pull", key: place + pr.url)
         for badge in badges(pr, mine: !showAuthor).prefix(2) { row = row.badge(badge.text, role: badge.role) }
         if clickShowsChecks && !palette {
             row = row.action(expanded == pr.url ? "Hide checks" : "Show checks") { await self.toggleChecks(pr) }
@@ -993,12 +1164,25 @@ final class PRCockpit: StackbarPlugin {
             .action("Snooze until it changes", shortcut: "cmd+s") { self.snoozed[pr.url] = pr.updatedAt }
             .action("Hide \(pr.repo)") { if !self.hiddenRepos.contains(pr.repo) { self.hiddenRepos.append(pr.repo) } }
             .action("Copy link") { Stackbar.copy(pr.url) }
+        row = row.navigate("View Diff", to: "files", arguments: ["url": pr.url], shortcut: "cmd+d")
         if toReview.contains(where: { $0.id == pr.id }) {
             row = row.action("Approve", shortcut: "cmd+shift+a", confirm: "approve \(pr.id)") { await self.approve(pr) }
+        }
+        if mine.contains(where: { $0.id == pr.id }) && pr.state != "MERGED" && pr.state != "CLOSED" {
+            if pr.isDraft {
+                row = row.action("Mark Ready for Review", shortcut: "cmd+shift+r", confirm: "mark \(pr.id) ready for review") { await self.markReady(pr) }
+            } else if pr.readyToMerge && pr.autoMergeRequest == nil {
+                row = row.action(pr.mergeVerb.prefix(1).uppercased() + pr.mergeVerb.dropFirst(), shortcut: "cmd+shift+m", confirm: "\(pr.mergeVerb) \(pr.id)") { await self.merge(pr) }
+            } else if pr.autoMergeRequest != nil {
+                row = row.action("Disable Auto-Merge") { await self.setAutoMerge(pr, on: false) }
+            } else if pr.mergeable != "CONFLICTING" {
+                row = row.action("Enable Auto-Merge", shortcut: "cmd+shift+m", confirm: "\(pr.mergeVerb) \(pr.id) by itself once reviews and checks allow it") { await self.setAutoMerge(pr, on: true) }
+            }
         }
         if let branch = pr.headRefName {
             row = row.action("Copy branch name") { Stackbar.copy(branch) }
         }
+        row = row.action("Copy checkout command") { Stackbar.copy("gh pr checkout \(pr.number) --repo \(pr.repo)") }
         return row.action("Copy as Markdown") { Stackbar.copy("[\(pr.title) (\(pr.id))](\(pr.url))") }
     }
 
@@ -1011,6 +1195,7 @@ final class PRCockpit: StackbarPlugin {
         if pr.mergeable == "CONFLICTING" { found.append(("Conflicts", .warning)) }
         if mine, pr.readyToMerge { found.append(("Ready to merge", .success)) } else if pr.reviewDecision == "APPROVED" { found.append(("Approved", .success)) }
         if pr.checks == "PENDING" || pr.checks == "EXPECTED" { found.append(("Checks running", .warning)) }
+        if pr.autoMergeRequest != nil { found.append(("Auto-merge", .accent)) }
         if pr.isDraft { found.append(("Draft", .secondary)) }
         return found
     }
@@ -1198,10 +1383,10 @@ final class PRCockpit: StackbarPlugin {
         if let lastError { Banner(lastError) }
         List(searchable: true) {
             Section("Waiting on your review (\(shownReview.count))") {
-                ForEach(shownReview) { pr in rowWithChecks(pr, showAuthor: true) }
+                ForEach(shownReview) { pr in rowWithChecks(pr, showAuthor: true, place: "window-") }
             }
             Section("Yours (\(shownMine.count))") {
-                ForEach(shownMine) { pr in rowWithChecks(pr, showAuthor: false) }
+                ForEach(shownMine) { pr in rowWithChecks(pr, showAuthor: false, place: "window-") }
             }
         }
         if !recentlyClosed.isEmpty {
@@ -1402,6 +1587,15 @@ final class PRCockpit: StackbarPlugin {
                 if let url = invocation["url"] { await self.loadDetails(url, maxAge: 15) }
             }) { invocation in
                 self.checksView(invocation["url"] ?? "")
+            }
+        // The files a pull request changes, each diff beside the list (⌘D on a row).
+        Command("files", title: "Pull Request Files", symbol: "doc.text.magnifyingglass", keywords: ["github", "diff", "files"])
+            .argument("url", placeholder: "Pull request URL")
+            .stackbarOnly()
+            .view(search: { invocation in
+                if let url = invocation["url"] { await self.loadFiles(url) }
+            }) { invocation in
+                self.filesView(invocation["url"] ?? "")
             }
         Command("refresh", title: "Refresh Pull Requests", symbol: "arrow.clockwise", keywords: ["github"]) { _ in
             try await self.refresh()
@@ -1965,8 +2159,8 @@ extension PRCockpit {
     }
 
     /// A pull request's row, with its checks under it while it is open.
-    @ViewBuilder func rowWithChecks(_ pr: PullRequest, showAuthor: Bool) -> ViewContent {
-        row(pr, showAuthor: showAuthor)
+    @ViewBuilder func rowWithChecks(_ pr: PullRequest, showAuthor: Bool, place: String = "") -> ViewContent {
+        row(pr, showAuthor: showAuthor, place: place)
         if expanded == pr.url { checkRows(pr.url) }
     }
 

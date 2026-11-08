@@ -32,7 +32,7 @@ final class BrowserTabs: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.browser-tabs",
         name: "Browser Tabs",
-        version: "1.2.0",
+        version: "1.2.1",
         summary: "Switch to any open tab in Safari, Chrome, Arc, Brave or Edge, and search your bookmarks.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -119,16 +119,22 @@ final class BrowserTabs: StackbarPlugin {
 
     /// Prints `window⇥tab⇥title⇥url` a line for every tab. Only run for a
     /// browser that is running, so it never starts one.
+    /// One line per tab: window, index, title and URL, split by tab
+    /// characters. The separators are made before `tell`: inside it, `tab`
+    /// is the browser's tab class, which joins as the word "tab", so no line
+    /// would split and every browser would look empty.
     static func listScript(_ browser: Browser) -> String {
         let title = browser.safari ? "name of t" : "title of t"
         return """
+        set sep to character id 9
+        set nl to character id 10
         set out to ""
         tell application "\(browser.name)"
             repeat with w from 1 to (count of windows)
                 set i to 0
                 repeat with t in (tabs of window w)
                     set i to i + 1
-                    set out to out & w & tab & i & tab & (\(title)) & tab & (URL of t) & linefeed
+                    set out to out & w & sep & i & sep & (\(title)) & sep & (URL of t) & nl
                 end repeat
             end repeat
         end tell

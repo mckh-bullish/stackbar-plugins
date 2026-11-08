@@ -65,15 +65,28 @@ private struct Answers: Sendable {
     var threads: [String: [String]] = [:]
     /// The total GitHub reports for review requests, when more than it sends.
     var reviewTotal: Int?
+    /// Pull requests that are approved with green checks, drafts, and ones
+    /// with auto-merge on. Their repository squashes.
+    var ready: Set<Int> = []
+    var drafts: Set<Int> = []
+    var autoMerge: Set<Int> = []
 }
 
-private func gitHub(_ method: String, _ path: String, _ auth: String, _ answers: Answers) -> (Int, String) {
+private func gitHub(_ method: String, _ path: String, _ auth: String, _ answers: Answers, body: Data = Data()) -> (Int, String) {
+    if method == "POST", path == "/api/graphql", String(decoding: body, as: UTF8.self).contains("mutation") {
+        return (200, #"{"data":{}}"#)
+    }
     if method == "POST", path == "/api/graphql" {
         return auth == "Bearer C" ? (401, #"{"message":"Bad credentials"}"#) : (200, graphQL(answers, auth: auth))
     }
     if method == "GET", path.hasPrefix("/api/v3/issues") { return (200, "[]") }
     if method == "GET", path.hasPrefix("/api/v3/notifications") { return (200, "[" + (answers.threads[auth] ?? []).joined(separator: ",") + "]") }
     if method == "POST", path.hasSuffix("/reviews") { return (200, "{}") }
+    if method == "PUT", path.hasSuffix("/merge") { return (200, #"{"merged":true}"#) }
+    if method == "DELETE", path.hasPrefix("/api/v3/notifications/threads/") { return (204, "") }
+    if method == "GET", path.hasPrefix("/api/v3/repos/o/r/pulls/5/files") {
+        return (200, #"[{"filename":"Sources/App/Checkout.swift","status":"modified","additions":3,"deletions":1,"patch":"@@ -1 +1,3 @@\n-old\n+new"},{"filename":"logo.png","status":"added","additions":0,"deletions":0}]"#)
+    }
     if method == "PUT", path == "/api/v3/notifications" { return (205, "") }
     return (404, #"{"message":"Not Found"}"#)
 }
@@ -81,7 +94,7 @@ private func gitHub(_ method: String, _ path: String, _ auth: String, _ answers:
 private func graphQL(_ answers: Answers, auth: String) -> String {
     func search(_ numbers: [Int], state: String, total: Int?) -> String {
         let count = total.map { "\"issueCount\":\($0)," } ?? ""
-        let nodes = numbers.map { pullRequest($0, state: state) }.joined(separator: ",")
+        let nodes = numbers.map { pullRequest($0, state: state, answers) }.joined(separator: ",")
         return "{" + count + "\"nodes\":[" + nodes + "]}"
     }
     let review = answers.review[auth] ?? []
@@ -90,8 +103,13 @@ private func graphQL(_ answers: Answers, auth: String) -> String {
         + ",\"closed\":" + search(answers.merged[auth] ?? [], state: "MERGED", total: nil) + "}}"
 }
 
-private func pullRequest(_ number: Int, state: String) -> String {
-    #"{"number":\#(number),"title":"PR \#(number)","url":"https://github.example/o/r/pull/\#(number)","isDraft":false,"updatedAt":"2026-11-01T00:00:00Z","state":"\#(state)","repository":{"nameWithOwner":"o/r"},"author":{"login":"a"},"reviewDecision":"REVIEW_REQUIRED","mergeable":"MERGEABLE","headRefName":"b","additions":1,"deletions":1,"comments":{"totalCount":0},"commits":{"nodes":[]}}"#
+private func pullRequest(_ number: Int, state: String, _ answers: Answers = Answers()) -> String {
+    let ready = answers.ready.contains(number)
+    let draft = answers.drafts.contains(number)
+    let review = ready ? "APPROVED" : "REVIEW_REQUIRED"
+    let checks = ready ? #"[{"commit":{"statusCheckRollup":{"state":"SUCCESS"}}}]"# : #"[{"commit":{"statusCheckRollup":{"state":"PENDING"}}}]"#
+    let auto = answers.autoMerge.contains(number) ? #"{"enabledAt":"2026-11-01T00:00:00Z"}"# : "null"
+    return #"{"nodeID":"PR_\#(number)","number":\#(number),"title":"PR \#(number)","url":"https://github.example/o/r/pull/\#(number)","isDraft":\#(draft),"updatedAt":"2026-11-01T00:00:00Z","state":"\#(state)","repository":{"nameWithOwner":"o/r","viewerDefaultMergeMethod":"SQUASH"},"author":{"login":"a"},"autoMergeRequest":\#(auto),"reviewDecision":"\#(review)","mergeable":"MERGEABLE","headRefName":"b","additions":1,"deletions":1,"comments":{"totalCount":0},"commits":{"nodes":\#(checks)}}"#
 }
 
 private func mentionThread(_ id: Int) -> String {
@@ -305,6 +323,79 @@ final class PRCockpitTests: XCTestCase {
         XCTAssertTrue(window.contains("Paste a GitHub token above"), window)
         XCTAssertFalse(window.contains("Waiting on your review"), window)
         await supervisor.stop()
+    }
+
+    // MARK: Merging, drafts and files (after Raycast's GitHub extension)
+
+    /// The stub and a session showing your pull requests in the panel.
+    private func mineSession(_ answers: Locked<Answers>) async throws -> (GitHubStub, PluginSession) {
+        let stub = try GitHubStub { method, path, auth, body in gitHub(method, path, auth, answers.current, body: body) }
+        let host = Host(self)
+        try await connect(host, stub, token: "A")
+        try await host.services.storage.set("tab", #""Mine""#, for: id)
+        let session = try await host.session("PRCockpit")
+        return (stub, session)
+    }
+
+    private func action(_ session: PluginSession, _ title: String) async -> ActionRef? {
+        _ = await waitUntil { await session.view(.panel)?.rows.contains { $0.actions.contains { $0.title == title } } == true }
+        return await session.view(.panel)?.rows.lazy.compactMap { $0.actions.first { $0.title == title } }.first
+    }
+
+    /// A ready pull request of yours merges the way its repository does,
+    /// on the second press.
+    func testMergeAsksThenUsesTheRepositorysMethod() async throws {
+        let (stub, session) = try await mineSession(Locked(Answers(mine: ["Bearer A": [5]], ready: [5])))
+        let mergeFound = await action(session, "Squash and merge")
+        let merge = try XCTUnwrap(mergeFound, "a ready pull request offers its repository's merge")
+        XCTAssertEqual(merge.confirm, "squash and merge o/r#5")
+        let held = try await session.event(merge.id)
+        XCTAssertNotNil(held, "Stackbar holds the first press")
+        XCTAssertFalse(stub.requests.all.contains { $0.hasPrefix("PUT ") })
+        try await session.event(merge.id)
+        XCTAssertTrue(stub.requests.all.contains("PUT /api/v3/repos/o/r/pulls/5/merge Bearer A {\"merge_method\":\"squash\"}"), "\(stub.requests.all)")
+        await session.stop()
+    }
+
+    /// One still waiting on checks offers auto-merge; one with it on offers to turn it off.
+    func testAutoMergeTurnsOnAndOff() async throws {
+        let (stub, session) = try await mineSession(Locked(Answers(mine: ["Bearer A": [5, 6]], autoMerge: [6])))
+        let enableFound = await action(session, "Enable Auto-Merge")
+        let enable = try XCTUnwrap(enableFound)
+        let held = try await session.event(enable.id)
+        XCTAssertNotNil(held, "turning it on asks first")
+        try await session.event(enable.id)
+        XCTAssertTrue(stub.requests.all.contains { $0.contains("enablePullRequestAutoMerge") && $0.contains(#"\"PR_5\""#) && $0.contains("SQUASH") }, "\(stub.requests.all)")
+        let disableFound = await action(session, "Disable Auto-Merge")
+        let disable = try XCTUnwrap(disableFound)
+        XCTAssertNil(disable.confirm, "turning it off needs no question")
+        try await session.event(disable.id)
+        XCTAssertTrue(stub.requests.all.contains { $0.contains("disablePullRequestAutoMerge") && $0.contains(#"\"PR_6\""#) }, "\(stub.requests.all)")
+        await session.stop()
+    }
+
+    func testADraftOfYoursCanBeMarkedReady() async throws {
+        let (stub, session) = try await mineSession(Locked(Answers(mine: ["Bearer A": [7]], drafts: [7])))
+        let readyFound = await action(session, "Mark Ready for Review")
+        let ready = try XCTUnwrap(readyFound)
+        XCTAssertEqual(ready.confirm, "mark o/r#7 ready for review")
+        try await session.event(ready.id, confirmed: true)
+        XCTAssertTrue(stub.requests.all.contains { $0.contains("markPullRequestReadyForReview") && $0.contains(#"\"PR_7\""#) }, "\(stub.requests.all)")
+        await session.stop()
+    }
+
+    /// View Diff lists the files with each one's patch beside the list.
+    func testViewDiffListsTheFilesWithTheirPatches() async throws {
+        let (stub, session) = try await mineSession(Locked(Answers(mine: ["Bearer A": [5]])))
+        _ = await action(session, "Open in browser")
+        let opened = try await session.openView("files", query: CommandQuery(arguments: ["url": "https://github.example/o/r/pull/5"]))
+        _ = await waitUntil { (await session.commandView(opened.session)?.rows.count ?? 0) == 2 }
+        let rows = await session.commandView(opened.session)?.rows ?? []
+        let shown = await session.commandView(opened.session).map { TreeTextRenderer.render($0) } ?? "(no view)"
+        XCTAssertEqual(rows.map(\.title), ["Checkout.swift", "logo.png"], "\(shown)\n\(stub.requests.all.filter { $0.contains("/files") })")
+        XCTAssertEqual(rows.first?.subtitle, "Sources/App · +3 −1")
+        XCTAssertEqual(rows.first?.preview?.text, "@@ -1 +1,3 @@\n-old\n+new")
+        await session.stop()
     }
 }
 #endif

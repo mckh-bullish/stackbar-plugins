@@ -15,6 +15,10 @@ Edge and Vivaldi keep, and opens one in its browser.
 - **Leaves out:** Safari's bookmarks, which macOS keeps behind Full Disk
   Access, and browser profiles other than the default one.
 
+## What's new in 1.2.1
+
+- Search Browser Tabs lists your tabs again. It said "No tabs open" for every browser, because the script that reads them wrote the word "tab" where it meant a tab character.
+
 ## What's new in 1.2.0
 
 - Close Tab says outright that it closes at once, so Stackbar doesn't ask.

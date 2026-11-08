@@ -13,8 +13,9 @@ all here, with the same `GITHUB_TOKEN`.
 - **Needs:** network access to `api.github.com` only, and a `GITHUB_TOKEN`
   secret kept in the Keychain. A fine-grained token with read access to pull
   requests, issues and metadata covers everything except creating issues,
-  which needs write access to issues. Approving needs write access to pull
-  requests. On GitHub Enterprise Server, turn it on in Settings and enter the
+  which needs write access to issues. Approving, merging, auto-merge and
+  Mark Ready for Review need write access to pull requests (merging also
+  needs contents write). Mark as done in the inbox needs notifications. On GitHub Enterprise Server, turn it on in Settings and enter the
   server as `GITHUB_ENTERPRISE_URL`; the plugin then reaches that server and
   no other.
 - **Checks on click:** click a pull request to see each check under it:
@@ -27,17 +28,25 @@ all here, with the same `GITHUB_TOKEN`.
   write access. In the palette, a selected pull request shows its checks
   beside the list, fetched in the background for the ones whose checks
   changed (a setting turns this off); ⌘I opens them in full.
+- **Your own pull requests:** merge one that is approved with green checks
+  the way its repository's merge button does (squash, rebase or a merge
+  commit), turn on auto-merge for one still waiting on reviews or checks so
+  GitHub merges it by itself, or take a draft out of draft. Stackbar asks for
+  a second press first, naming the pull request.
+- **View Diff:** ⌘D on any pull request lists the files it changes, with each
+  file's diff beside the list.
 - **Surfaces:** menu bar, panel (To review, Mine, Issues and an optional
   Inbox), window, widget, settings.
 - **Settings:** include team review requests, include drafts, how recently a
   pull request or issue must have changed to show (any age, or the last week
   to three months), notifications, repositories (include archived, copy clone
   URLs as SSH or HTTPS, reload), repositories to hide, and the inbox view.
-- **Commands:** Search Pull Requests, Review Queue, Open Next Review, Search
+- **Commands:** Search Pull Requests (each row also copies a `gh pr checkout`
+  command), Review Queue, Open Next Review, Search
   GitHub Repositories (yours first, recently opened on top, then GitHub
   search; each row opens the repository, its pull requests, issues or
   Actions, copies the clone URL, or starts a new issue), My GitHub Issues,
-  GitHub Inbox (with Mark All as Read), Create GitHub Issue, Refresh Pull
+  GitHub Inbox (Mark as read, Mark as done, Mark All as Read), Create GitHub Issue, Refresh Pull
   Requests.
 - **Agent tools:** `review_queue`, `my_pull_requests` and `my_issues`.
 
@@ -69,6 +78,15 @@ how long reviews have waited.
 ### On your desktop too
 A widget keeps the review queue in view.
 <!-- preview: widget -->
+
+## What's new in 1.13.0
+
+- Merge your own pull request from the panel or the palette once it is approved with green checks, the way its repository merges (squash, rebase or a merge commit).
+- Enable Auto-Merge on one still waiting on reviews or checks, and GitHub merges it by itself; the row says Auto-merge while it is on.
+- Mark Ready for Review takes one of your drafts out of draft.
+- View Diff (⌘D) lists the files a pull request changes, with each diff beside the list.
+- Copy checkout command copies `gh pr checkout` for the pull request.
+- Mark as done (⌘E) in the inbox takes a notification out of GitHub's inbox, as Done does on github.com.
 
 ## What's new in 1.12.0
 
