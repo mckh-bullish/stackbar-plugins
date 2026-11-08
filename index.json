@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-08T04:49:52Z",
+  "generated" : "2026-11-08T05:01:30Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -3266,6 +3266,38 @@
       "version" : "1.2.0"
     },
     {
+      "accent" : "blue",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.recent-projects-1.3.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /usr/bin/sqlite3",
+        "Reads and writes ~/.vscode-shared/sharedStorage, ~/Library/Application Support/Code/User/globalStorage, ~/Library/Application Support/Cursor/User/globalStorage, ~/Library/Application Support/Windsurf/User/globalStorage, ~/Library/Application Support/VSCodium/User/globalStorage",
+        "Opens any link, file or folder, in any app",
+        "Sees which apps are installed and running, and switches to, opens or hides them"
+      ],
+      "capabilityKinds" : [
+        "run",
+        "files",
+        "openURLs",
+        "apps"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/RecentProjects",
+      "id" : "io.navbytes.stackbar.plugins.recent-projects",
+      "minimumStackbar" : "0.22.0",
+      "name" : "Recent Projects",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.recent-projects.png",
+      "sha256" : "524890d7e7e409003240dde7629f575aafc33169ebbe5fce4783b59538ece828",
+      "summary" : "Open the projects you used lately in VS Code, Cursor, Windsurf or VSCodium from the palette.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "folder.badge.gearshape",
+      "updated" : "2026-11-08",
+      "version" : "1.3.0"
+    },
+    {
       "accent" : "graphite",
       "bundle" : "Developer/io.navbytes.stackbar.plugins.script-commands-1.0.0.stackbarplugin",
       "capabilities" : [
@@ -5965,5 +5997,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "tioDpYs7VvzX7la0yst0qA8ygSNAgSfOuPX2AAoNUxIBoK8iH9lMnqoxX1yzr0YH6XmaFU6i3360Dh+yNFx7Dw=="
+  "signature" : "5VXdjlwcg6PTGx+fhIfOS5RrQCwO+9fEI5iFjb+vaFqiL7PQ0Z4O11wDhVGE/8RmXYh5E7NmHEefjAwCFlgKBg=="
 }

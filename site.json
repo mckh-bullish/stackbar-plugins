@@ -1311,6 +1311,12 @@
       "changes": [
         {
           "notes": [
+            "VS Code 1.118 and later: your recent projects show up again. VS Code moved its list to `~/.vscode-shared/sharedStorage`, and the plugin now reads it there as well as in the old place. Updating asks you once to allow reading that folder."
+          ],
+          "version": "1.3.0"
+        },
+        {
+          "notes": [
             "Show in Finder on every project.",
             "The panel lists all your recent projects, with search, not only the latest 8.",
             "If VS Code's projects are missing because VS Code moved its list, or an editor's list can't be read, the panel says so instead of looking empty.",
@@ -1336,7 +1342,7 @@
       "facts": [
         {
           "label": "How it finds projects",
-          "text": "VS Code, Cursor, Windsurf and VSCodium each keep their recently opened list in `state.vscdb` under `~/Library/Application Support/<Editor>/User/globalStorage`. The plugin reads its `history.recentlyOpenedPathsList` entry, up to 30 from each editor, and lists each folder or workspace once. VS Code 1.118 and later keep this list in a new place that this version can't read yet."
+          "text": "VS Code, Cursor, Windsurf and VSCodium each keep their recently opened list in `state.vscdb` under `~/Library/Application Support/<Editor>/User/globalStorage`. The plugin reads its `history.recentlyOpenedPathsList` entry, up to 30 from each editor, and lists each folder or workspace once. VS Code 1.118 and later keep this list in `~/.vscode-shared/sharedStorage/state.vscdb` instead, which is read too."
         },
         {
           "label": "Settings",
@@ -1344,7 +1350,7 @@
         },
         {
           "label": "Needs",
-          "text": "running `sqlite3` (part of macOS) in read-only mode on each editor's `state.vscdb`, the editors' storage folders under Application Support, opening links and folders in any app (to hand a folder to your default editor), and the list of installed apps (to show which editors you have). Stackbar 0.22.0 or later."
+          "text": "running `sqlite3` (part of macOS) in read-only mode on each editor's `state.vscdb`, the editors' storage folders under Application Support and VS Code's `~/.vscode-shared/sharedStorage`, opening links and folders in any app (to hand a folder to your default editor), and the list of installed apps (to show which editors you have). Stackbar 0.22.0 or later."
         },
         {
           "label": "Surfaces",
@@ -1359,7 +1365,7 @@
           "text": "single files and remote (SSH, container) projects."
         }
       ],
-      "version": "1.2.0"
+      "version": "1.3.0"
     },
     "io.navbytes.stackbar.plugins.script-commands": {
       "changes": [
@@ -3515,6 +3521,12 @@
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.2.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.2.0/light/panel.png"
         }
+      },
+      "1.3.0": {
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.3.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.3.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.script-commands": {
@@ -5639,6 +5651,22 @@
         {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.2.0/dark/previews/editors/settings.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.2.0/light/previews/editors/settings.png",
+          "name": "editors",
+          "surface": "settings",
+          "title": "Open projects in the editor you prefer"
+        }
+      ],
+      "1.3.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.3.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.3.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your projects, a few letters away"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.3.0/dark/previews/editors/settings.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.3.0/light/previews/editors/settings.png",
           "name": "editors",
           "surface": "settings",
           "title": "Open projects in the editor you prefer"
