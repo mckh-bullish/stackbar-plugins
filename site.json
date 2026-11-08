@@ -1111,6 +1111,44 @@
       ],
       "version": "1.5.0"
     },
+    "io.navbytes.stackbar.plugins.openrouter": {
+      "changes": [
+        {
+          "notes": [
+            "First release: spend, credits, limits and model mix for your OpenRouter account."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "What [OpenRouter](https://openrouter.ai) is costing you, in the menu bar. The\npanel has:\n\n- **Tiles** for today, this week and this month, from your API key.\n- **Credits**: what is left of the credits you bought, with an Add Credits\n  button once it runs low.\n- **Limit**: the key's spending limit or the budget that stops it first,\n  and when it resets. Free-tier keys also show today's free-model requests.\n- **Last 30 days**: daily spend, tokens or requests as a chart.\n- **Models**: where the last 30 days went, by spend.\n\nThe menu bar shows today's spend, the credits left or the share of the limit\nused (you choose in Settings), and it turns orange at 75% of the limit and red\nat 90% or when credits run low.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "`OPENROUTER_API_KEY`, any OpenRouter key, for today, this week, this month and the key's limit. Optionally `OPENROUTER_MANAGEMENT_KEY`, a [management key](https://openrouter.ai/settings/management-keys), for the credit balance, the daily chart and the models: OpenRouter only gives those to a management key. Both are kept in the Keychain, and the plugin reaches `openrouter.ai` and nothing else. Nothing is contacted until a key is set."
+        },
+        {
+          "label": "Calls",
+          "text": "`/api/v1/key` and `/api/v1/credits` every two minutes, and `/api/v1/activity` (the last 30 completed days) at most once an hour. Days are UTC days, as OpenRouter counts them."
+        },
+        {
+          "label": "Surfaces",
+          "text": "menu bar, panel, widget, settings."
+        },
+        {
+          "label": "Commands",
+          "text": "OpenRouter Spend lists today, this week and month, the credits, the limit and the top models; each row copies a summary."
+        },
+        {
+          "label": "Settings",
+          "text": "what the menu bar shows, notifications at 90% and 100% of the limit, and a notification when credits drop below an amount you pick (5 dollars to start)."
+        },
+        {
+          "label": "Agent tool",
+          "text": "`usage_summary`."
+        }
+      ],
+      "version": "1.0.0"
+    },
     "io.navbytes.stackbar.plugins.pomodoro": {
       "changes": [
         {
@@ -3312,6 +3350,18 @@
         }
       }
     },
+    "io.navbytes.stackbar.plugins.openrouter": {
+      "1.0.0": {
+        "menuBar": {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.openrouter/1.0.0/dark/menuBar.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.openrouter/1.0.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.openrouter/1.0.0/dark/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.openrouter/1.0.0/light/panel.png"
+        }
+      }
+    },
     "io.navbytes.stackbar.plugins.pomodoro": {
       "1.3.0": {
         "menuBar": {
@@ -5321,6 +5371,31 @@
           "name": "widget",
           "surface": "widget",
           "title": "Now playing, on your desktop"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.openrouter": {
+      "1.0.0": [
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.openrouter/1.0.0/dark/previews/hero/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.openrouter/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Spend, credits and models for OpenRouter"
+        },
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.openrouter/1.0.0/dark/previews/key-only/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.openrouter/1.0.0/light/previews/key-only/panel.png",
+          "name": "key-only",
+          "surface": "panel",
+          "title": "Just an API key: today, this week and its limit"
+        },
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.openrouter/1.0.0/dark/previews/widget/widget.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.openrouter/1.0.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Today's spend and credits on the desktop"
         }
       ]
     },
