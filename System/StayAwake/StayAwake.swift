@@ -10,12 +10,12 @@ final class StayAwake: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.stay-awake",
         name: "Stay Awake",
-        version: "1.5.1",
+        version: "1.6.0",
         summary: "Keeps your Mac awake for a while, until a time, while an app runs or on a schedule.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.power],
-        minimumStackbar: "0.21.0",
+        minimumStackbar: "0.26.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/System/StayAwake",
         accent: .amber,
         symbol: "cup.and.saucer.fill"
@@ -49,7 +49,7 @@ final class StayAwake: StackbarPlugin {
     static func sampleWeek(now: Date) -> [String: Double] {
         let hours = [2.5, 4, 1.5, 6, 3, 0.5, 2]
         return Dictionary(uniqueKeysWithValues: hours.enumerated().map { offset, value in
-            (day(now.addingTimeInterval(Double(offset - 6) * 86400)), value * 3600)
+            (day(Calendar.current.date(byAdding: .day, value: offset - 6, to: now) ?? now), value * 3600)
         })
     }
 
@@ -200,7 +200,7 @@ final class StayAwake: StackbarPlugin {
                 finish("Time's up")
             } else if notifyOnEnd, end.timeIntervalSince(now) <= 5 * 60, warnedFor != end, session.total ?? 0 > 10 * 60 {
                 warnedFor = end
-                Stackbar.notify("Your Mac can sleep in 5 minutes", body: "Open Stay Awake to add more time.")
+                Stackbar.notify("Your Mac can sleep in 5 minutes", body: "Keep it awake an hour longer from here.", actions: [NotificationAction("1 More Hour", command: "keep-awake", arguments: ["for": "65m"])])
             }
         case .whileRunning(let appID, let name):
             if !status.runningApps.isEmpty, !status.runningApps.contains(where: { $0.id == appID }) { finish("\(name) quit") }
@@ -210,7 +210,9 @@ final class StayAwake: StackbarPlugin {
     func finish(_ why: String) {
         session = nil
         lastEnded = why
-        if notifyOnEnd { Stackbar.notify("Your Mac can sleep again", body: why) }
+        // Only a session that ran its time out offers more time.
+        let more = why == "Time's up" ? [NotificationAction("Keep Awake 1 Hour", command: "keep-awake", arguments: ["for": "1h"])] : []
+        if notifyOnEnd { Stackbar.notify("Your Mac can sleep again", body: why, actions: more) }
     }
 
     /// Brings the host's assertion in line with `reason`, and counts awake time.
@@ -273,6 +275,16 @@ final class StayAwake: StackbarPlugin {
         await apply()
     }
 
+    /// Ends any session; if a rule still holds the Mac awake, pauses the rules
+    /// for an hour, as the panel's button does. True when it paused them.
+    @discardableResult func release() async -> Bool {
+        await stop()
+        guard held != nil, session == nil else { return false }
+        pausedUntil = Date().addingTimeInterval(3600)
+        await apply()
+        return true
+    }
+
     // MARK: Time helpers
 
     func describe(_ mode: Mode) -> String {
@@ -316,30 +328,73 @@ final class StayAwake: StackbarPlugin {
         return min(seconds, longestSession)
     }
 
-    static func rawDuration(_ text: String) -> Double? {
-        let text = text.lowercased().replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "min", with: "m")
-        if let minutes = Double(text.hasSuffix("m") ? String(text.dropLast()) : text), minutes > 0 { return minutes * 60 }
-        let parts = text.split(whereSeparator: { $0 == "h" || $0 == ":" }).map(String.init)
-        guard text.contains("h") || text.contains(":"), let hours = parts.first.flatMap(Double.init) else { return nil }
-        let minutes = parts.count > 1 ? Double(parts[1].replacingOccurrences(of: "m", with: "")) : 0
-        guard let minutes, hours * 60 + minutes > 0 else { return nil }
-        return (hours * 60 + minutes) * 60
+    static func rawDuration(_ input: String) -> Double? {
+        var text = input.lowercased().trimmingCharacters(in: .whitespaces)
+        for lead in ["for ", "in "] where text.hasPrefix(lead) { text.removeFirst(lead.count) }
+        text = text.replacingOccurrences(of: " ", with: "")
+        for (pattern, unit) in [("(days|day)", "d"), ("(hours|hour|hrs|hr)", "h"), ("(minutes|minute|mins|min)", "m"), ("(seconds|second|secs|sec)", "s")] {
+            text = text.replacingOccurrences(of: "(?<=[0-9.])" + pattern + "(?![a-z])", with: unit, options: .regularExpression)
+        }
+        if let minutes = Double(text), minutes > 0 { return minutes * 60 }               // "90"
+        if text.contains(":") {                                                           // "1:30" stays a duration (documented)
+            let parts = text.split(separator: ":").map(String.init)
+            guard parts.count == 2, let h = Double(parts[0]), let m = Double(parts[1]), h * 60 + m > 0 else { return nil }
+            return (h * 60 + m) * 60
+        }
+        // 2d, 1h30m, 1h30, 1.5h, 45m, 90s
+        guard let regex = try? NSRegularExpression(pattern: #"^(?:(\d+(?:\.\d+)?|\.\d+)d)?(?:(\d+(?:\.\d+)?|\.\d+)h)?(?:(\d+(?:\.\d+)?|\.\d+)(?:m|(?![\d.])))?(?:(\d+(?:\.\d+)?|\.\d+)s)?$"#),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) else { return nil }
+        func value(_ i: Int) -> Double { Range(match.range(at: i), in: text).flatMap { Double(text[$0]) } ?? 0 }
+        let total = value(1) * 86400 + value(2) * 3600 + value(3) * 60 + value(4)
+        return total > 0 ? total : nil
     }
 
-    /// The next time `text` (a clock time) happens, today or tomorrow.
-    static func next(_ text: String, after now: Date = Date()) -> Date? {
-        guard let minutes = minutes(text) else { return nil }
-        let today = Calendar.current.startOfDay(for: now).addingTimeInterval(Double(minutes) * 60)
-        return today > now ? today : Calendar.current.date(byAdding: .day, value: 1, to: today)
+    /// The next time `text` (a clock time, "noon" or "midnight") happens, today or
+    /// tomorrow. A bare hour from 1 to 12 takes whichever reading comes first: "5" is
+    /// 5 am or 5 pm, and "12" is noon or midnight. That is deliberate, because "until 5"
+    /// is a deadline. Timers reads "at 3" as 3 pm, but that rule is for the start of a
+    /// countdown, so it does not apply here.
+    static func next(_ input: String, after now: Date = Date()) -> Date? {
+        var text = input.trimmingCharacters(in: .whitespaces).lowercased()
+        if text.hasPrefix("at ") { text.removeFirst(3) }
+        let minutesAfterMidnight: [Int]
+        if text == "noon" {
+            minutesAfterMidnight = [720]
+        } else if text == "midnight" {
+            minutesAfterMidnight = [0]
+        } else if let hour = Int(text), (1...12).contains(hour) {
+            minutesAfterMidnight = [(hour % 12) * 60, (hour % 12 + 12) * 60]
+        } else if let minutes = minutes(text) {
+            minutesAfterMidnight = [minutes]
+        } else {
+            return nil
+        }
+        // Set on the calendar, not by adding seconds, so a clock time is right on the day the clocks change.
+        let calendar = Calendar.current
+        return minutesAfterMidnight.compactMap { minutes -> Date? in
+            guard let day = calendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: now) else { return nil }
+            return day > now ? day : calendar.date(byAdding: .day, value: 1, to: day)
+        }.min()
     }
 
+    /// Whether the schedule holds at `date`. An overnight shift that starts on a
+    /// weekday runs through the small hours of the next day, and a shift that
+    /// starts on a weekend is the one that counts for "Weekdays only".
     func inSchedule(_ date: Date) -> Bool {
         guard let start = Self.minutes(scheduleStart), let end = Self.minutes(scheduleEnd) else { return false }
         let calendar = Calendar.current
-        if scheduleWeekdaysOnly, calendar.isDateInWeekend(date) { return false }
         let parts = calendar.dateComponents([.hour, .minute], from: date)
         let now = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
-        return start <= end ? (start..<end).contains(now) : (now >= start || now < end)
+        var shiftDay = date
+        if start <= end {
+            guard (start..<end).contains(now) else { return false }
+        } else if now < end {
+            // The small hours belong to the shift that began the day before.
+            shiftDay = calendar.date(byAdding: .day, value: -1, to: date) ?? date
+        } else if now < start {
+            return false
+        }
+        return !(scheduleWeekdaysOnly && calendar.isDateInWeekend(shiftDay))
     }
 
     static func clock(_ seconds: Double) -> String {
@@ -363,8 +418,8 @@ final class StayAwake: StackbarPlugin {
 
     var menuBarClick: MenuBarAction? {
         guard clickMinutes >= 0 else { return nil }
-        if session != nil {
-            return MenuBarAction("Click to stop keeping awake") { await self.stop() }
+        if session != nil || heldByRule {
+            return MenuBarAction(heldByRule ? "Click to pause the rules for an hour" : "Click to stop keeping awake") { await self.release() }
         }
         let minutes = clickMinutes
         let label = minutes == 0 ? "until you stop it" : "for \(Self.durations.first { $0.minutes == minutes }?.title ?? "\(Int(minutes)) min")"
@@ -541,12 +596,10 @@ final class StayAwake: StackbarPlugin {
                 }
             }
             TextField("Or type 90m, 1h30 or 17:30") { text in
-                if let seconds = Self.duration(text) {
+                guard !text.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                if let mode = Self.mode(for: text) {
                     self.inputError = nil
-                    await self.start(.until(Date().addingTimeInterval(seconds)))
-                } else if let end = Self.next(text) {
-                    self.inputError = nil
-                    await self.start(.until(end))
+                    await self.start(mode)
                 } else {
                     self.inputError = "\"\(text)\" isn't a duration or a time; try 45m, 1h30 or 17:30"
                 }
@@ -588,7 +641,7 @@ final class StayAwake: StackbarPlugin {
     func hoursAwake(days: Int, now: Date = Date()) -> (values: [Double], labels: [String]) {
         let calendar = Calendar.current
         let totals = awakeTotals
-        let dates = (0..<days).reversed().map { now.addingTimeInterval(Double(-$0) * 86400) }
+        let dates = (0..<days).reversed().map { calendar.date(byAdding: .day, value: -$0, to: now) ?? now }
         let values = dates.map { ((totals[Self.day($0)] ?? 0) / 360).rounded() / 10 }
         let labels = dates.map { date in
             days <= 7 ? calendar.shortWeekdaySymbols[calendar.component(.weekday, from: date) - 1] : String(calendar.component(.day, from: date))
@@ -704,16 +757,26 @@ final class StayAwake: StackbarPlugin {
     static func mode(for text: String?, now: Date = Date()) -> Mode? {
         let text = (text ?? "").trimmingCharacters(in: .whitespaces).lowercased()
         if text.isEmpty { return .indefinitely }
-        if text.hasPrefix("until ") { return next(String(text.dropFirst(6)), after: now).map(Mode.until) }
+        // "until 17:30", "till noon", "at 5pm": a time.
+        if let lead = ["until ", "till ", "til ", "at "].first(where: { text.hasPrefix($0) }) {
+            return next(String(text.dropFirst(lead.count)), after: now).map(Mode.until)
+        }
+        // A colon form from 13:00 on is a time ("17:30"), not a 17-hour session typed that way.
+        // "1:30" is still an hour and a half.
+        if text.range(of: #"^\d{1,2}:\d{2}$"#, options: .regularExpression) != nil, let hour = Int(text.prefix(while: { $0 != ":" })), hour >= 13 {
+            return next(text, after: now).map(Mode.until)
+        }
+        // Digits alone are minutes, never a time, so "0" is refused.
+        if text.allSatisfy(\.isNumber) { return duration(text).map { Mode.until(now.addingTimeInterval($0)) } }
         if let seconds = duration(text) { return .until(now.addingTimeInterval(seconds)) }
         return next(text, after: now).map(Mode.until)
     }
 
     var commands: [Command] {
         Command("toggle", title: "Toggle Stay Awake", symbol: "cup.and.heat.waves", keywords: ["awake", "caffeine", "amphetamine", "sleep"]) { _ in
-            if self.session != nil {
-                await self.stop()
-                return .message("Your Mac can sleep again")
+            if self.session != nil || self.heldByRule {
+                let paused = await self.release()
+                return .message(paused ? "Rules paused for an hour; your Mac can sleep" : "Your Mac can sleep again")
             }
             await self.start(.indefinitely)
             return .message("Keeping your Mac awake until you stop it")
@@ -727,8 +790,8 @@ final class StayAwake: StackbarPlugin {
         }
         .argument("for", placeholder: "2h, 90m or 17:30", required: false)
         Command("allow-sleep", title: "Allow Sleep", symbol: "moon.zzz", keywords: ["awake", "sleep", "stop"]) { _ in
-            await self.stop()
-            return .message("Your Mac can sleep again")
+            let paused = await self.release()
+            return .message(paused ? "Rules paused for an hour; your Mac can sleep" : "Your Mac can sleep again")
         }
     }
 
@@ -749,8 +812,8 @@ final class StayAwake: StackbarPlugin {
             return "Keeping the Mac awake until stopped."
         }
         AgentTool("allow_sleep", description: "Stop keeping the Mac awake") { _ in
-            await self.stop()
-            return "The Mac can sleep again."
+            let paused = await self.release()
+            return paused ? "Rules paused for an hour; the Mac can sleep." : "The Mac can sleep again."
         }
     }
 }

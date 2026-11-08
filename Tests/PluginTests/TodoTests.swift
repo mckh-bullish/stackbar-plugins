@@ -26,6 +26,32 @@ final class TodoTests: XCTestCase {
         return offset == 0 ? 7 : offset
     }
 
+    /// The moment `hour` o'clock, `offset` days from today.
+    private func at(_ offset: Int, _ hour: Int) -> Date {
+        let start = calendar.date(byAdding: .day, value: offset, to: calendar.startOfDay(for: Date()))!
+        return calendar.date(bySettingHour: hour, minute: 0, second: 0, of: start)!
+    }
+
+    /// Days from today to the next 14 November, on or after today.
+    private func daysToNextNovember14() -> Int {
+        let today = calendar.startOfDay(for: Date())
+        var parts = calendar.dateComponents([.year], from: today)
+        parts.month = 11
+        parts.day = 14
+        var date = calendar.date(from: parts)!
+        if date < today { date = calendar.date(byAdding: .year, value: 1, to: date)! }
+        return calendar.dateComponents([.day], from: today, to: date).day!
+    }
+
+    private func taskLines(_ supervisor: PluginSupervisor) async -> [String] {
+        await supervisor.callTool("tasks").text.split(separator: "\n").map(String.init)
+    }
+
+    /// Whether a task line has `title`, due at `due`, whatever else it says.
+    private func isDue(_ lines: [String], _ title: String, _ due: String) -> Bool {
+        lines.contains { $0.hasPrefix("- \(title) (due \(due)") }
+    }
+
     func testDatesTypedInTheTaskAreUnderstood() async throws {
         let host = Host(self)
         let supervisor = try await host.start("Todo")
@@ -47,6 +73,169 @@ final class TodoTests: XCTestCase {
         XCTAssertTrue(tasks.contains("- Read Monday newsletter\n") || tasks.hasSuffix("- Read Monday newsletter"), "quoted words stay in the title: \(tasks)")
         XCTAssertTrue(tasks.contains("- Book flights (due \(day(3)))"), tasks)
         XCTAssertTrue(tasks.contains("- Pick up the kids (due \(day(offset(to: 6), hour: 15, minute: 30)))"), tasks)
+
+        // The agent tool shows private tasks only once the user turns it on.
+        let tools = await supervisor.tools
+        XCTAssertEqual(tools.first { $0.name == "tasks" }?.optIn, true)
+        XCTAssertEqual(tools.first { $0.name == "add" }?.optIn, false)
+        await supervisor.stop()
+    }
+
+    func testPartsOfTheDayMoveTheTime() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Todo")
+        for text in ["Call mum this evening at 7", "call mum tonight at 9", "Dinner tomorrow evening at 8", "Drinks friday night at 9"] {
+            _ = await supervisor.runCommand("add", arguments: ["task": text], source: .palette)
+        }
+        let lines = await taskLines(supervisor)
+        // With no day given, a time already gone today rolls to tomorrow.
+        let sevenPM = calendar.date(bySettingHour: 19, minute: 0, second: 0, of: Date())!
+        XCTAssertTrue(isDue(lines, "Call mum", day(Date() < sevenPM ? 0 : 1, hour: 19)), "\(lines)")
+        XCTAssertTrue(isDue(lines, "call mum", day(0, hour: 21)), "\(lines)")
+        XCTAssertTrue(isDue(lines, "Dinner", day(1, hour: 20)), "\(lines)")
+        XCTAssertTrue(isDue(lines, "Drinks", day(offset(to: 6), hour: 21)), "\(lines)")
+        await supervisor.stop()
+    }
+
+    func testNumericDates() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Todo")
+        for text in ["dentist 14/11", "vet 11/14", "Read 1/2 the book", "Pay 1/2 of the bill by 14/11"] {
+            _ = await supervisor.runCommand("add", arguments: ["task": text], source: .palette)
+        }
+        let lines = await taskLines(supervisor)
+        let nov14 = day(daysToNextNovember14())
+        XCTAssertTrue(isDue(lines, "dentist", nov14), "\(lines)")
+        XCTAssertTrue(isDue(lines, "vet", nov14), "\(lines)")
+        XCTAssertTrue(lines.contains("- Read 1/2 the book"), "a fraction is not a date: \(lines)")
+        XCTAssertTrue(isDue(lines, "Pay 1/2 of the bill", nov14), "a date after a fraction still counts: \(lines)")
+        await supervisor.stop()
+    }
+
+    func testByAndOrdinals() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Todo")
+        for text in ["Finish report by 5", "Submit by midnight", "pay bills on 3rd", "Lose 2 kg by 5 kg"] {
+            _ = await supervisor.runCommand("add", arguments: ["task": text], source: .palette)
+        }
+        let lines = await taskLines(supervisor)
+        let fivePM = calendar.date(bySettingHour: 17, minute: 0, second: 0, of: Date())!
+        let lastMinute = calendar.date(bySettingHour: 23, minute: 59, second: 0, of: Date())!
+        XCTAssertTrue(isDue(lines, "Finish report", day(Date() < fivePM ? 0 : 1, hour: 17)), "\(lines)")
+        XCTAssertTrue(isDue(lines, "Submit", day(Date() < lastMinute ? 0 : 1, hour: 23, minute: 59)), "\(lines)")
+        XCTAssertTrue(lines.contains { $0.hasPrefix("- pay bills (due ") && $0.hasSuffix("-03)") }, "\(lines)")
+        XCTAssertTrue(lines.contains("- Lose 2 kg by 5 kg"), "\"by 5 kg\" is a quantity: \(lines)")
+        await supervisor.stop()
+    }
+
+    func testABareHourIsTheNextOneComing() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Todo")
+        let before = Date()
+        _ = await supervisor.runCommand("add", arguments: ["task": "Book table at 8"], source: .palette)
+        // 8 am today, 8 pm today, then 8 am tomorrow: the first one still to come.
+        let (offset, hour) = [(0, 8), (0, 20), (1, 8)].first { at($0.0, $0.1) > before }!
+        let lines = await taskLines(supervisor)
+        XCTAssertTrue(isDue(lines, "Book table", day(offset, hour: hour)), "\(lines)")
+        await supervisor.stop()
+    }
+
+    func testADueTaskNotificationCanBeDoneOrSnoozed() async throws {
+        let host = Host(self)
+        let due = Date().addingTimeInterval(-60).timeIntervalSinceReferenceDate
+        let created = Date().addingTimeInterval(-3600).timeIntervalSinceReferenceDate
+        try await host.services.storage.set("storage", #""This Mac only""#, for: id)
+        try await host.services.storage.set("tasks", """
+        [{"id":"a","title":"Call mum","due":\(due),"hasTime":true,"important":false,"created":\(created),"reminded":false}]
+        """, for: id)
+        let supervisor = try await host.start("Todo")
+        _ = await waitUntil { !host.notifications.all.isEmpty }
+        let notification = try XCTUnwrap(host.notifications.all.first)
+        XCTAssertEqual(notification.actions.map(\.command), ["complete", "snooze"])
+
+        // Each button runs its command with the task's id.
+        let snooze = notification.actions[1]
+        guard case .message = await supervisor.runCommand(snooze.command ?? "", arguments: snooze.arguments ?? [:], source: .palette) else {
+            return XCTFail("Snooze 1 Hour moves the task")
+        }
+        let lines = await taskLines(supervisor)
+        XCTAssertTrue(lines.contains { $0.hasPrefix("- Call mum (due ") }, "\(lines)")
+        let done = notification.actions[0]
+        guard case .message = await supervisor.runCommand(done.command ?? "", arguments: done.arguments ?? [:], source: .palette) else {
+            return XCTFail("Done ticks the task off")
+        }
+        let remaining = await supervisor.callTool("tasks").text
+        XCTAssertEqual(remaining, "No open tasks")
+
+        // A button for a task that has since gone says so, rather than showing its id.
+        let gone = await supervisor.runCommand("complete", arguments: ["task": UUID().uuidString], source: .palette)
+        XCTAssertEqual(gone, .failure("That task is no longer open"))
+        await supervisor.stop()
+    }
+
+    func testByCountsOnlyAtTheEndOfATask() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Todo")
+        for text in ["Divide by 2", "Written by 3 authors", "Finish report by 5"] {
+            _ = await supervisor.runCommand("add", arguments: ["task": text], source: .palette)
+        }
+        let lines = await taskLines(supervisor)
+        XCTAssertTrue(lines.contains("- Divide by 2"), "a sum is not a time: \(lines)")
+        XCTAssertTrue(lines.contains("- Written by 3 authors"), "\(lines)")
+        let fivePM = calendar.date(bySettingHour: 17, minute: 0, second: 0, of: Date())!
+        XCTAssertTrue(isDue(lines, "Finish report", day(Date() < fivePM ? 0 : 1, hour: 17)), "\(lines)")
+        await supervisor.stop()
+    }
+
+    func testNumbersThatAreNotDates() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Todo")
+        for text in ["Gym 24/7 support", "PR #12/13", "Pay 31/4"] {
+            _ = await supervisor.runCommand("add", arguments: ["task": text], source: .palette)
+        }
+        let lines = await taskLines(supervisor)
+        XCTAssertTrue(lines.contains("- Gym 24/7 support"), "24/7 means always: \(lines)")
+        XCTAssertTrue(lines.contains("- PR #12/13"), "a reference is not a date: \(lines)")
+        XCTAssertTrue(lines.contains("- Pay 31/4"), "April has no 31st, and the date is not rolled into May: \(lines)")
+        await supervisor.stop()
+    }
+
+    func testTonightAndEveningHoursAfterMidnight() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Todo")
+        for text in ["Party tonight at 12", "Call the bank tonight at 1am", "Gym every evening at 7"] {
+            _ = await supervisor.runCommand("add", arguments: ["task": text], source: .palette)
+        }
+        let lines = await taskLines(supervisor)
+        // Tonight at 12 is the midnight at the end of today.
+        XCTAssertTrue(isDue(lines, "Party", day(1, hour: 0)), "\(lines)")
+        // Tonight at 1am is tomorrow's 1 am once today's has passed.
+        let oneAM = calendar.date(bySettingHour: 1, minute: 0, second: 0, of: Date())!
+        XCTAssertTrue(isDue(lines, "Call the bank", day(Date() < oneAM ? 0 : 1, hour: 1)), "\(lines)")
+        // A repeat with an explicit time keeps the part of the day: every evening at 7 is 7 pm.
+        let sevenPM = calendar.date(bySettingHour: 19, minute: 0, second: 0, of: Date())!
+        XCTAssertTrue(isDue(lines, "Gym", day(Date() < sevenPM ? 0 : 1, hour: 19)) && lines.contains { $0.hasPrefix("- Gym") && $0.hasSuffix("repeats daily)") }, "\(lines)")
+        await supervisor.stop()
+    }
+
+    func testAPartOfTheDayStaysInTheTitleUnlessItIsUsed() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Todo")
+        _ = await supervisor.runCommand("add", arguments: ["task": "Evening class at 6"], source: .palette)
+        let lines = await taskLines(supervisor)
+        let sixPM = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: Date())!
+        XCTAssertTrue(isDue(lines, "Evening class", day(Date() < sixPM ? 0 : 1, hour: 18)), "the title keeps evening: \(lines)")
+        await supervisor.stop()
+    }
+
+    func testSearchListsEveryOpenTask() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Todo")
+        _ = await supervisor.runCommand("add", arguments: ["task": "Buy milk"], source: .palette)
+        _ = await supervisor.runCommand("add", arguments: ["task": "Call the bank tomorrow"], source: .palette)
+        let session = try await host.session("Todo")
+        let opened = try await session.openView("search")
+        XCTAssertEqual(opened.root?.rows.count, 2, "\(String(describing: opened.root))")
         await supervisor.stop()
     }
 
@@ -267,7 +456,8 @@ final class TodoTests: XCTestCase {
         [{"id":"a","title":"Clean the garage","hasTime":false,"important":false,"created":\(created),"reminded":false,
           "steps":[{"id":"s1","title":"Sort the boxes","size":"B","done":false},{"id":"s2","title":"Bin the old paint","size":"S","done":false}]}]
         """, for: id)
-        try await host.services.storage.set("nudgeHour", "0", for: id)
+        // The nudge fires in the four hours from the chosen one, so choose this hour.
+        try await host.services.storage.set("nudgeHour", "\(calendar.component(.hour, from: Date()))", for: id)
         let supervisor = try await host.start("Todo")
         _ = await waitUntil { !host.notifications.all.isEmpty }
         XCTAssertEqual(host.notifications.all.first?.title, "One small thing?")

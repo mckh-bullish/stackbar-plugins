@@ -12,11 +12,11 @@ final class WorldClock: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.world-clock",
         name: "World Clock",
-        version: "1.5.1",
+        version: "1.6.0",
         summary: "The time in the cities you work with, with offsets and working hours.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(30)), .wake],
-        minimumStackbar: "0.21.0",
+        minimumStackbar: "0.22.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WorldClock",
         accent: .violet,
         symbol: "globe"
@@ -46,6 +46,12 @@ final class WorldClock: StackbarPlugin {
     @Stored("use24Hour") var use24Hour = true
     @Stored("workStart") var workStart = 9.0
     @Stored("workEnd") var workEnd = 18.0
+    /// The name each added city was typed as, by zone, when it isn't the city's own.
+    @Stored("names") var names: [String: String] = [:]
+    /// Why the last add failed, shown under the field until the next add.
+    var addError: String?
+    /// Formatters by zone and clock, made on first use: a clock is drawn on every redraw.
+    private var timeFormatters: [String: DateFormatter] = [:]
 
     func refresh() async throws {
         realNow = Date()
@@ -53,9 +59,15 @@ final class WorldClock: StackbarPlugin {
 
     let theme = Theme.violet
 
+    /// The city in the menu bar: the one picked, or the first city once that one is removed.
+    /// A picked city this Mac no longer knows falls back to the first one it does.
+    var shownZone: TimeZone? {
+        validZones.first { $0.identifier == menuBarZone } ?? validZones.first
+    }
+
     var menuBar: ViewContent {
-        if let zone = TimeZone(identifier: menuBarZone) {
-            Label("\(city(menuBarZone)) \(time(realNow, in: zone))", symbol: "globe").role(.primary)
+        if let zone = shownZone {
+            Label("\(city(zone.identifier)) \(time(realNow, in: zone))", symbol: "globe").role(.primary)
         } else {
             Label("", symbol: "globe").role(.secondary)
         }
@@ -70,6 +82,7 @@ final class WorldClock: StackbarPlugin {
         if validZones.isEmpty {
             EmptyState("Add a city", symbol: "globe", message: "Type a city or a time zone. The menu bar shows the one you tap.", theme: theme) {
                 TextField("City or time zone, like Tokyo") { submitted in self.add(submitted) }
+                if let addError { Text(addError).style(.caption).role(.warning) }
             }
         } else {
             VStack(spacing: Space.s) {
@@ -91,7 +104,23 @@ final class WorldClock: StackbarPlugin {
             if offsetHours != 0 {
                 ActionButton("Now", theme: theme) { self.offsetHours = 0 }
             }
+            ActionButton("Copy times", symbol: "doc.on.doc", theme: theme, key: "copy-times") {
+                Stackbar.copy(self.timesText(at: self.now))
+                Stackbar.hud("Copied")
+            }
         }
+    }
+
+    /// Every city's time at `date`, one line to paste into an invite, with a
+    /// note where a city is on another day from yours.
+    func timesText(at date: Date) -> String {
+        let here = day(in: .current, at: date)
+        let lines = validZones.map { zone -> String in
+            let theirs = day(in: zone, at: date)
+            let note = theirs == here ? "" : theirs > here ? " (next day)" : " (previous day)"
+            return "\(city(zone.identifier)) \(time(date, in: zone))\(note)"
+        }
+        return (["\(time(date, in: .current)) here"] + lines).joined(separator: " · ")
     }
 
     /// `+3h`, `−1h 30m`.
@@ -106,7 +135,7 @@ final class WorldClock: StackbarPlugin {
     @ViewBuilder func card(_ zone: TimeZone) -> ViewContent {
         let working = isWorking(zone)
         let sky = Sky(hour: hour(in: zone))
-        let shown = zone.identifier == menuBarZone
+        let shown = zone.identifier == shownZone?.identifier
         Button(key: "city-\(zone.identifier)", action: { self.menuBarZone = zone.identifier }) {
             VStack(spacing: Space.s + 2) {
                 HStack(spacing: Space.s + 2) {
@@ -196,13 +225,18 @@ final class WorldClock: StackbarPlugin {
         Section("Cities") {
             ForEach(zones) { identifier in
                 Row(city(identifier), subtitle: TimeZone(identifier: identifier) == nil ? "Unknown time zone" : identifier, symbol: "mappin", key: "zone-\(identifier)")
-                    .action("Remove") { self.zones.removeAll { $0 == identifier } }
+                    .action("Remove") {
+                        self.zones.removeAll { $0 == identifier }
+                        self.names[identifier] = nil
+                        if self.menuBarZone == identifier { self.menuBarZone = self.validZones.first?.identifier ?? self.menuBarZone }
+                    }
             }
             TextField("Add a city or time zone, like Tokyo", text: "") { submitted in self.add(submitted) }
+            if let addError { Text(addError).style(.caption).role(.warning) }
             Text("Type a city name (Tokyo, New York) or a zone (Asia/Tokyo).").style(.caption).role(.secondary)
         }
         Section("Menu bar") {
-            Picker("City", options: validZones.map(\.identifier), selection: menuBarZone) { self.menuBarZone = $0 }
+            Picker("City", options: validZones.map(\.identifier), selection: shownZone?.identifier) { self.menuBarZone = $0 }
         }
         Section("Working hours") {
             Picker("Start", options: Array(Self.hours.dropLast()), selection: Self.hours[Self.hourIndex(workStart, in: 0...23)], key: "work-start") { self.workStart = Double(Self.hours.firstIndex(of: $0) ?? 9) }
@@ -234,6 +268,10 @@ final class WorldClock: StackbarPlugin {
                     }
                 }
             }
+        Command("copy-times", title: "Copy My Cities' Times", subtitle: "The time now in each of your cities", symbol: "doc.on.doc", keywords: ["time", "zone", "city", "copy", "schedule"]) { _ in
+            self.realNow = Date()
+            return .copy(self.timesText(at: self.realNow))
+        }
         // "tokyo" or "time in tok" at the palette's root answers with the time.
         Command("time-in", title: "Time In a City", subtitle: "World Clock", symbol: "globe", keywords: ["time", "zone", "city"])
             .view(search: { _ in self.realNow = Date() }) { invocation in
@@ -246,32 +284,85 @@ final class WorldClock: StackbarPlugin {
                         }
                 }
             }
-            .rootSearch(section: "World Clock", matching: #"(?i)[a-z][a-z .'-]+"#)
+            .rootSearch(section: "World Clock", matching: #"(?i)\p{L}[\p{L} .'’-]+\??"#)
             .stackbarOnly()
     }
 
-    /// Zones a palette query names: a whole city name ("tokyo"), or a city's
-    /// start after "time in" or before "time" ("time in tok", "lond time").
-    /// Your own cities come first. Empty for anything else, so ordinary
-    /// typing shows nothing from World Clock.
+    /// Zones a palette query names: a whole city name ("tokyo", "san
+    /// francisco"), an abbreviation after "time in" ("time in pst"), or a
+    /// city's start after "time in" or before "time" ("time in tok", "lond
+    /// time"). Accents and a question mark don't matter. Your own cities come
+    /// first. Empty for anything else, so ordinary typing shows nothing.
     func zones(named query: String) -> [TimeZone] {
-        var text = query.trimmingCharacters(in: .whitespaces).lowercased()
+        var text = Self.fold(query)
         var prefix = false
-        if text.hasPrefix("time in ") {
-            text = String(text.dropFirst("time in ".count)).trimmingCharacters(in: .whitespaces)
+        for lead in ["time in ", "what time is it in ", "what's the time in ", "what’s the time in "] where text.hasPrefix(lead) {
+            text = String(text.dropFirst(lead.count)).trimmingCharacters(in: .whitespaces)
             prefix = true
-        } else if text.hasSuffix(" time") {
+        }
+        if !prefix, text.hasSuffix(" time") {
             text = String(text.dropLast(" time".count)).trimmingCharacters(in: .whitespaces)
             prefix = true
         }
         guard text.count >= 2 else { return [] }
+        var found: [String] = []
+        if let identifier = Self.aliases[text] { found.append(identifier) }
+        if prefix, let identifier = Self.shortNames[text] { found.append(identifier) }
+        found += Self.cityIndex.filter { prefix ? $0.key.hasPrefix(text) : $0.key == text }.map(\.identifier)
+        if prefix { found += Self.aliases.filter { $0.key.hasPrefix(text) }.map(\.value) }
+        // A name said in full ("ist", "la") beats a city that only starts with it.
+        let exact = Set([Self.aliases[text], prefix ? Self.shortNames[text] : nil].compactMap { $0 })
         let mine = Set(zones)
-        let found = TimeZone.knownTimeZoneIdentifiers.filter { identifier in
-            let name = city(identifier).lowercased()
-            return prefix ? name.hasPrefix(text) : name == text
-        }
-        return found.sorted { (mine.contains($0) ? 0 : 1, $0) < (mine.contains($1) ? 0 : 1, $1) }.compactMap(TimeZone.init(identifier:))
+        func rank(_ zone: String) -> (Int, Int, String) { (exact.contains(zone) ? 0 : 1, mine.contains(zone) ? 0 : 1, zone) }
+        return Array(Set(found)).sorted { rank($0) < rank($1) }.compactMap(TimeZone.init(identifier:))
     }
+
+    /// Full city names people say, and the zone each one is in. These match
+    /// on their own, as well as after "time in".
+    static let aliases: [String: String] = [
+        "mumbai": "Asia/Kolkata", "bombay": "Asia/Kolkata", "delhi": "Asia/Kolkata", "new delhi": "Asia/Kolkata",
+        "bangalore": "Asia/Kolkata", "bengaluru": "Asia/Kolkata", "chennai": "Asia/Kolkata", "hyderabad": "Asia/Kolkata", "pune": "Asia/Kolkata",
+        "san francisco": "America/Los_Angeles", "seattle": "America/Los_Angeles", "san diego": "America/Los_Angeles", "las vegas": "America/Los_Angeles", "portland": "America/Los_Angeles",
+        "washington": "America/New_York", "boston": "America/New_York", "miami": "America/New_York", "atlanta": "America/New_York", "philadelphia": "America/New_York",
+        "austin": "America/Chicago", "dallas": "America/Chicago", "houston": "America/Chicago",
+        "beijing": "Asia/Shanghai", "shenzhen": "Asia/Shanghai", "guangzhou": "Asia/Shanghai",
+        "osaka": "Asia/Tokyo", "kyoto": "Asia/Tokyo",
+        "munich": "Europe/Berlin", "frankfurt": "Europe/Berlin", "hamburg": "Europe/Berlin",
+        "barcelona": "Europe/Madrid",
+        "milan": "Europe/Rome",
+        "geneva": "Europe/Zurich",
+        "abu dhabi": "Asia/Dubai",
+    ]
+
+    /// Abbreviations. They match only after "time in", and in Add, because a
+    /// bare "sf" or "eat" is more often a word than a city.
+    static let shortNames: [String: String] = [
+        "nyc": "America/New_York", "dc": "America/New_York", "et": "America/New_York", "est": "America/New_York", "edt": "America/New_York",
+        "sf": "America/Los_Angeles", "la": "America/Los_Angeles", "pt": "America/Los_Angeles", "pst": "America/Los_Angeles", "pdt": "America/Los_Angeles",
+        "mst": "America/Denver", "mdt": "America/Denver",
+        "cst": "America/Chicago", "cdt": "America/Chicago",
+        "utc": "UTC", "gmt": "GMT",
+        "bst": "Europe/London",
+        "cet": "Europe/Paris", "cest": "Europe/Paris",
+        "ist": "Asia/Kolkata",
+        "jst": "Asia/Tokyo",
+        "aest": "Australia/Sydney", "aedt": "Australia/Sydney",
+        "hkt": "Asia/Hong_Kong",
+        "sgt": "Asia/Singapore",
+    ]
+
+    /// Lowercased, without accents, and without the punctuation people type around a name.
+    static func fold(_ text: String) -> String {
+        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil).trimmingCharacters(in: CharacterSet(charactersIn: " ?!."))
+    }
+
+    /// The city a zone is named for: "America/New_York" is "New York".
+    static func cityName(_ identifier: String) -> String {
+        (identifier.split(separator: "/").last.map(String.init) ?? identifier).replacingOccurrences(of: "_", with: " ")
+    }
+
+    /// Every zone by its folded city name, for matching what people type. Built once.
+    static let cityIndex: [(identifier: String, key: String)] = TimeZone.knownTimeZoneIdentifiers.map { (identifier: $0, key: fold(cityName($0))) }
 
     // MARK: -
 
@@ -279,21 +370,45 @@ final class WorldClock: StackbarPlugin {
 
     func add(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
-        let match = TimeZone.knownTimeZoneIdentifiers.first { $0.caseInsensitiveCompare(trimmed) == .orderedSame }
-            ?? TimeZone.knownTimeZoneIdentifiers.first { city($0).caseInsensitiveCompare(trimmed) == .orderedSame }
-        guard let match, !zones.contains(match) else { return }
+        guard !trimmed.isEmpty else { return }
+        let key = Self.fold(trimmed)
+        var match = TimeZone.knownTimeZoneIdentifiers.first { $0.caseInsensitiveCompare(trimmed) == .orderedSame }
+        // What was typed names the city, when the city has no name of its own.
+        var typed: String?
+        if match == nil, let identifier = Self.aliases[key] {
+            match = identifier
+            typed = trimmed.capitalized
+        }
+        if match == nil, let identifier = Self.shortNames[key] {
+            match = identifier
+            typed = trimmed.uppercased()
+        }
+        if match == nil { match = Self.cityIndex.first { $0.key == key }?.identifier }
+        guard let match else {
+            addError = "No city or time zone called “\(trimmed)”. Try a nearby big city or a zone like Asia/Tokyo."
+            return
+        }
+        guard !zones.contains(match) else {
+            addError = "\(city(match)) is already in your list"
+            return
+        }
+        if let typed { names[match] = typed }
         zones.append(match)
+        addError = nil
     }
 
     func city(_ identifier: String) -> String {
-        (identifier.split(separator: "/").last.map(String.init) ?? identifier).replacingOccurrences(of: "_", with: " ")
+        names[identifier] ?? Self.cityName(identifier)
     }
 
     func time(_ date: Date, in zone: TimeZone) -> String {
+        let key = "\(zone.identifier)|\(use24Hour)"
+        if let formatter = timeFormatters[key] { return formatter.string(from: date) }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = zone
         formatter.dateFormat = use24Hour ? "HH:mm" : "h:mm a"
+        timeFormatters[key] = formatter
         return formatter.string(from: date)
     }
 
@@ -346,11 +461,11 @@ final class WorldClock: StackbarPlugin {
         return offset + (theirs == ours ? "" : theirs > ours ? " · tomorrow" : " · yesterday")
     }
 
-    private func day(in zone: TimeZone, at now: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = zone
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: now)
+    /// The calendar day in a zone as a number (20261107), so days compare in order.
+    private func day(in zone: TimeZone, at now: Date) -> Int {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let parts = calendar.dateComponents([.year, .month, .day], from: now)
+        return (parts.year ?? 0) * 10000 + (parts.month ?? 0) * 100 + (parts.day ?? 0)
     }
 }

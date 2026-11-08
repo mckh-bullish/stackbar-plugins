@@ -33,8 +33,9 @@ too, and Siri can add to them. Big tasks break into small steps.
 - **Typing dates:** today, tonight, tomorrow, the day after tomorrow, friday,
   this friday, next friday (the Friday of next week), this weekend, next week,
   next month, in 3 days, in 2 hours, in half an hour, Nov 5, 5 November, the
-  12th, 2027-03-12. Times: 2pm, 2:30pm, 14:30, at 9, noon, this morning,
-  this afternoon, this evening. Repeats: every day, every weekday, every
+  12th, on 3rd, 2027-03-12, 14/11. Times: 2pm, 2:30pm, 14:30, at 9, by 5,
+  noon, midnight, this morning, this afternoon, this evening, tomorrow night,
+  friday night. Repeats: every day, every weekday, every
   monday, every week, every month, daily, weekly, monthly. A `!` on its own
   marks the task important. Words in "double quotes" are kept as they are.
 - **In the panel:** tick the circle to finish a task; tick a done one to bring
@@ -46,8 +47,8 @@ too, and Siri can add to them. Big tasks break into small steps.
   to its next day.
 - **Alerts:** in Reminders, a task with a time gets a Reminders alert, on
   every device, with Done and Snooze. On this Mac only, Todo sends one
-  notification when it is due; one the Mac slept through by more than half a
-  day is let go quietly.
+  notification when it is due, with Done and Snooze 1 Hour buttons; one the
+  Mac slept through by more than half a day is let go quietly.
 - **One nudge:** optionally, one notification at a time you choose, only on
   days you haven't ticked anything off, naming a small step to start with.
 - **No guilt:** nothing is ever “overdue” or red. Tasks from earlier days
@@ -55,16 +56,28 @@ too, and Siri can add to them. Big tasks break into small steps.
 - **Menu bar:** a quiet count of what is due today, or the next task, the count
   of everything open, or just the icon. It never turns red.
 - **Commands:** Add a Todo, Mark a Todo Done, Snooze a Todo (to a time you
-  type, or an hour or a day later) and Today's Todos (a list to tick off from
-  the palette). Run them from the palette, give them a hotkey, or call them
+  type, or an hour or a day later), Today's Todos (a list to tick off from
+  the palette) and Search Todos (every open task, to tick off, snooze or move
+  to today). Run them from the palette, give them a hotkey, or call them
   from a Shortcut or a
   `stackbar://commands/io.navbytes.stackbar.plugins.todo/add?task=…` link.
 - **Settings:** where tasks live, what the menu bar shows, alerts and their
   sound, the nudge, a morning
   summary of the day at 7, 8, 9 or 10 AM, and how long done tasks are kept.
-- **Agent tools:** `tasks` lists open tasks with their dates; `add` adds one
-  from plain words.
-- **Requires:** Stackbar 0.18.0 or later.
+- **Agent tools:** `tasks` (off until you turn it on in Settings › Agents)
+  lists open tasks with their dates; `add` adds one from plain words.
+- **Requires:** Stackbar 0.26.0 or later.
+
+## What's new in 2.2.0
+
+- "This evening at 7", "tonight at 9", "tomorrow evening at 8" and "Friday night at 9" now mean the evening, and the words no longer stay in the task's title.
+- Dates written with numbers work: "dentist 14/11" or "11/14" (and "on 3/4", in your Mac's date order).
+- "by 5", "on the 3rd" or "on 3rd", and "by midnight" are understood.
+- "at 8" typed in the afternoon means 8 tonight, not tomorrow morning.
+- A due-task notification has Done and Snooze 1 Hour buttons.
+- New Search Todos command: find any open task in the palette and tick it off, snooze it or move it to today.
+- Agents can only read your tasks once you turn the tasks tool on in Settings › Agents, since they're private.
+- The morning summary and the nudge no longer arrive hours late when your Mac was off at the time.
 
 ## What's new in 2.1.1
 

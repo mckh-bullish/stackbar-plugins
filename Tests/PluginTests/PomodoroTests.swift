@@ -72,4 +72,61 @@ final class PomodoroTests: XCTestCase {
         XCTAssertTrue(now.hasPrefix("On a break"), "run again, it replaces the session: \(now)")
         await supervisor.stop()
     }
+
+    func testLengthsTakeUnits() async throws {
+        let host = Host(self)
+        let session = try await host.session("Pomodoro")
+        guard case .message(let forty) = try await session.runCommand("start-focus", arguments: ["minutes": "45 minutes"]) else {
+            return XCTFail("a length with a unit starts a session")
+        }
+        XCTAssertTrue(forty?.hasPrefix("Focusing") == true && (forty?.contains("45:00") == true || forty?.contains("44:5") == true), forty ?? "")
+        // Under a minute in, so the second start replaces the first without asking.
+        guard case .message(let hour) = try await session.runCommand("start-focus", arguments: ["minutes": "1h"]) else {
+            return XCTFail("an hour starts a session")
+        }
+        XCTAssertTrue(hour?.contains("60:00") == true || hour?.contains("59:5") == true, hour ?? "")
+        guard case .failure = try await session.runCommand("start-focus", arguments: ["minutes": "forever"]) else {
+            return XCTFail("a length that is not a length is refused")
+        }
+    }
+
+    func testResetFromThePaletteAsksFirst() async throws {
+        let host = Host(self)
+        // Fifteen minutes into a 25-minute focus session, paused.
+        try await host.services.storage.set("session", #"{"mode":"Focus","minutes":25,"tag":"Deep Work","remaining":600}"#, for: id)
+        let supervisor = try await host.start("Pomodoro")
+        let asked = await supervisor.runCommand("reset", source: .palette)
+        guard case .message(let text) = asked else { return XCTFail("reset answers instead of resetting") }
+        XCTAssertTrue(text?.contains("again") == true, text ?? "")
+        var status = await supervisor.callTool("status").text
+        XCTAssertTrue(status.hasPrefix("Paused on Deep Work, 10:00 left"), "the first run keeps the session: \(status)")
+
+        let reset = await supervisor.runCommand("reset", source: .palette)
+        XCTAssertEqual(reset, .message("Pomodoro reset"))
+        status = await supervisor.callTool("status").text
+        XCTAssertTrue(status.hasPrefix("Idle"), status)
+        await supervisor.stop()
+    }
+
+    func testAHugeLengthIsRefusedNotACrash() async throws {
+        let host = Host(self)
+        let session = try await host.session("Pomodoro")
+        guard case .failure = try await session.runCommand("start-focus", arguments: ["minutes": "1e30"]) else {
+            return XCTFail("a length beyond any session is refused")
+        }
+        // A crash would leave every later command failing, so the helper must still answer.
+        let status = try await session.callTool("status", arguments: [:])
+        XCTAssertFalse(status.isError, status.text)
+        XCTAssertTrue(status.text.hasPrefix("Idle"), status.text)
+        await session.stop()
+    }
+
+    func testDailyGoalShowsInStatus() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Pomodoro")
+        await supervisor.press("picker/daily-goal", value: .text("6"))
+        let status = await supervisor.callTool("status").text
+        XCTAssertTrue(status.hasSuffix("Goal: 6 sessions."), status)
+        await supervisor.stop()
+    }
 }

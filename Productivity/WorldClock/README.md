@@ -5,7 +5,7 @@ lists them all with the offset from you, whether it is already tomorrow or
 still yesterday there, and whether it is working hours (weekdays, 9 to 18 by
 default).
 
-- **Needs:** nothing. No network, files or secrets.
+- **Needs:** nothing beyond Stackbar 0.22.0 or later. No network, files or secrets.
 - **Surfaces:** menu bar, panel, widget, settings.
 - **Settings:** the cities (type a time zone like `Asia/Tokyo`, or a city name
   like `Tokyo`), which one the menu bar shows, 12- or 24-hour time, and your
@@ -13,9 +13,11 @@ default).
 - **In the panel:** tap a city to show it in the menu bar. The time-travel
   slider moves every clock up to 12 hours either way in half-hour steps, so
   you can see what time it is everywhere when it's 3pm here; Now puts it back.
+  Copy times copies every city's time, at the slider's time, for an invite.
   The menu bar and widget always show the real time.
 - **Commands:** World Clock lists your cities with their times; each row can
-  be copied or shown in the menu bar.
+  be copied or shown in the menu bar. Copy My Cities' Times copies every
+  city's time now.
 - **Agent tool:** `times` returns the time in every city.
 
 ## Highlights
@@ -35,6 +37,16 @@ Add `Tokyo` or `Asia/Tokyo`, and pick which city the menu bar shows.
 ### On your desktop too
 A widget keeps your cities on the desktop.
 <!-- preview: widget -->
+
+## What's new in 1.6.0
+
+- Type the cities people actually say: Mumbai, Bangalore, San Francisco, Beijing, São Paulo, and in "time in …" also NYC, SF, PST or UTC. A question mark at the end is fine, and so is the curly apostrophe in "what’s the time in".
+- A name typed in full wins: "time in ist" shows India and "time in la" Los Angeles first, ahead of cities that only start with those letters.
+- A city added by its own name keeps that name, so Mumbai shows as Mumbai.
+- Settings tells you when it can't find a city, or when it's already in your list.
+- Copy times: one click copies every city's time at the slider's time, ready to paste into an invite. Also a Copy My Cities' Times command.
+- Removing the city shown in the menu bar now moves the menu bar to your next city, and so does a city this Mac no longer recognises, instead of an empty menu bar.
+- Lighter on redraws: each clock no longer rebuilds its date formatter.
 
 ## What's new in 1.5.1
 
