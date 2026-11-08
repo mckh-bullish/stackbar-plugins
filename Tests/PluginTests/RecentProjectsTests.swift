@@ -26,6 +26,19 @@ final class RecentProjectsTests: XCTestCase {
         XCTAssertEqual(reset, "Where it was last opened")
         await supervisor.stop()
     }
+
+    /// VS Code 1.118 keeps its recent list in ~/.vscode-shared, so the plugin
+    /// asks to read it as well as the old Application Support folder.
+    func testReadsVSCodeSharedStorage() async throws {
+        let supervisor = try await Host(self, system: SimulatedSystem()).start("RecentProjects")
+        let paths = supervisor.manifest.capabilities.flatMap { capability -> [String] in
+            if case .files(let paths) = capability { return paths }
+            return []
+        }
+        XCTAssertTrue(paths.contains("~/.vscode-shared/sharedStorage"))
+        XCTAssertTrue(paths.contains("~/Library/Application Support/Code/User/globalStorage"))
+        await supervisor.stop()
+    }
 }
 
 extension ViewNode {

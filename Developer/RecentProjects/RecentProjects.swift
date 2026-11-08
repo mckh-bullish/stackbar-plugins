@@ -14,13 +14,26 @@ final class RecentProjects: StackbarPlugin {
     struct Editor: Equatable, Sendable {
         var name: String
         var bundleID: String
-        /// The folder under Application Support that holds `state.vscdb`.
-        var folder: String
+        /// The folders that hold a `state.vscdb` with the recent list,
+        /// read in order: VS Code 1.118 moved it from Application Support to
+        /// `~/.vscode-shared/sharedStorage`, so both are read.
+        var folders: [String]
         var scheme: String
+
+        init(name: String, bundleID: String, folders: [String], scheme: String) {
+            self.name = name
+            self.bundleID = bundleID
+            self.folders = folders
+            self.scheme = scheme
+        }
+
+        init(name: String, bundleID: String, folder: String, scheme: String) {
+            self.init(name: name, bundleID: bundleID, folders: [folder], scheme: scheme)
+        }
     }
 
     static let editors: [Editor] = [
-        Editor(name: "VS Code", bundleID: "com.microsoft.VSCode", folder: "~/Library/Application Support/Code/User/globalStorage", scheme: "vscode"),
+        Editor(name: "VS Code", bundleID: "com.microsoft.VSCode", folders: ["~/.vscode-shared/sharedStorage", "~/Library/Application Support/Code/User/globalStorage"], scheme: "vscode"),
         Editor(name: "Cursor", bundleID: "com.todesktop.230313mzl4w4u92", folder: "~/Library/Application Support/Cursor/User/globalStorage", scheme: "cursor"),
         Editor(name: "Windsurf", bundleID: "com.exafunction.windsurf", folder: "~/Library/Application Support/Windsurf/User/globalStorage", scheme: "windsurf"),
         Editor(name: "VSCodium", bundleID: "com.vscodium", folder: "~/Library/Application Support/VSCodium/User/globalStorage", scheme: "vscodium"),
@@ -64,13 +77,13 @@ final class RecentProjects: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.recent-projects",
         name: "Recent Projects",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "Open the projects you used lately in VS Code, Cursor, Windsurf or VSCodium from the palette.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [
             .run(commands: ["sqlite3"]),
-            .files(paths: editors.map(\.folder)),
+            .files(paths: editors.flatMap(\.folders)),
             // "*": folders open in any default editor, not only by link.
             .openURLs(schemes: ["*"]),
             // Which editors are installed, for the default editor setting.
@@ -99,10 +112,6 @@ final class RecentProjects: StackbarPlugin {
             plugin.loadedAt = Date()
         },
     ]
-
-    /// What the panel and the palette say while VS Code keeps its list where
-    /// this version can't read it.
-    static let vsCodeMovedText = "VS Code 1.118 and later keep recent projects where this version can't read them yet."
 
     let theme = Theme.blue
 
@@ -140,10 +149,6 @@ final class RecentProjects: StackbarPlugin {
     /// Editors whose list couldn't be read, and why: a locked database, say.
     var problems: [String] = []
 
-    /// VS Code is installed but its list wasn't found where this version
-    /// looks: it moved the list in 1.118.
-    var vsCodeMoved: Bool { installed.contains("com.microsoft.VSCode") && !found.contains("VS Code") && !problems.contains { $0.hasPrefix("VS Code") } }
-
     // MARK: Reading
 
     func load(force: Bool = false) async {
@@ -152,20 +157,31 @@ final class RecentProjects: StackbarPlugin {
         var seen: [String] = []
         var failures: [String] = []
         for editor in Self.editors {
-            let result: RunResult
-            do {
-                result = try await Stackbar.run("sqlite3", ["-readonly", "state.vscdb", "SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'"], workingDirectory: editor.folder, timeout: .seconds(10))
-            } catch {
-                // An editor that isn't installed has no folder: the run is
-                // refused and it is skipped. Any other refusal is a failed read.
-                if !"\(error)".contains("is not a folder") { failures.append("\(editor.name): \(error)") }
-                continue
+            var list: [Project] = []
+            var read = false
+            var failure: String?
+            for folder in editor.folders {
+                let result: RunResult
+                do {
+                    result = try await Stackbar.run("sqlite3", ["-readonly", "state.vscdb", "SELECT value FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'"], workingDirectory: folder, timeout: .seconds(10))
+                } catch {
+                    // An editor that isn't installed has no folder: the run is
+                    // refused and it is skipped. Any other refusal is a failed read.
+                    if !"\(error)".contains("is not a folder") { failure = failure ?? "\(editor.name): \(error)" }
+                    continue
+                }
+                guard result.succeeded else {
+                    failure = failure ?? "\(editor.name): " + (result.errorText.split(separator: "\n").first.map(String.init) ?? "sqlite3 failed (\(result.status))")
+                    continue
+                }
+                read = true
+                list += Self.parse(result.text, editor: editor.name)
             }
-            guard result.succeeded else {
-                failures.append("\(editor.name): " + (result.errorText.split(separator: "\n").first.map(String.init) ?? "sqlite3 failed (\(result.status))"))
-                continue
-            }
-            let list = Self.parse(result.text, editor: editor.name)
+            // A folder that couldn't be read counts only when no other one
+            // of this editor's could: VS Code before 1.118 has no shared one.
+            if !read, let failure { failures.append(failure) }
+            var mine = Set<String>()
+            list = list.filter { mine.insert($0.path).inserted }
             if !list.isEmpty { seen.append(editor.name) }
             all += list.prefix(perEditor)
         }
@@ -325,7 +341,7 @@ final class RecentProjects: StackbarPlugin {
                 self.results = self.matches(invocation.text)
             }) { _ in
                 if self.projects.isEmpty {
-                    ContentUnavailableView("No recent projects", symbol: "folder", message: self.vsCodeMoved ? Self.vsCodeMovedText : "Open a folder in VS Code, Cursor, Windsurf or VSCodium and it shows up here.")
+                    ContentUnavailableView("No recent projects", symbol: "folder", message: "Open a folder in VS Code, Cursor, Windsurf or VSCodium and it shows up here.")
                 } else if self.results.isEmpty {
                     ContentUnavailableView("No project matches", symbol: "magnifyingglass", message: "Type part of a project's name or path.")
                 } else {
@@ -341,7 +357,6 @@ final class RecentProjects: StackbarPlugin {
 
     var panel: ViewContent {
         PanelHeader("Recent Projects", subtitle: found.isEmpty ? "No editor found yet" : found.joined(separator: " · "), symbol: "folder.badge.gearshape", theme: theme)
-        if vsCodeMoved { Banner(Self.vsCodeMovedText, symbol: "info.circle", theme: .info) }
         if let first = problems.first { Banner("Couldn't read " + first, theme: .warning) }
         if projects.isEmpty {
             EmptyState("Open a project in your editor", symbol: "folder", message: "Folders and workspaces you open in VS Code, Cursor, Windsurf or VSCodium show up here and in the palette.", theme: theme)
