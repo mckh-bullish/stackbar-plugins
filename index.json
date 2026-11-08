@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-08T08:05:37Z",
+  "generated" : "2026-11-08T11:27:15Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -1486,6 +1486,39 @@
       "symbol" : "doc.text.magnifyingglass",
       "updated" : "2026-11-08",
       "version" : "1.0.2"
+    },
+    {
+      "accent" : "green",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.git-sync-1.0.0.stackbarplugin",
+      "capabilities" : [
+        "Runs /opt/homebrew/bin/git, /usr/bin/find",
+        "Uses your SSH keys through the SSH agent, for the commands it runs",
+        "Opens any link, file or folder, in any app"
+      ],
+      "capabilityKinds" : [
+        "run",
+        "sshAgent",
+        "openURLs"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/GitSync",
+      "id" : "io.navbytes.stackbar.plugins.git-sync",
+      "minimumStackbar" : "0.34.0",
+      "name" : "Git Sync",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.git-sync.png",
+      "sha256" : "653d881a5a40980509ee7c288df63d5ff9912fbd0c0180f0bd53d105871a621d",
+      "summary" : "Which local repositories are behind or ahead of their remote, with the safe ones updated in one click.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "arrow.triangle.branch",
+      "updated" : "2026-11-08",
+      "version" : "1.0.0"
     },
     {
       "bundle" : "Developer/io.navbytes.stackbar.plugins.github-1.0.0.stackbarplugin",
@@ -6030,5 +6063,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "44elOp6kRQE5kSfwTZicgNZawW69OE5xQHSH3Yy4u/PP5MyjEOmtbD/ucg7ZmXRkf6mzL3kl8by1OGfhx+NbBg=="
+  "signature" : "HJ3Xba8f4nUMMih9kj9twmhcsAhMHPTECjccXXBPyoaBou835key1Icij7k7/m7HBuWXPvhvsjEL7jCNnH4OAA=="
 }

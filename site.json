@@ -653,6 +653,52 @@
       ],
       "version": "1.0.2"
     },
+    "io.navbytes.stackbar.plugins.git-sync": {
+      "changes": [
+        {
+          "notes": [
+            "First release."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Which of your local git repositories are behind their remote, ahead of it,\ndiverged or holding uncommitted changes, in the menu bar, with the safe\nones updated in one click. Worktrees show under their repository, and the\nmerged ones left behind are cleaned up in one go.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "to run `git` and `find` (Stackbar finds them in `/usr/bin` or Homebrew and asks you to approve those paths once), your SSH agent for remotes over SSH, and to open folders in your editor, terminal or Finder. It never reads your files itself: git runs only in the folders you choose, and each plugin's Settings page lists them with Remove. Needs Stackbar 0.34.0 or later, and git (the Xcode Command Line Tools or Homebrew's)."
+        },
+        {
+          "label": "Surfaces",
+          "text": "menu bar (only when something is behind, by default), panel, window, widget, settings."
+        },
+        {
+          "label": "How it checks",
+          "text": "it finds the repositories in your folders (2 levels deep by default; skipping `node_modules`, `.build`, `Pods` and the like), and reads each with `git status --porcelain=v2 --branch` every two minutes, which uses no network. `git fetch --prune --no-tags` runs every 15 minutes per repository, a few repositories a minute, and on wake; it never changes your files. Prompts are off, so a remote that wants a password says so instead of waiting."
+        },
+        {
+          "label": "Updating",
+          "text": "Pull is fast-forward only (or rebase, in Settings), so it never makes a merge commit. A repository with uncommitted changes is skipped, or stashed, pulled and restored, or offered on its row, as you choose; if restoring conflicts, your changes stay in the stash. Diverged repositories always wait for you. Push never forces. Update All does every repository that is safe to, three at a time, and says what it skipped and why."
+        },
+        {
+          "label": "Worktrees",
+          "text": "a count on each repository, and under it each worktree's branch, \u2193\u2191, changes and last commit, with Agent (Claude Code, Codex, Conductor), Locked, Merged and Missing labels. Remove one (only when clean), prune missing ones, or Clean Up every worktree whose branch was merged or deleted on the remote. A branch that was never pushed is never offered for clean-up. Changes in a worktree outside your folders show as unknown, with Add its folder."
+        },
+        {
+          "label": "Settings",
+          "text": "your folders and how deep to look in each, how often to check the remote, fast-forward or rebase, what to do with uncommitted changes, worktrees shown and included in Update All, where new worktrees go (next to the repository, a `.worktrees` folder inside it, or a folder you choose), every local branch in the window, the menu bar (when behind, always, never) and whether it counts unpushed repositories, the editor and terminal to open in, notifications (never, when a repository falls behind, or only when you have unpushed work too), and hidden repositories."
+        },
+        {
+          "label": "Commands",
+          "text": "Search Local Repositories (also in the palette's own results), Update All Repositories, Fetch All Repositories, Search Worktrees, Clean Up Worktrees, New Git Worktree."
+        },
+        {
+          "label": "Agent tool",
+          "text": "`repo_status` lists each repository's state."
+        }
+      ],
+      "version": "1.0.0"
+    },
     "io.navbytes.stackbar.plugins.homebrew": {
       "changes": [
         {
@@ -3032,6 +3078,18 @@
         }
       }
     },
+    "io.navbytes.stackbar.plugins.git-sync": {
+      "1.0.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.git-sync/1.0.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.git-sync/1.0.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.git-sync/1.0.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.git-sync/1.0.0/light/panel.png"
+        }
+      }
+    },
     "io.navbytes.stackbar.plugins.homebrew": {
       "1.3.0": {
         "menuBar": {
@@ -5018,6 +5076,38 @@
           "name": "folders",
           "surface": "panel",
           "title": "Folders too, with their Finder icons"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.git-sync": {
+      "1.0.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.git-sync/1.0.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.git-sync/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Which repositories are behind, and one click to update them"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.git-sync/1.0.0/dark/previews/worktrees/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.git-sync/1.0.0/light/previews/worktrees/panel.png",
+          "name": "worktrees",
+          "surface": "panel",
+          "title": "Every worktree under its repository, and the merged ones to clean up"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.git-sync/1.0.0/dark/previews/dashboard/window.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.git-sync/1.0.0/light/previews/dashboard/window.png",
+          "name": "dashboard",
+          "surface": "window",
+          "title": "Repositories, worktrees and stale branches"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.git-sync/1.0.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.git-sync/1.0.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Behind and unpushed at a glance"
         }
       ]
     },
