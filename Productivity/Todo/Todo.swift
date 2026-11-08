@@ -17,12 +17,12 @@ final class Todo: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.todo",
         name: "Todo",
-        version: "2.2.0",
+        version: "2.3.0",
         summary: "A calm to-do list that understands dates as you type them, kept in Apple Reminders so it's on all your devices.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(30)), .wake, .reminders],
         capabilities: [.reminders],
-        minimumStackbar: "0.26.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Todo",
         accent: .orange,
         symbol: "checklist"
@@ -283,7 +283,8 @@ final class Todo: StackbarPlugin {
             Picker("Keep done tasks for", options: Self.keepOptions.map(\.title), selection: Self.keepOptions.first { $0.days == keepDoneDays }?.title ?? "7 days") { title in
                 self.keepDoneDays = Self.keepOptions.first { $0.title == title }?.days ?? 7
             }
-            Button("Clear done tasks now", symbol: "trash", role: .critical) {
+            // Undo brings them back, so it asks nothing.
+            Button("Clear done tasks now", symbol: "trash", role: .critical, confirm: .none) {
                 self.clearDone()
                 await self.save()
             }

@@ -66,7 +66,12 @@ too, and Siri can add to them. Big tasks break into small steps.
   summary of the day at 7, 8, 9 or 10 AM, and how long done tasks are kept.
 - **Agent tools:** `tasks` (off until you turn it on in Settings › Agents)
   lists open tasks with their dates; `add` adds one from plain words.
-- **Requires:** Stackbar 0.26.0 or later.
+- **Requires:** Stackbar 0.35.0 or later.
+
+## What's new in 2.3.0
+
+- Clear done tasks now says outright that it needs no second press (Undo brings them back).
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 2.2.0
 

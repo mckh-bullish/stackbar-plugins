@@ -17,7 +17,7 @@ final class ScriptCommands: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.script-commands",
         name: "Script Commands",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "Run your own scripts from the palette, in Raycast's Script Commands format.",
         surfaces: [.panel],
         triggers: [.launch, .every(.seconds(300))],
@@ -25,7 +25,7 @@ final class ScriptCommands: StackbarPlugin {
             .files(paths: [folder]),
             .run(commands: ["grep"] + interpreters),
         ],
-        minimumStackbar: "0.22.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/ScriptCommands",
         accent: .graphite,
         symbol: "terminal.fill"
@@ -83,12 +83,6 @@ final class ScriptCommands: StackbarPlugin {
     var problem: String?
     /// The last full output, by script id, for the fullOutput view.
     var outputs: [String: String] = [:]
-    /// The script whose Run was pressed once, waiting for a second press.
-    var armed: String?
-    var armedAt = Date.distantPast
-    static let armWindow: TimeInterval = 10
-    var armedNow: String? { armed.flatMap { Date().timeIntervalSince(armedAt) < Self.armWindow ? $0 : nil } }
-    func arm(_ id: String) { armed = id; armedAt = Date() }
 
     // MARK: Reading the folder
 
@@ -298,7 +292,7 @@ final class ScriptCommands: StackbarPlugin {
     @ViewBuilder func outputView(_ script: Script, arguments: [String]) -> ViewContent {
         List {
             Row(outputs[script.id] == nil ? "Run \(script.title)" : "Run Again", subtitle: script.needsConfirmation ? "This script asks before it runs" : script.name, symbol: "play.fill", key: "run")
-                .action("Run Script", role: script.needsConfirmation ? .critical : .primary) {
+                .action("Run Script", role: script.needsConfirmation ? .critical : .primary, confirm: .none) {
                     do {
                         self.outputs[script.id] = Self.shownOutput(try await self.run(script, arguments: arguments))
                     } catch {
@@ -313,23 +307,17 @@ final class ScriptCommands: StackbarPlugin {
     }
 
     /// A script's row in the panel and in Script Commands. Return or a click
-    /// runs it; one that asks first needs a second press.
+    /// runs it; Stackbar asks for a second press on one that asks first and
+    /// can run (one that can't says why on the first press).
     func scriptRow(_ script: Script) -> Row {
-        Row(script.title, subtitle: [script.package, script.name].compactMap { $0 }.joined(separator: " · "), symbol: "terminal", key: script.id)
+        let runnable = (try? Self.interpreter(for: script)) != nil && !script.arguments.contains { !$0.optional }
+        let confirm: Confirm = script.needsConfirmation && runnable ? "run \(script.title)" : .none
+        return Row(script.title, subtitle: [script.package, script.name].compactMap { $0 }.joined(separator: " · "), symbol: "terminal", key: script.id)
             .badge(script.interpreter ?? "no #!", role: script.interpreter.map { Self.interpreters.contains($0) } == true ? .secondary : .critical)
-            .action("Run") {
-                // Refuse first, so a script that can't run says so before it asks for a second press.
+            .action("Run", confirm: confirm) {
                 _ = try Self.interpreter(for: script)
                 if let missing = script.arguments.first(where: { !$0.optional }) {
                     throw HostError("\(script.title) needs \(missing.placeholder); run it from the palette")
-                }
-                if script.needsConfirmation {
-                    guard self.armedNow == "run:\(script.id)" else {
-                        self.arm("run:\(script.id)")
-                        Stackbar.hud("Press Run again within 10 s to run \(script.title)")
-                        return
-                    }
-                    self.armed = nil
                 }
                 let (ok, message) = try await self.perform(script, arguments: script.arguments.map { _ in "" })
                 guard ok else { throw HostError(message ?? "") }

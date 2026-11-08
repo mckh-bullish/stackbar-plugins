@@ -8,7 +8,12 @@ Pick a color from anywhere on screen and copy it. Run **Pick Color** from the pa
 - **Surfaces:** panel, settings.
 - **Commands:** Pick Color, Picked Colors, Convert Color (type a hex color like #0A60C8 in the palette).
 - **Settings:** copy as hex (`#0A60C8`), RGB (`rgb(10, 96, 200)`), HSL (`hsl(213, 90%, 41%)`) or SwiftUI (`Color(red: 0.039, green: 0.376, blue: 0.784)`), and Clear Picked Colors.
-- **Requires:** Stackbar 0.26.0 or later.
+- **Requires:** Stackbar 0.35.0 or later.
+
+## What's new in 1.2.0
+
+- Clear Picked Colors asks through Stackbar, naming how many colors go.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 1.1.0
 

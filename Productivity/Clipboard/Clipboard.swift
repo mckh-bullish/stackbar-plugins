@@ -15,7 +15,7 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.12.0",
+        version: "1.13.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
@@ -25,7 +25,7 @@ final class Clipboard: StackbarPlugin {
         // the panel stays on the menu bar icon.
         hotkey: "cmd+shift+v",
         hotkeyCommand: "search",
-        minimumStackbar: "0.31.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Clipboard",
         accent: .blue,
         symbol: "doc.on.clipboard.fill"
@@ -274,15 +274,6 @@ final class Clipboard: StackbarPlugin {
     var lastError: String?
     /// A pattern typed in Settings that isn't a regex, shown where it was typed.
     var settingsError: String?
-    /// The clear button clicked once ("clear" or "clear-all"), waiting for a second click.
-    var armedClear: String?
-    private var armedClearAt = Date.distantPast
-    var armedClearNow: String? { armedClear.flatMap { Date().timeIntervalSince(armedClearAt) < 10 ? $0 : nil } }
-    func confirmClear(_ which: String, keepPinned: Bool) {
-        guard armedClearNow == which else { armedClear = which; armedClearAt = Date(); return }
-        armedClear = nil
-        clear(keepPinned: keepPinned)
-    }
 
     var entries: [Entry] {
         get {
@@ -645,7 +636,8 @@ final class Clipboard: StackbarPlugin {
             }
             Toggle("Keep images", isOn: keepImages) { self.keepImages = $0 }
             Toggle("Find images by the text in them", isOn: readImageText) { self.readImageText = $0 }
-            Button(armedClearNow == "clear" ? "Click again to clear \(entries.filter { !$0.pinned }.count) items" : "Clear history (keeps pinned)", symbol: "trash", role: .critical, key: "clear") { self.confirmClear("clear", keepPinned: true) }
+            let unpinned = entries.filter { !$0.pinned }.count
+            Button("Clear history (keeps pinned)", symbol: "trash", role: .critical, key: "clear", confirm: "clear \(unpinned) item\(unpinned == 1 ? "" : "s")") { self.clear(keepPinned: true) }
         }
         Section("Ignored apps") {
             ignoredAppsContent
@@ -662,7 +654,7 @@ final class Clipboard: StackbarPlugin {
             ignoredText
         }
         Section {
-            Button(armedClearNow == "clear-all" ? "Click again to clear all \(entries.count) items" : "Clear everything, including pinned", symbol: "trash.slash", role: .critical, key: "clear-all") { self.confirmClear("clear-all", keepPinned: false) }
+            Button("Clear everything, including pinned", symbol: "trash.slash", role: .critical, key: "clear-all", confirm: "clear all \(entries.count) item\(entries.count == 1 ? "" : "s"), pinned too") { self.clear(keepPinned: false) }
         }
     }
 
@@ -732,7 +724,7 @@ final class Clipboard: StackbarPlugin {
             row = row.action(paused ? "Resume Recording" : "Pause Recording") { self.paused.toggle() }
                 .action(ignoreNext ? "Keep Next Copy" : "Ignore Next Copy") { self.ignoreNext.toggle() }
         }
-        return row.action("Delete", shortcut: "option+delete", role: .critical) { self.delete(entry.id) }
+        return row.action("Delete", shortcut: "option+delete", role: .critical, confirm: .none) { self.delete(entry.id) }
     }
 
     /// The selected row's preview: the text past its first line, the image,
@@ -822,9 +814,9 @@ final class Clipboard: StackbarPlugin {
                     List {
                         let unpinned = all.filter { !$0.pinned }.count
                         Row("Clear \(unpinned) item\(unpinned == 1 ? "" : "s")", subtitle: "Pinned items stay", symbol: "trash", key: "confirm")
-                            .action("Clear", role: .critical) { self.clear() }
+                            .action("Clear", role: .critical, confirm: .none) { self.clear() }
                         Row("Clear everything, including \(all.count - unpinned) pinned", symbol: "trash.slash", key: "confirm-all")
-                            .action("Clear Everything", role: .critical) { self.clear(keepPinned: false) }
+                            .action("Clear Everything", role: .critical, confirm: .none) { self.clear(keepPinned: false) }
                     }
                 }
             }

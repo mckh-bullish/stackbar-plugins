@@ -32,7 +32,7 @@ final class BrowserTabs: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.browser-tabs",
         name: "Browser Tabs",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Switch to any open tab in Safari, Chrome, Arc, Brave or Edge, and search your bookmarks.",
         surfaces: [.panel],
         triggers: [.launch],
@@ -43,7 +43,7 @@ final class BrowserTabs: StackbarPlugin {
             .apps,
             .files(paths: browsers.compactMap(\.profile)),
         ],
-        minimumStackbar: "0.31.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/BrowserTabs",
         accent: .cyan,
         symbol: "rectangle.stack.fill"
@@ -370,7 +370,7 @@ final class BrowserTabs: StackbarPlugin {
             .action("Switch to Tab") { try await self.focus(tab) }
             .action("Copy Link", shortcut: "cmd+shift+c") { Stackbar.copy(tab.url) }
             .action("Copy as Markdown Link") { Stackbar.copy(Self.markdownLink(title: tab.title, url: tab.url)) }
-            .action("Close Tab", shortcut: "cmd+w", role: .critical) { try await self.close(tab) }
+            .action("Close Tab", shortcut: "cmd+w", role: .critical, confirm: .none) { try await self.close(tab) }
         return inPanel ? row.hiddenFromPalette() : row
     }
 

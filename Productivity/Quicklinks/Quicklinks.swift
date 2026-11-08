@@ -19,7 +19,7 @@ final class Quicklinks: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.quicklinks",
         name: "Quicklinks",
-        version: "1.6.1",
+        version: "1.7.0",
         summary: "Open links and folders by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -29,7 +29,7 @@ final class Quicklinks: StackbarPlugin {
         // domain of each web link shown in the launcher (off until you turn
         // them on in Settings).
         capabilities: [.openURLs(schemes: ["*"]), .clipboard, .context, .network("icons.duckduckgo.com")],
-        minimumStackbar: "0.20.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Quicklinks",
         accent: .cyan,
         symbol: "link"
@@ -509,7 +509,7 @@ final class Quicklinks: StackbarPlugin {
                 copy.name = link.name + " 2"
                 self.links.append(copy)
             }
-            .action("Delete", shortcut: "ctrl+x", role: .critical) {
+            .action("Delete", shortcut: "ctrl+x", role: .critical, confirm: "delete \(link.name)") {
                 self.links.removeAll { $0.id == link.id }
             }
     }

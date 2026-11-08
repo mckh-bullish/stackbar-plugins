@@ -10,12 +10,12 @@ final class Timers: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.timers",
         name: "Timers",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Countdown timers from the palette, several at once, the soonest in the menu bar.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .every(.seconds(1)), .wake],
         capabilities: [],
-        minimumStackbar: "0.26.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Timers",
         accent: .orange,
         symbol: "timer"
@@ -352,7 +352,7 @@ final class Timers: StackbarPlugin {
             .action("Add 1 Minute") { self.extend(timer.id, by: 60) }
             .action("Add 5 Minutes") { self.extend(timer.id, by: 300) }
             .action(timer.paused == nil ? "Pause" : "Resume") { self.togglePause(timer.id) }
-            .action("Cancel Timer", role: .critical) { self.cancel(timer.id) }
+            .action("Cancel Timer", role: .critical, confirm: "cancel \(timer.name)") { self.cancel(timer.id) }
     }
 
     var panel: ViewContent {

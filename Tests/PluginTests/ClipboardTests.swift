@@ -180,15 +180,18 @@ final class ClipboardTests: XCTestCase {
         let host = Host(self)
         let id = "io.navbytes.stackbar.clipboard"
         try await host.services.storage.set("history", #"[{"id":"a","kind":"text","text":"one","files":[],"firstCopied":0,"lastCopied":100,"count":1,"pinned":false},{"id":"b","kind":"text","text":"two","files":[],"firstCopied":0,"lastCopied":200,"count":1,"pinned":false}]"#, for: id)
-        let supervisor = try await host.start("Clipboard")
+        let session = try await host.session("Clipboard")
         let clear = ActionID("button/clear")
-        await supervisor.press(clear)
+        let settings = await session.view(.settings)
+        XCTAssertEqual(settings?.confirmations[clear], "clear 2 items")
+        let held = try await session.event(clear)
+        XCTAssertNotNil(held, "Stackbar holds the first click")
         let afterOne = await history(host, id).count
         XCTAssertEqual(afterOne, 2, "the first click only asks")
-        await supervisor.press(clear)
+        try await session.event(clear)
         let cleared = await waitUntil { await self.history(host, id).isEmpty }
         XCTAssertTrue(cleared, "the second click clears the unpinned copies")
-        await supervisor.stop()
+        await session.stop()
     }
 
     private func history(_ host: Host, _ id: String) async -> [[String: Any]] {

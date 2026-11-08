@@ -29,7 +29,7 @@ using the most a click away and a notification when something stays high.
   speed, or CPU temperature), and the alerts and the CPU line.
 - **Agent tool:** `usage` returns CPU, memory, pressure, swap, disk, network,
   temperatures and the busiest processes.
-- **Requires:** Stackbar 0.26.0 or later.
+- **Requires:** Stackbar 0.35.0 or later.
 
 ## Highlights
 
@@ -54,6 +54,11 @@ fans.
 ### On your desktop too
 A widget shows your Mac's load without opening anything.
 <!-- preview: widget -->
+
+## What's new in 1.8.0
+
+- Quit Process asks through Stackbar, naming the process and its pid.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 1.7.0
 

@@ -10,7 +10,7 @@ merged ones left behind are cleaned up in one go.
   remotes over SSH, and to open folders in your editor, terminal or Finder.
   It never reads your files itself: git runs only in the folders you
   choose, and each plugin's Settings page lists them with Remove. Needs
-  Stackbar 0.34.0 or later, and git (the Xcode Command Line Tools or
+  Stackbar 0.35.0 or later, and git (the Xcode Command Line Tools or
   Homebrew's).
 - **Surfaces:** menu bar (only when something is behind, by default),
   panel, window, widget, settings.
@@ -64,6 +64,11 @@ up the merged ones.
 ### On your desktop too
 A widget with what's behind and unpushed, and an Update button.
 <!-- preview: widget -->
+
+## What's new in 1.1.0
+
+- Clean Up asks through Stackbar before it removes merged worktrees, naming how many.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 1.0.0
 

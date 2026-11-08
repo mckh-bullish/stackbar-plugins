@@ -9,11 +9,16 @@ Edge and Vivaldi keep, and opens one in its browser.
 - **Needs:** running `osascript` to read and switch tabs (macOS asks once to
   let Stackbar control each browser), `cat` to read each Chromium browser's
   `Bookmarks` file in its profile folder, and the list of running apps, so a
-  browser that isn't open is never started. Stackbar 0.31.0 or later.
+  browser that isn't open is never started. Stackbar 0.35.0 or later.
 - **Surfaces:** panel (the open tabs).
 - **Commands:** Search Browser Tabs, Search Bookmarks.
 - **Leaves out:** Safari's bookmarks, which macOS keeps behind Full Disk
   Access, and browser profiles other than the default one.
+
+## What's new in 1.2.0
+
+- Close Tab says outright that it closes at once, so Stackbar doesn't ask.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 1.1.0
 

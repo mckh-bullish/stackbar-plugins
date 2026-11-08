@@ -13,12 +13,12 @@ final class AppSwitcher: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.app-switcher",
         name: "App Switcher",
-        version: "1.3.0",
+        version: "1.4.0",
         summary: "Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .apps, .every(.seconds(60))],
         capabilities: [.apps, .keyLayer, .openURLs(schemes: ["x-apple.systempreferences"])],
-        minimumStackbar: "0.21.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/AppSwitcher",
         accent: .indigo,
         symbol: "command"
@@ -79,9 +79,6 @@ final class AppSwitcher: StackbarPlugin {
     var notice: String?
     /// The layer last sent, so an unchanged map isn't sent again.
     var sent: KeyLayer?
-    /// When "Clear every pin" was last clicked: a second click within 10 seconds clears.
-    var clearArmedAt = Date.distantPast
-    var clearArmed: Bool { Date().timeIntervalSince(clearArmedAt) < 10 }
 
     func refresh() async throws {
         do {
@@ -296,12 +293,7 @@ final class AppSwitcher: StackbarPlugin {
             Toggle("Give running apps their first letter", isOn: autoLetters) { value in await self.set { self.autoLetters = value } }
             Toggle("Open pinned apps that aren't running", isOn: openPinned) { value in await self.set { self.openPinned = value } }
             if !pins.isEmpty {
-                Button(clearArmed ? "Click again to clear every pin" : "Clear every pin", symbol: "pin.slash", role: .critical, key: "clear-pins") {
-                    guard self.clearArmed else {
-                        self.clearArmedAt = Date()
-                        return
-                    }
-                    self.clearArmedAt = .distantPast
+                Button("Clear every pin", symbol: "pin.slash", role: .critical, key: "clear-pins", confirm: "clear \(pins.count) pinned letter\(pins.count == 1 ? "" : "s")") {
                     await self.set { self.pins = [:] }
                 }
             }
@@ -331,7 +323,7 @@ final class AppSwitcher: StackbarPlugin {
             .view { _ in
                 List {
                     Row("Clear Every Pin Now", subtitle: "\(self.pins.count) pinned \(self.pins.count == 1 ? "letter" : "letters") will go back to each app's first letter", symbol: "pin.slash", key: "confirm")
-                        .action("Clear", role: .critical) {
+                        .action("Clear", role: .critical, confirm: .none) {
                             await self.set { self.pins = [:] }
                             self.notice = "Cleared every pin"
                         }

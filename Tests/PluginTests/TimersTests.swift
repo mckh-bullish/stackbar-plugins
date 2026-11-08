@@ -107,7 +107,7 @@ final class TimersTests: XCTestCase {
         _ = await supervisor.runCommand("start", arguments: ["for": "10m tea"], source: .palette)
         _ = await waitUntil { await self.lengths(supervisor).count == 1 }
         let pause = await supervisor.views[.panel]?.tree.lazy.compactMap { node -> ActionID? in
-            if case .tappable(_, let action) = node, action.rawValue.hasPrefix("button/pause-") { return action }
+            if case .tappable(_, let action, _) = node, action.rawValue.hasPrefix("button/pause-") { return action }
             return nil
         }.first
         let action = try XCTUnwrap(pause, "no pause button")

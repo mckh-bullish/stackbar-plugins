@@ -158,12 +158,14 @@ final class WindowsTests: XCTestCase {
         guard let restore = commands.first(where: { $0.id.hasPrefix("restore-") }) else { return XCTFail("each layout is a command") }
         let id = String(restore.id.dropFirst("restore-".count))
 
-        await supervisor.press(ActionID("button/delete-\(id)"))
-        let afterOne = await supervisor.callTool("layouts").text
-        XCTAssertTrue(afterOne.contains("Desk"), "one click only asks")
-        await supervisor.press(ActionID("button/delete-\(id)"))
-        let afterTwo = await supervisor.callTool("layouts").text
-        XCTAssertEqual(afterTwo, "No layouts saved", "the second click deletes it")
+        // Stackbar asks for the second click; the plugin only says what it confirms.
+        let delete = ActionID("button/delete-\(id)")
+        _ = await waitUntil { await supervisor.views[.panel]?.confirmations[delete] != nil }
+        let panel = await supervisor.views[.panel]
+        XCTAssertEqual(panel?.confirmations[delete], "delete Desk")
+        await supervisor.press(delete)
+        let after = await supervisor.callTool("layouts").text
+        XCTAssertEqual(after, "No layouts saved", "the confirmed click deletes it")
         await supervisor.stop()
     }
 

@@ -24,12 +24,12 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.11.0",
+        version: "1.12.0",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(20)), .wake],
         capabilities: [.network("api.github.com"), .secret(name: "GITHUB_TOKEN"), .userServer(secret: "GITHUB_ENTERPRISE_URL")],
-        minimumStackbar: "0.31.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/PRCockpit",
         accent: .violet,
         symbol: "arrow.triangle.pull"
@@ -332,13 +332,8 @@ final class PRCockpit: StackbarPlugin {
     /// Whether the inbox has loaded once, so an empty one still has a
     /// "before" to compare a new mention against.
     var inboxLoaded = false
-    /// When the inbox was last fetched for the palette, and when Mark All as
-    /// Read was first pressed (the second press within 10 s does it).
+    /// When the inbox was last fetched for the palette.
     var inboxFetched: Date?
-    var markAllArmed: Date?
-    /// The approval a first press asked for ("approve:<id>"), and when.
-    var approveArmed: String?
-    var approveArmedAt = Date.distantPast
     var recentlyClosed: [PullRequest] = []
     var issues: [Issue] = []
     var issuesError: String?
@@ -387,9 +382,6 @@ final class PRCockpit: StackbarPlugin {
     /// What each pull request looked like (updated, rollup) when its checks
     /// were fetched; a change means they're worth fetching again.
     var checksStamp: [String: String] = [:]
-    /// The re-run a first press asked for, and when.
-    var rerunArmed: String?
-    var rerunArmedAt = Date.distantPast
 
     /// github.com's API, or the Enterprise server's (`/api/v3` and `/api/graphql`).
     var apiBase: String { enterprise ? (enterpriseServer ?? "") + "/api/v3" : "https://api.github.com" }
@@ -558,19 +550,16 @@ final class PRCockpit: StackbarPlugin {
         inboxFetched = Date()
     }
 
+    /// What Mark All as Read asks before it runs: Stackbar holds the first
+    /// press. The inbox loads up to 40, so 40 may be only some of them.
+    var markAllConfirm: Confirm {
+        "mark \(inbox.count >= 40 ? "all your GitHub notifications" : "\(inbox.count)") as read"
+    }
+
     /// Marks notifications as read on GitHub, up to the last fetch: GitHub
     /// marks the whole account unless told otherwise, and anything that arrived
-    /// since would be marked read unseen. The first press only asks for a second
-    /// one within 10 seconds, as the other bulk actions do.
+    /// since would be marked read unseen.
     func markAllRead() async {
-        guard let armed = markAllArmed, Date().timeIntervalSince(armed) < 10 else {
-            markAllArmed = Date()
-            // The inbox loads up to 40, so 40 may be only some of them.
-            let scope = inbox.count >= 40 ? "all your GitHub notifications" : "\(inbox.count)"
-            Stackbar.hud("Press again within 10 s to mark \(scope) as read")
-            return
-        }
-        markAllArmed = nil
         let count = inbox.count
         do {
             guard let token = try await Stackbar.secret("GITHUB_TOKEN"), !token.isEmpty else { throw HostError("Add a GitHub token first") }
@@ -737,17 +726,8 @@ final class PRCockpit: StackbarPlugin {
     }
 
     /// Approves a pull request, then refreshes the lists so it leaves the queue.
-    /// The first press only asks for a second one within 10 seconds, as the
-    /// other bulk actions do, so a stray click doesn't approve anything.
+    /// The action carries confirm, so a stray click doesn't approve anything.
     func approve(_ pr: PullRequest) async {
-        let id = "approve:\(pr.id)"
-        guard approveArmed == id, Date().timeIntervalSince(approveArmedAt) < 10 else {
-            approveArmed = id
-            approveArmedAt = Date()
-            Stackbar.hud("Press Approve again within 10 s to approve \(pr.id)")
-            return
-        }
-        approveArmed = nil
         do {
             _ = try await rest("/repos/\(pr.repo)/pulls/\(pr.number)/reviews", method: "POST", body: JSONSerialization.data(withJSONObject: ["event": "APPROVE"]), timeout: Self.refreshTimeout)
             Stackbar.hud("Approved \(pr.id)")
@@ -1014,7 +994,7 @@ final class PRCockpit: StackbarPlugin {
             .action("Hide \(pr.repo)") { if !self.hiddenRepos.contains(pr.repo) { self.hiddenRepos.append(pr.repo) } }
             .action("Copy link") { Stackbar.copy(pr.url) }
         if toReview.contains(where: { $0.id == pr.id }) {
-            row = row.action("Approve", shortcut: "cmd+shift+a") { await self.approve(pr) }
+            row = row.action("Approve", shortcut: "cmd+shift+a", confirm: "approve \(pr.id)") { await self.approve(pr) }
         }
         if let branch = pr.headRefName {
             row = row.action("Copy branch name") { Stackbar.copy(branch) }
@@ -1092,7 +1072,7 @@ final class PRCockpit: StackbarPlugin {
                     if inbox.isEmpty {
                         if inboxError == nil { EmptyState("Inbox zero", symbol: "tray", message: "No GitHub notifications.", theme: .success) }
                     } else {
-                        ActionButton("Mark All as Read", symbol: "checkmark.circle", theme: theme, key: "inbox-mark-all") { await self.markAllRead() }
+                        ActionButton("Mark All as Read", symbol: "checkmark.circle", theme: theme, key: "inbox-mark-all", confirm: markAllConfirm) { await self.markAllRead() }
                         List(inbox, searchable: true) { item in inboxRow(item) }
                     }
                 } else if currentTab == .issues {
@@ -1394,7 +1374,7 @@ final class PRCockpit: StackbarPlugin {
                     List(searchable: true) {
                         ForEach(self.inbox) { item in self.inboxRow(item) }
                         Row("Mark All as Read", symbol: "checkmark.circle", key: "inbox-mark-all")
-                            .action("Mark All as Read") { await self.markAllRead() }
+                            .action("Mark All as Read", confirm: self.markAllConfirm) { await self.markAllRead() }
                     }
                 }
             }
@@ -1838,18 +1818,10 @@ extension PRCockpit {
         await loadDetails(url, maxAge: 15)
     }
 
-    /// Re-runs a workflow run's failed jobs (or all of them). The first
-    /// press only asks for a second one within 10 seconds.
+    /// Re-runs a workflow run's failed jobs (or all of them). The actions
+    /// carry confirm, so Stackbar holds the first press.
     func rerun(_ url: String, runID: Int, failedOnly: Bool) async {
         guard let parts = Self.parts(of: url) else { return }
-        let key = "\(runID)-\(failedOnly)"
-        guard rerunArmed == key, Date().timeIntervalSince(rerunArmedAt) < 10 else {
-            rerunArmed = key
-            rerunArmedAt = Date()
-            Stackbar.hud("Press again within 10 s to re-run \(failedOnly ? "the failed jobs" : "every job")")
-            return
-        }
-        rerunArmed = nil
         do {
             _ = try await rest("/repos/\(parts.owner)/\(parts.name)/actions/runs/\(runID)/\(failedOnly ? "rerun-failed-jobs" : "rerun")", method: "POST", body: Data("{}".utf8), timeout: Self.refreshTimeout)
             Stackbar.hud(failedOnly ? "Re-running the failed jobs" : "Re-running every job")
@@ -1929,10 +1901,10 @@ extension PRCockpit {
         if check.isRequired { row = row.badge("Required", role: check.state == .failed ? .critical : .secondary) }
         if let link = check.url { row = row.action("Open log") { Stackbar.open(link) } }
         if let runID = check.runID, check.state == .failed || check.state == .cancelled {
-            row = row.action("Re-run failed jobs") { await self.rerun(url, runID: runID, failedOnly: true) }
+            row = row.action("Re-run failed jobs", confirm: "re-run the failed jobs of \(check.title)") { await self.rerun(url, runID: runID, failedOnly: true) }
         }
         if let runID = check.runID, check.state == .failed || check.state == .cancelled {
-            row = row.action("Re-run all jobs") { await self.rerun(url, runID: runID, failedOnly: false) }
+            row = row.action("Re-run all jobs", confirm: "re-run every job of \(check.title)") { await self.rerun(url, runID: runID, failedOnly: false) }
         }
         if !check.annotations.isEmpty {
             row = row.preview(text: check.annotations.joined(separator: "\n"), caption: check.failedStep)
@@ -1957,7 +1929,7 @@ extension PRCockpit {
         var summary = Row(found.summary, subtitle: found.deployments.isEmpty ? "Checks" : "Checks and deployments", symbol: found.failed.isEmpty ? (found.isRunning ? "hourglass" : "checkmark.seal") : "exclamationmark.triangle.fill", key: "checks-\(url)")
             .action("Open checks page") { Stackbar.open(url + "/checks") }
         if failedRuns.count == 1, let run = failedRuns.first {
-            summary = summary.action("Re-run failed jobs") { await self.rerun(url, runID: run, failedOnly: true) }
+            summary = summary.action("Re-run failed jobs", confirm: "re-run the failed jobs") { await self.rerun(url, runID: run, failedOnly: true) }
         }
         summary = summary.action("Copy summary") { Stackbar.copy(self.checksText(self.pull(url), found)) }
             .action("Refresh checks") { await self.loadDetails(url) }

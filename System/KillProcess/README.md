@@ -8,7 +8,7 @@ seconds. When several processes share a name, one action quits them all. The
 panel lists the heaviest processes, by CPU or memory, each with its command
 line.
 
-- **Needs:** running `ps` and `kill`. Stackbar 0.26.0 or later.
+- **Needs:** running `ps` and `kill`. Stackbar 0.35.0 or later.
 - **Surfaces:** panel (the heaviest processes now), settings.
 - **Commands:** Kill Process.
 - **Settings:** an alert when one of your processes stays busy: on or off,
@@ -17,6 +17,11 @@ line.
   Dock, launchd and Stackbar itself, which would log you out or freeze the
   screen.
 - To free a port, use Ports; for the whole-system view, use System Monitor.
+
+## What's new in 1.3.0
+
+- Quit, Force Quit and Quit All ask through Stackbar, naming the process and its pid.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 1.2.0
 

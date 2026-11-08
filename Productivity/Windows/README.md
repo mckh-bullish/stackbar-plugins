@@ -13,7 +13,7 @@ can uninstall it from its page in Settings.
 
 - **Needs:** `.windows`: the host lists and moves windows through
   Accessibility, so Stackbar asks for Accessibility access the first time.
-  Stackbar 0.25.0 or later.
+  Stackbar 0.35.0 or later.
 - **Surfaces:** menu bar (off by default), panel, settings.
 - **Snapping:** halves, the four quarters, First / Center / Last Third,
   First / Last Two Thirds, Maximize, Almost Maximize, Center, Next Display,
@@ -29,6 +29,11 @@ can uninstall it from its page in Settings.
 - **Agent tools:** `snap`, `layouts`, `save_layout` and `restore_layout`.
 - **Not covered:** windows in full screen and on other Spaces, and browser
   tabs.
+
+## What's new in 2.2.0
+
+- Deleting a layout, or every layout, asks through Stackbar, naming what goes.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 2.1.0
 

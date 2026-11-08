@@ -11,12 +11,12 @@ final class Ports: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.ports",
         name: "Ports",
-        version: "1.4.2",
+        version: "1.5.0",
         summary: "Which process is listening on which port, and a way to stop it.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .every(.seconds(30))],
         capabilities: [.run(commands: ["lsof", "kill"])],
-        minimumStackbar: "0.21.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Ports",
         accent: .teal,
         symbol: "point.3.connected.trianglepath.dotted"
@@ -28,13 +28,6 @@ final class Ports: StackbarPlugin {
         PreviewScene("hero", "What's listening, and one click to stop it") { plugin in
             plugin.listeners = samples
             plugin.loaded = true
-        },
-        PreviewScene("confirm", "Asks before it stops anything") { plugin in
-            plugin.listeners = samples
-            plugin.loaded = true
-            plugin.arm("stop:48211:127.0.0.1:3000")
-            plugin.notice = "Press Stop Process again within 10 s to stop node (pid 48211)"
-            plugin.noticeOK = false
         },
     ]
 
@@ -66,12 +59,6 @@ final class Ports: StackbarPlugin {
     var problem: String?
     var notice: String?
     var noticeOK = true
-    /// The stop or force quit pressed once, waiting for a second press.
-    var armed: String?
-    var armedAt = Date.distantPast
-    static let armWindow: TimeInterval = 10
-    var armedNow: String? { armed.flatMap { Date().timeIntervalSince(armedAt) < Self.armWindow ? $0 : nil } }
-    func arm(_ id: String) { armed = id; armedAt = Date() }
 
     @Stored("hideSystem") var hideSystem = true
     @Stored("minimumPort") var minimumPort = 1024
@@ -236,28 +223,11 @@ final class Ports: StackbarPlugin {
         if !listener.isLocalOnly { row = row.badge("LAN", role: .warning) }
         return row
             .action("Open in Browser") { Stackbar.open("http://localhost:\(listener.port)") }
-            .action("Stop Process", shortcut: "cmd+.", role: .critical) {
-                guard self.armedNow == "stop:\(listener.id)" else {
-                    let prompt = "Press Stop Process again within 10 s to stop \(listener.process) (pid \(listener.pid))"
-                    self.arm("stop:\(listener.id)")
-                    self.notice = prompt
-                    self.noticeOK = false
-                    Stackbar.hud(prompt)
-                    return
-                }
-                self.armed = nil
+            // Stackbar asks for a second press before either runs.
+            .action("Stop Process", shortcut: "cmd+.", role: .critical, confirm: "stop \(listener.process) (pid \(listener.pid)) on :\(listener.port)") {
                 _ = try await self.stop(listener, force: false)
             }
-            .action("Force Quit Process", shortcut: "cmd+shift+.", role: .critical) {
-                guard self.armedNow == "kill:\(listener.id)" else {
-                    let prompt = "Press Force Quit Process again within 10 s to force quit \(listener.process) (pid \(listener.pid))"
-                    self.arm("kill:\(listener.id)")
-                    self.notice = prompt
-                    self.noticeOK = false
-                    Stackbar.hud(prompt)
-                    return
-                }
-                self.armed = nil
+            .action("Force Quit Process", shortcut: "cmd+shift+.", role: .critical, confirm: "force quit \(listener.process) (pid \(listener.pid)) on :\(listener.port)") {
                 _ = try await self.stop(listener, force: true)
             }
             .action("Copy PID", shortcut: "cmd+shift+c") { Stackbar.copy("\(listener.pid)") }
@@ -281,7 +251,7 @@ final class Ports: StackbarPlugin {
             .argument("port", placeholder: "3000")
             .argument("signal", required: false, default: "TERM", options: ["TERM", "KILL"])
             .view(search: { _ in
-                // A "Press again" from the panel doesn't belong in this view.
+                // A result from the panel doesn't belong in this view.
                 self.notice = nil
                 await self.loadIfStale()
             }) { invocation in
@@ -296,7 +266,7 @@ final class Ports: StackbarPlugin {
                     } else {
                         List(holders) { holder in
                             Row("\(force ? "Force quit" : "Stop") \(holder.process) on :\(port)", subtitle: "pid \(holder.pid) · Return to confirm", symbol: "xmark.octagon", key: "confirm-\(holder.pid)")
-                                .action(force ? "Force Quit" : "Stop", role: .critical) { _ = try await self.stop(holder, force: force) }
+                                .action(force ? "Force Quit" : "Stop", role: .critical, confirm: .none) { _ = try await self.stop(holder, force: force) }
                         }
                     }
                 } else {

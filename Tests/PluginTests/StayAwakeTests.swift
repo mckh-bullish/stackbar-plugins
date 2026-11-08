@@ -27,7 +27,7 @@ final class StayAwakeTests: XCTestCase {
 
         // The durations are chips: buttons keyed by their minutes.
         let hour = await supervisor.views[.panel]?.tree.lazy.compactMap { node -> ActionID? in
-            if case .tappable(_, let action) = node, action.rawValue == "button/for-60" { return action }
+            if case .tappable(_, let action, _) = node, action.rawValue == "button/for-60" { return action }
             return nil
         }.first
         await supervisor.press(try XCTUnwrap(hour, "no one-hour chip"))

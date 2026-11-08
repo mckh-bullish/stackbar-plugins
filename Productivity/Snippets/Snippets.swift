@@ -20,7 +20,7 @@ final class Snippets: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.snippets",
         name: "Snippets",
-        version: "1.6.0",
+        version: "1.7.0",
         summary: "Paste text by name, with placeholders filled in.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
@@ -29,7 +29,7 @@ final class Snippets: StackbarPlugin {
         // expand as you type.
         capabilities: [.clipboard, .context, .storage(megabytes: 16), .textExpansion],
         hotkey: "ctrl+option+s",
-        minimumStackbar: "0.24.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Snippets",
         accent: .indigo,
         symbol: "text.insert"
@@ -329,7 +329,7 @@ final class Snippets: StackbarPlugin {
                 copy.keyword = nil
                 self.snippets.append(copy)
             }
-            .action("Delete", shortcut: "ctrl+x", role: .critical) {
+            .action("Delete", shortcut: "ctrl+x", role: .critical, confirm: "delete \(snippet.name)") {
                 self.snippets.removeAll { $0.id == snippet.id }
             }
     }

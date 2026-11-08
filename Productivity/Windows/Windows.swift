@@ -17,12 +17,12 @@ final class Windows: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.workspaces",
         name: "Windows",
-        version: "2.1.0",
+        version: "2.2.0",
         summary: "Snap the front window to halves, thirds or quarters, and save where your windows go for each monitor setup.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .wake, .displays],
         capabilities: [.windows],
-        minimumStackbar: "0.25.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/Windows",
         accent: .indigo,
         symbol: "macwindow.on.rectangle",
@@ -87,10 +87,6 @@ final class Windows: StackbarPlugin {
     var snapshot: WindowSnapshot?
     var problem: String?
     var notice: String?
-    /// The layout (or "all") whose delete waits for a second click, and when it was armed.
-    var armedDelete: String?
-    var armedDeleteAt = Date.distantPast
-    func isArmed(_ id: String) -> Bool { armedDelete == id && Date().timeIntervalSince(armedDeleteAt) < 10 }
 
     func refresh() async throws {
         let reason = Stackbar.refreshReason
@@ -507,13 +503,7 @@ final class Windows: StackbarPlugin {
                     self.notice = "“\(layout.name)” belongs to \(layout.setupName); save a new layout for this setup instead"
                 }
             }
-            IconButton(isArmed(layout.id) ? "trash.fill" : "trash", label: isArmed(layout.id) ? "Click again to delete \(layout.name)" : "Delete \(layout.name)", theme: isArmed(layout.id) ? .critical : theme, key: "delete-\(layout.id)") {
-                guard self.isArmed(layout.id) else {
-                    self.armedDelete = layout.id
-                    self.armedDeleteAt = Date()
-                    return
-                }
-                self.armedDelete = nil
+            IconButton("trash", label: "Delete \(layout.name)", theme: theme, key: "delete-\(layout.id)", confirm: "delete \(layout.name)") {
                 self.delete(layout)
             }
         }
@@ -543,13 +533,7 @@ final class Windows: StackbarPlugin {
         Section("Layouts") {
             Text("\(Self.count(layouts.count, "layout")) saved across \(Self.count(Set(layouts.map(\.setupID)).count, "setup")). Each one is a command you can give a hotkey in Stackbar's Settings.").role(.secondary)
             if !layouts.isEmpty {
-                Button(isArmed("all") ? "Click again to delete every layout" : "Delete every layout", symbol: "trash", role: .critical, key: "delete-all") {
-                    guard self.isArmed("all") else {
-                        self.armedDelete = "all"
-                        self.armedDeleteAt = Date()
-                        return
-                    }
-                    self.armedDelete = nil
+                Button("Delete every layout", symbol: "trash", role: .critical, key: "delete-all", confirm: "delete \(Self.count(layouts.count, "layout"))") {
                     self.layouts = []
                     self.defaults = [:]
                 }

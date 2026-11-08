@@ -15,12 +15,12 @@ final class Linear: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.linear",
         name: "Linear",
-        version: "1.6.0",
+        version: "1.7.0",
         summary: "Your assigned Linear issues and inbox: change status and priority, start work, comment, and new issues from the palette.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(5), .wake],
         capabilities: [.network("api.linear.app"), .secret(name: "LINEAR_API_KEY")],
-        minimumStackbar: "0.22.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Linear",
         accent: .indigo,
         symbol: "circle.lefthalf.filled"
@@ -146,8 +146,6 @@ final class Linear: StackbarPlugin {
     /// for, and why a failed one failed.
     var lookupMisses: [String: Date] = [:]
     var lookupProblems: [String: String] = [:]
-    /// When Mark All as Read was first pressed; a second press within 10 s does it.
-    var markAllArmed: Date?
     @Stored("teams") var teams: [Team] = []
     @Stored("defaultTeam") var defaultTeam = ""
     @Stored("menuBarCount") var menuBarCount = "In progress"
@@ -339,15 +337,11 @@ final class Linear: StackbarPlugin {
         }
     }
 
-    /// Marks up to 30 unread inbox entries as read. The first press only asks
-    /// for a second within 10 seconds, as the other bulk actions do.
+    /// What Mark All as Read asks before it runs: Stackbar holds the first press.
+    var markAllConfirm: Confirm { "mark \(min(unread.count, 30)) as read" }
+
+    /// Marks up to 30 unread inbox entries as read.
     func markAllRead() async {
-        guard let armed = markAllArmed, Date().timeIntervalSince(armed) < 10 else {
-            markAllArmed = Date()
-            Stackbar.hud("Press again within 10 s to mark \(min(unread.count, 30)) as read")
-            return
-        }
-        markAllArmed = nil
         var done = 0
         for item in Array(unread.prefix(30)) {
             do {
@@ -630,7 +624,7 @@ final class Linear: StackbarPlugin {
                 if let problem { Banner(problem) }
                 if !unread.isEmpty {
                     Section("Inbox · \(unread.count) new") {
-                        ActionButton("Mark All as Read", symbol: "checkmark.circle", theme: theme, key: "inbox-mark-all") { await self.markAllRead() }
+                        ActionButton("Mark All as Read", symbol: "checkmark.circle", theme: theme, key: "inbox-mark-all", confirm: markAllConfirm) { await self.markAllRead() }
                         ForEach(Array(unread.prefix(5))) { item in self.inboxRow(item) }
                     }
                 }
@@ -706,7 +700,7 @@ final class Linear: StackbarPlugin {
                         ForEach(self.inbox) { item in self.inboxRow(item) }
                         if !self.unread.isEmpty {
                             Row("Mark All as Read", symbol: "checkmark.circle", key: "inbox-mark-all")
-                                .action("Mark All as Read") { await self.markAllRead() }
+                                .action("Mark All as Read", confirm: self.markAllConfirm) { await self.markAllRead() }
                         }
                     }
                 }

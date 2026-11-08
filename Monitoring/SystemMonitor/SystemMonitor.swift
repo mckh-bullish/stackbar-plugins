@@ -15,12 +15,12 @@ final class SystemMonitor: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.system-monitor",
         name: "System Monitor",
-        version: "1.7.0",
+        version: "1.8.0",
         summary: "CPU, memory, disk and network speed in the menu bar, the processes using the most, and alerts when one stays high.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .every(.seconds(10)), .wake],
         capabilities: [.run(commands: ["ps", "sysctl", "vm_stat", "netstat", "df", "kill"]), .sensors],
-        minimumStackbar: "0.26.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/SystemMonitor",
         accent: .green,
         symbol: "gauge.with.dots.needle.67percent"
@@ -198,8 +198,6 @@ final class SystemMonitor: StackbarPlugin {
     /// When the last read started: a palette view reads again only when this
     /// is more than five seconds old.
     var lastAttempt: Date?
-    /// Quit presses waiting for their second press, by key, and when they came.
-    var armed: [String: Date] = [:]
 
     @Stored("menuBarShows") var menuBarShows = "CPU and memory"
     @Stored("sortBy") var sortBy = "CPU"
@@ -772,7 +770,7 @@ final class SystemMonitor: StackbarPlugin {
     func processRow(_ process: ProcessRow) -> Row {
         // The badge shows the sort; the subtitle shows the other number.
         let other = sortBy == "Memory" ? String(format: "%.1f%% CPU", process.cpu) : Self.memory(process.rss)
-        let row = Row(process.command, subtitle: armedText(process) ?? "pid \(process.pid) · \(other)", symbol: "gearshape", key: "\(process.pid)")
+        let row = Row(process.command, subtitle: "pid \(process.pid) · \(other)", symbol: "gearshape", key: "\(process.pid)")
             .badge(sortBy == "Memory" ? Self.memory(process.rss) : String(format: "%.1f%%", process.cpu), role: process.cpu > 80 ? .warning : .secondary)
             .action("Copy PID") { Stackbar.copy("\(process.pid)") }
         return quitAction(row, process)
@@ -780,7 +778,7 @@ final class SystemMonitor: StackbarPlugin {
 
     /// A row in Top Processes, with every process listed.
     func listRow(_ process: ProcessRow) -> Row {
-        let row = Row(process.command, subtitle: armedText(process) ?? "pid \(process.pid) · \(String(format: "%.1f%%", process.cpu)) CPU · \(Self.memory(process.rss))", symbol: "gearshape", key: "\(process.pid)")
+        let row = Row(process.command, subtitle: "pid \(process.pid) · \(String(format: "%.1f%%", process.cpu)) CPU · \(Self.memory(process.rss))", symbol: "gearshape", key: "\(process.pid)")
             .action("Copy PID") { Stackbar.copy("\(process.pid)") }
         return quitAction(row, process, shortcut: "cmd+.")
     }
@@ -795,38 +793,15 @@ final class SystemMonitor: StackbarPlugin {
         keepRunning.contains(process.command) || process.pid == Int(ProcessInfo.processInfo.processIdentifier)
     }
 
-    /// The house window: a first press arms a quit, and a second within ten
-    /// seconds runs it. After that a press starts over.
-    static let armWindow: TimeInterval = 10
-
-    func isArmed(_ key: String) -> Bool {
-        armed[key].map { Date().timeIntervalSince($0) < Self.armWindow } ?? false
-    }
-
-    /// The row's subtitle while its quit waits for the second press.
-    func armedText(_ process: ProcessRow) -> String? {
-        isArmed("quit/\(process.pid)") ? "Press again to quit \(process.command)" : nil
-    }
-
-    /// Quit Process on the row, unless the process is one that is kept running.
+    /// Quit Process on the row, unless the process is one that is kept
+    /// running. Stackbar asks for a second press before it runs.
     func quitAction(_ row: Row, _ process: ProcessRow, shortcut: String? = nil) -> Row {
         guard !Self.keepsRunning(process) else { return row }
-        return row.action("Quit Process", shortcut: shortcut, role: .critical) { await self.quit(process) }
-    }
-
-    /// Arms on the first press. A second within the window runs `action`.
-    func confirm(_ key: String, then action: () async -> Void) async {
-        guard isArmed(key) else {
-            armed = armed.filter { Date().timeIntervalSince($0.value) < Self.armWindow }
-            armed[key] = Date()
-            return
-        }
-        armed[key] = nil
-        await action()
+        return row.action("Quit Process", shortcut: shortcut, role: .critical, confirm: "quit \(process.command) (pid \(process.pid))") { await self.quit(process) }
     }
 
     func quit(_ process: ProcessRow) async {
-        await confirm("quit/\(process.pid)") { await self.end([process], force: false) }
+        await end([process], force: false)
     }
 
     /// Ends the processes the shared way. Each pid must still have the name

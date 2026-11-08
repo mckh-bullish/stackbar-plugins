@@ -18,12 +18,12 @@ final class GitSync: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.git-sync",
         name: "Git Sync",
-        version: "1.0.0",
+        version: "1.1.0",
         summary: "Which local repositories are behind or ahead of their remote, with the safe ones updated in one click.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(60)), .wake],
         capabilities: [.run(commands: ["git", "find"]), .sshAgent, .openURLs(schemes: ["*"])],
-        minimumStackbar: "0.34.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/GitSync",
         accent: .green,
         symbol: "arrow.triangle.branch"
@@ -171,8 +171,6 @@ final class GitSync: StackbarPlugin {
     @Stored("worktreeFolder") var worktreeFolder = ""
     /// Repositories behind at the last check, for notifications.
     @Stored("wasBehind") var wasBehind: [String] = []
-    /// Remove All in Clean Up asks for a second press.
-    var cleanArmed = Date.distantPast
 
     let theme = Theme.green
 
@@ -695,13 +693,12 @@ final class GitSync: StackbarPlugin {
         shown.flatMap { repo in repo.linked.filter(\.removable).map { (repo, $0) } }
     }
 
+    /// What a clean-up asks before it runs: Stackbar holds the first press.
+    var cleanUpConfirm: Confirm {
+        "remove \(removable.count) merged worktree\(removable.count == 1 ? "" : "s")"
+    }
+
     func cleanUp() async {
-        guard Date().timeIntervalSince(cleanArmed) < 10 else {
-            cleanArmed = Date()
-            Stackbar.hud("Press again within 10 s to remove \(removable.count) worktree\(removable.count == 1 ? "" : "s")")
-            return
-        }
-        cleanArmed = .distantPast
         let list = removable
         var removed = 0
         for (repo, tree) in list {
@@ -988,7 +985,7 @@ final class GitSync: StackbarPlugin {
                     repoList(shown)
                 }
                 if showWorktrees, !removable.isEmpty {
-                    ActionButton("Clean Up \(removable.count) Merged Worktree\(removable.count == 1 ? "" : "s")", symbol: "trash", theme: .neutral, fillWidth: true, key: "clean-up") { await self.cleanUp() }
+                    ActionButton("Clean Up \(removable.count) Merged Worktree\(removable.count == 1 ? "" : "s")", symbol: "trash", theme: .neutral, fillWidth: true, key: "clean-up", confirm: cleanUpConfirm) { await self.cleanUp() }
                 }
             }
         }
@@ -1204,7 +1201,7 @@ final class GitSync: StackbarPlugin {
                 } else {
                     List {
                         Section("Merged and clean") {
-                            Row("Remove All \(self.removable.count)", symbol: "trash", key: "clean-all").action("Remove All") { await self.cleanUp() }
+                            Row("Remove All \(self.removable.count)", symbol: "trash", key: "clean-all").action("Remove All", confirm: self.cleanUpConfirm) { await self.cleanUp() }
                             ForEach(self.removable) { pair in self.worktreeRow(pair.1, in: pair.0) }
                         }
                         if !left.isEmpty {

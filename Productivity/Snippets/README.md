@@ -9,7 +9,7 @@ another snippet.
 
 - **Needs:** the clipboard (to paste), what you had selected for
   `{selection}`, 16 MB of storage for the snippets, and keyword expansion.
-  Stackbar 0.24.0 or later.
+  Stackbar 0.35.0 or later.
 - **Surfaces:** panel, settings. Hotkey ⌃⌥S opens Search Snippets.
 - **Settings:** your snippets, importing from Raycast, TextExpander, Espanso or
   Apple's Text Replacements, and whether
@@ -35,6 +35,11 @@ Import Snippets reads:
   Replacements and drag them to the Desktop, then import the plist.
 
 Duplicates are skipped, and keywords already taken, or that would clash, are left off.
+
+## What's new in 1.7.0
+
+- Delete asks through Stackbar before a snippet goes.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 1.6.0
 

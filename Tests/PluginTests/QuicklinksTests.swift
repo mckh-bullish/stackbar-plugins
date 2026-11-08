@@ -144,7 +144,7 @@ final class QuicklinksTests: XCTestCase {
         let host = Host(self)
         let supervisor = try await host.start("Quicklinks")
         let offer = await supervisor.views[.panel]?.tree.lazy.compactMap { node -> ActionID? in
-            if case .tappable(_, let action) = node, action.rawValue.hasPrefix("button/Add ") { return action }
+            if case .tappable(_, let action, _) = node, action.rawValue.hasPrefix("button/Add ") { return action }
             return nil
         }.first
         await supervisor.press(try XCTUnwrap(offer, "the empty panel offers a starter set"))

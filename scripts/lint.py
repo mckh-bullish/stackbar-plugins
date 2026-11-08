@@ -75,6 +75,30 @@ def version_tuple(text):
     return tuple(int(part) for part in re.findall(r"\d+", text or "0"))
 
 
+def unconfirmed_critical(source):
+    """Lines of `.action(...)` and `Button(...)` calls with `role: .critical`
+    and neither `confirm:` nor `confirm: .none`: Stackbar asks for a second
+    press only when the action says what it confirms (protocol 25)."""
+    found = []
+    for match in re.finditer(r"(?:\.action|\bButton|\bActionButton|\bIconButton)\(", source):
+        depth, end = 0, None
+        for index in range(match.end() - 1, len(source)):
+            char = source[index]
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+                if depth == 0:
+                    end = index
+                    break
+        arguments = source[match.end():end] if end else ""
+        # Only this call's own arguments: nested calls' text stays in, which
+        # is fine, as a role or confirm inside them still belongs to this one.
+        if re.search(r"\brole:\s*\.critical\b", arguments) and "confirm:" not in arguments:
+            found.append(source.count("\n", 0, match.start()) + 1)
+    return found
+
+
 def lint(ctl, base=None):
     problems = []
     rows = []
@@ -99,6 +123,8 @@ def lint(ctl, base=None):
                 problems.append(f"{where}: imports {module}; plugins import only StackbarKit and Foundation (plus NaturalLanguage and Translation)")
         if re.search(r"(?<![\w.])print\(", source):
             problems.append(f"{where}: uses print(); show it in a view or log through the host instead")
+        for line in unconfirmed_critical(source):
+            problems.append(f"{where}: line {line}: a .critical action needs confirm: \"what it does\" (Stackbar asks for a second press), or confirm: .none when it needs no question")
         for banned in ("URLSession", "Process(", "FileManager"):
             if banned in source:
                 problems.append(f"{where}: uses {banned.rstrip('(')}; plugins are sandboxed, go through Stackbar.* host calls")

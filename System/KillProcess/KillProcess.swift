@@ -11,12 +11,12 @@ final class KillProcess: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.kill-process",
         name: "Kill Process",
-        version: "1.2.0",
+        version: "1.3.0",
         summary: "Find a process by name, see its CPU and memory, and quit or force quit it.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .every(.seconds(60))],
         capabilities: [.run(commands: ["ps", "kill"])],
-        minimumStackbar: "0.26.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/System/KillProcess",
         accent: .red,
         symbol: "xmark.octagon.fill"
@@ -83,8 +83,6 @@ final class KillProcess: StackbarPlugin {
     var loadedAt: Date?
     var problem: String?
     var results: [Proc] = []
-    /// Quit presses waiting for their second press, by key, and when they came.
-    var armed: [String: Date] = [:]
     /// Processes above the busy line on each poll, since when.
     var spells: [Watch: Spell] = [:]
     /// Processes already notified for their current busy spell.
@@ -241,23 +239,6 @@ final class KillProcess: StackbarPlugin {
 
     // MARK: Ending
 
-    /// Arms on the first press. A second within the house window runs `action`.
-    func isArmed(_ key: String) -> Bool {
-        armed[key].map { Date().timeIntervalSince($0) < Self.armWindow } ?? false
-    }
-
-    static let armWindow: TimeInterval = 10
-
-    func confirm(_ key: String, then action: () async -> Void) async {
-        guard isArmed(key) else {
-            armed = armed.filter { Date().timeIntervalSince($0.value) < Self.armWindow }
-            armed[key] = Date()
-            return
-        }
-        armed[key] = nil
-        await action()
-    }
-
     /// Ends the processes the shared way. Each pid must still have the name it
     /// was listed under, since pids get reused. The signal goes out, then the
     /// pids are checked for up to two seconds. Processes that ended leave both
@@ -319,15 +300,6 @@ final class KillProcess: StackbarPlugin {
         results.removeAll { pids.contains($0.pid) }
     }
 
-    /// The row's subtitle while one of its quits waits for the second press, or nil.
-    func armedText(_ process: Proc, siblings: Int) -> String? {
-        let name = Self.label(process.name)
-        if isArmed("quit/\(process.pid)") { return "Press again to quit \(name)" }
-        if isArmed("force/\(process.pid)") { return "Press again to force quit \(name)" }
-        if siblings > 1, isArmed("all/\(process.name)") { return "Press again to quit all \(siblings) \(name)" }
-        return nil
-    }
-
     /// The command line, shortened, then CPU and memory. The command line is
     /// what tells two processes with the same name apart.
     func subtitle(_ process: Proc) -> String {
@@ -337,11 +309,13 @@ final class KillProcess: StackbarPlugin {
 
     func row(_ process: Proc) -> Row {
         let group = processes.filter { $0.name == process.name }
-        var row = Row(Self.label(process.name), subtitle: armedText(process, siblings: group.count) ?? subtitle(process), symbol: "gearshape", key: process.id)
-            .action("Quit Process", role: .critical) { await self.confirm("quit/\(process.pid)") { await self.end([process], force: false) } }
-            .action("Force Quit Process", shortcut: "cmd+shift+return", role: .critical) { await self.confirm("force/\(process.pid)") { await self.end([process], force: true) } }
+        // Stackbar asks for a second press before any of these runs.
+        let name = Self.label(process.name)
+        var row = Row(name, subtitle: subtitle(process), symbol: "gearshape", key: process.id)
+            .action("Quit Process", role: .critical, confirm: "quit \(name) (pid \(process.pid))") { await self.end([process], force: false) }
+            .action("Force Quit Process", shortcut: "cmd+shift+return", role: .critical, confirm: "force quit \(name) (pid \(process.pid))") { await self.end([process], force: true) }
         if group.count > 1 {
-            row = row.action("Quit All \(group.count) Named \(process.name)", role: .critical) { await self.confirm("all/\(process.name)") { await self.end(group, force: false) } }
+            row = row.action("Quit All \(group.count) Named \(process.name)", role: .critical, confirm: "quit all \(group.count) \(name)") { await self.end(group, force: false) }
         }
         row = row.action("Copy PID", shortcut: "cmd+shift+c") { Stackbar.copy("\(process.pid)") }
         if process.cpu >= 80 { row = row.badge("High CPU", role: .critical) }

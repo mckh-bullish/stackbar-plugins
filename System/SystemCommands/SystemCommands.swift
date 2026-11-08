@@ -10,12 +10,12 @@ final class SystemCommands: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.system-commands",
         name: "System Commands",
-        version: "1.0.2",
+        version: "1.1.0",
         summary: "Lock, sleep, restart, empty the Trash or switch to dark mode from the palette.",
         surfaces: [.panel],
         triggers: [.launch],
         capabilities: [.systemActions],
-        minimumStackbar: "0.22.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/System/SystemCommands",
         accent: .graphite,
         symbol: "power.circle.fill"
@@ -24,8 +24,7 @@ final class SystemCommands: StackbarPlugin {
     // MARK: Previews
 
     static let previews: [PreviewScene<SystemCommands>] = [
-        PreviewScene("hero", "Lock, sleep or switch to dark mode by name") { plugin in plugin.armed = nil },
-        PreviewScene("asks-first", "Restart and Shut Down ask once more") { plugin in plugin.arm("restart") },
+        PreviewScene("hero", "Lock, sleep or switch to dark mode by name") { _ in },
     ]
 
     let theme = Theme.graphite
@@ -57,25 +56,6 @@ final class SystemCommands: StackbarPlugin {
         Item(action: .shutDown, id: "shut-down", symbol: "power", subtitle: "Turn the Mac off", keywords: ["shutdown", "power off", "turn off"], done: nil),
     ]
 
-    /// The destructive command clicked once in the panel, waiting for a
-    /// second click.
-    var armed: String?
-    private var armedAt = Date.distantPast
-    /// How long the second click stays good: a click much later starts over.
-    static let armWindow: TimeInterval = 10
-
-    /// The armed command, if its window hasn't passed.
-    var armedNow: String? {
-        armed.flatMap { Date().timeIntervalSince(armedAt) < Self.armWindow ? $0 : nil }
-    }
-
-    /// The row reads its window at every render (the panel renders again
-    /// when it opens), so a click much later is a first click again.
-    func arm(_ id: String) {
-        armed = id
-        armedAt = Date()
-    }
-
     func perform(_ item: Item) async throws {
         try await Stackbar.system(item.action)
         if let done = item.done { Stackbar.hud(done) }
@@ -97,7 +77,7 @@ final class SystemCommands: StackbarPlugin {
                     .view { _ in
                         List {
                             Row("\(item.action.title) Now", subtitle: item.subtitle, symbol: item.symbol, key: "confirm")
-                                .action(item.action.title, role: .critical) { await self.run(item) }
+                                .action(item.action.title, role: .critical, confirm: .none) { await self.run(item) }
                         }
                     }
             }
@@ -120,23 +100,9 @@ final class SystemCommands: StackbarPlugin {
         }
         Card("Asks first", spacing: 0, padding: Space.s) {
             ForEach(Self.items.filter(\.action.isDestructive)) { item in
-                if armedNow == item.id {
-                    Row("Click again to \(item.action.title.lowercased())", subtitle: item.subtitle, symbol: item.symbol, key: item.id)
-                        .action(item.action.title, role: .critical) {
-                            // A stale confirmation counts as a first click, and says so.
-                            guard self.armedNow == item.id else {
-                                self.arm(item.id)
-                                Stackbar.hud("Click again within 10 seconds to \(item.action.title.lowercased())")
-                                return
-                            }
-                            self.armed = nil
-                            await self.run(item)
-                        }
-                        .action("Cancel") { self.armed = nil }
-                } else {
-                    Row(item.action.title, subtitle: item.subtitle, symbol: item.symbol, key: item.id)
-                        .action(item.action.title) { self.arm(item.id) }
-                }
+                // Stackbar asks for a second click before it runs.
+                Row(item.action.title, subtitle: item.subtitle, symbol: item.symbol, key: item.id)
+                    .action(item.action.title, role: .critical, confirm: Confirm(item.subtitle.prefix(1).lowercased() + item.subtitle.dropFirst())) { await self.run(item) }
             }
         }
     }

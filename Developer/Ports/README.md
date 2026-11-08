@@ -19,6 +19,11 @@ whatever holds it is asked to stop.
 Processes owned by another user, like system services, can't be stopped
 from here.
 
+## What's new in 1.5.0
+
+- Stop and Force Quit ask through Stackbar, naming the process and port. Kill Port's confirm row still acts at once.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
+
 ## What's new in 1.4.2
 
 - Kill Port shows which process holds the port and stops it only when you press Return, so you see what you're about to end.

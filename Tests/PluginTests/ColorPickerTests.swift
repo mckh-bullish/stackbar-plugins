@@ -28,15 +28,18 @@ final class ColorPickerTests: XCTestCase {
         let host = Host(self)
         let id = "io.navbytes.stackbar.plugins.color-picker"
         try await host.services.storage.set("history", ##"[{"hex":"#0A60C8","at":0},{"hex":"#FF5FA2","at":0}]"##, for: id)
-        let supervisor = try await host.start("ColorPicker")
+        let session = try await host.session("ColorPicker")
         let clear = ActionID("button/clear")
-        await supervisor.press(clear)
+        let settings = await session.view(.settings)
+        XCTAssertEqual(settings?.confirmations[clear], "clear 2 picked colors")
+        let held = try await session.event(clear)
+        XCTAssertNotNil(held, "Stackbar holds the first click")
         let afterOne = await savedHistory(host, id).count
         XCTAssertEqual(afterOne, 2, "the first click only asks")
-        await supervisor.press(clear)
+        try await session.event(clear)
         let cleared = await waitUntil { await self.savedHistory(host, id).isEmpty }
         XCTAssertTrue(cleared, "the second click clears the colors")
-        await supervisor.stop()
+        await session.stop()
     }
 
     private func savedHistory(_ host: Host, _ id: String) async -> [[String: Any]] {

@@ -180,8 +180,8 @@ final class PRCockpitTests: XCTestCase {
         await supervisor.stop()
     }
 
-    /// Mark All as Read takes a second press within 10 seconds, and only the
-    /// second one reaches GitHub.
+    /// Mark All as Read asks Stackbar for a second press, and only the second
+    /// one reaches GitHub.
     func testMarkAllAsReadWaitsForASecondPress() async throws {
         let answers = Locked(Answers(threads: ["Bearer A": [1, 2].map(mentionThread)]))
         let stub = try GitHubStub { method, path, auth, _ in gitHub(method, path, auth, answers.current) }
@@ -193,7 +193,8 @@ final class PRCockpitTests: XCTestCase {
         XCTAssertTrue(loaded, "two threads and Mark All as Read")
 
         let markAll = ActionID("view/\(opened.session)/row/inbox-mark-all/Mark All as Read")
-        try await session.event(markAll)
+        let held = try await session.event(markAll)
+        XCTAssertEqual(held?.text, "mark 2 as read")
         XCTAssertFalse(stub.requests.all.contains { $0.hasPrefix("PUT ") }, "the first press only asks")
         try await session.event(markAll)
         XCTAssertEqual(stub.requests.all.filter { $0.hasPrefix("PUT /api/v3/notifications ") }.count, 1)
@@ -202,22 +203,23 @@ final class PRCockpitTests: XCTestCase {
         await session.stop()
     }
 
-    /// Approve asks for a second press within 10 seconds, then posts an approving review.
+    /// Approve asks Stackbar for a second press, then posts an approving review.
     func testApproveSendsAReviewOnlyOnTheSecondPress() async throws {
         let answers = Locked(Answers(review: ["Bearer A": [1]]))
         let stub = try GitHubStub { method, path, auth, _ in gitHub(method, path, auth, answers.current) }
         let host = Host(self)
         try await connect(host, stub, token: "A")
-        let supervisor = try await host.start("PRCockpit")
-        _ = await waitUntil { await supervisor.views[.menuBar]?.plainText == "1" }
-
-        let panel = await supervisor.views[.panel]
-        let approve = try XCTUnwrap(panel?.rows.first?.actions.first { $0.title == "Approve" }?.id)
-        await supervisor.press(approve)
+        let session = try await host.session("PRCockpit")
+        _ = await waitUntil { await session.view(.panel)?.rows.first?.actions.contains { $0.title == "Approve" } == true }
+        let panel = await session.view(.panel)
+        let approve = try XCTUnwrap(panel?.rows.first?.actions.first { $0.title == "Approve" })
+        XCTAssertEqual(approve.confirm, "approve o/r#1")
+        let held = try await session.event(approve.id)
+        XCTAssertNotNil(held, "Stackbar holds the first press")
         XCTAssertFalse(stub.requests.all.contains { $0.hasPrefix("POST /api/v3/repos/") }, "the first press only asks: \(stub.requests.all)")
-        await supervisor.press(approve)
+        try await session.event(approve.id)
         XCTAssertTrue(stub.requests.all.contains("POST /api/v3/repos/o/r/pulls/1/reviews Bearer A {\"event\":\"APPROVE\"}"), "\(stub.requests.all)")
-        await supervisor.stop()
+        await session.stop()
     }
 
     /// GitHub can list more pull requests than the 40 fetched; the panel says so.

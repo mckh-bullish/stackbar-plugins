@@ -10,12 +10,12 @@ final class ColorPicker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.color-picker",
         name: "Color Picker",
-        version: "1.1.0",
+        version: "1.2.0",
         summary: "Pick a color from anywhere on screen and copy it as hex, RGB or HSL.",
         surfaces: [.panel, .settings],
         triggers: [.launch],
         capabilities: [],
-        minimumStackbar: "0.26.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/ColorPicker",
         accent: .pink,
         symbol: "eyedropper"
@@ -50,9 +50,6 @@ final class ColorPicker: StackbarPlugin {
     @Stored("history") var history: [Picked] = []
     @Stored("format") var format = Format.hex.rawValue
     static let historyLimit = 30
-    /// When Clear Picked Colors was first clicked; a second click within 10 seconds clears.
-    var armedClearAt: Date?
-    var clearArmed: Bool { armedClearAt.map { Date().timeIntervalSince($0) < 10 } ?? false }
     /// The hex color typed into Convert Color, if it reads as one.
     var converted: PickedColor?
 
@@ -89,7 +86,7 @@ final class ColorPicker: StackbarPlugin {
         for format in [chosenFormat] + Format.allCases.filter({ $0 != chosenFormat }) {
             row = row.action("Copy \(format.rawValue)", shortcut: shortcuts[format]) { Stackbar.copy(Self.text(color, as: format)) }
         }
-        return row.action("Remove", shortcut: "ctrl+x", role: .critical) { self.history.removeAll { $0.hex == picked.hex } }
+        return row.action("Remove", shortcut: "ctrl+x", role: .critical, confirm: .none) { self.history.removeAll { $0.hex == picked.hex } }
     }
 
     // MARK: Commands
@@ -149,9 +146,7 @@ final class ColorPicker: StackbarPlugin {
             Picker("Copy as", options: Format.allCases.map(\.rawValue), selection: format) { self.format = $0 }
         }
         Section("History") {
-            Button(clearArmed ? "Click again to clear \(history.count) colors" : "Clear Picked Colors", symbol: "trash", role: .critical, key: "clear") {
-                guard self.clearArmed else { self.armedClearAt = Date(); return }
-                self.armedClearAt = nil
+            Button("Clear Picked Colors", symbol: "trash", role: .critical, key: "clear", confirm: "clear \(history.count) picked color\(history.count == 1 ? "" : "s")") {
                 self.history = []
             }
         }

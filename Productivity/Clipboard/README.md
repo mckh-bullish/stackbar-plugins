@@ -25,7 +25,7 @@ the menu bar icon, if you turn the icon on.
 - **Commands:** Search Clipboard History, Paste Last Copy as Plain Text,
   Pause Clipboard History, Ignore Next Copy, Clear Clipboard History.
 - **Agent tools:** `recent_clips`, `search_clips` and `copy_clip`.
-- **Requires:** Stackbar 0.31.0 or later.
+- **Requires:** Stackbar 0.35.0 or later.
 
 ## Highlights
 
@@ -45,6 +45,11 @@ key or card number is masked, kept away from agent tools, and dropped after
 ### See what you copy
 The window shows how much you copy, and from which apps.
 <!-- preview: insights -->
+
+## What's new in 1.13.0
+
+- Clearing the history from Settings asks through Stackbar, naming how many items go.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 1.12.0
 

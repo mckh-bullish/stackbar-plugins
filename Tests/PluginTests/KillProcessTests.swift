@@ -83,7 +83,7 @@ final class KillProcessTests: XCTestCase {
         await session.commandView(view)?.rows ?? []
     }
 
-    func testQuitTakesTwoPressesWithinTenSeconds() async throws {
+    func testQuitAsksStackbarForASecondPress() async throws {
         let sleeper = try startSleep()
         defer { if sleeper.isRunning { sleeper.terminate() } }
         let pid = Int(sleeper.processIdentifier)
@@ -94,20 +94,15 @@ final class KillProcessTests: XCTestCase {
         let found = try XCTUnwrap(opened.root?.rows.first { $0.key == "\(pid)" }, "the test's sleep is listed")
         let quit = try XCTUnwrap(found.actions.first { $0.title == "Quit Process" })
         XCTAssertEqual(quit.role, .critical)
+        XCTAssertEqual(quit.confirm, "quit sleep (pid \(pid))")
 
-        try await session.event(quit.id)
-        XCTAssertTrue(sleeper.isRunning, "the first press only asks again")
-        let asked = await rows(session, opened.session).first { $0.key == "\(pid)" }
-        XCTAssertEqual(asked?.subtitle, "Press again to quit sleep")
-
-        // Past the ten seconds, the first press has lapsed, so the next one asks again.
-        try await Task.sleep(for: .seconds(10.5))
-        try await session.event(quit.id)
-        XCTAssertTrue(sleeper.isRunning, "a press after the window asks again")
+        let held = try await session.event(quit.id)
+        XCTAssertEqual(held?.prompt, "Press again within 10 s to quit sleep (pid \(pid))")
+        XCTAssertTrue(sleeper.isRunning, "the first press only asks")
 
         try await session.event(quit.id)
         let ended = await waitUntil(5) { !sleeper.isRunning }
-        XCTAssertTrue(ended, "a second press within the window ends it")
+        XCTAssertTrue(ended, "the second press ends it")
         let remaining = await rows(session, opened.session)
         XCTAssertFalse(remaining.contains { $0.key == "\(pid)" }, "and it leaves the results, not just the system")
     }
@@ -126,13 +121,13 @@ final class KillProcessTests: XCTestCase {
         let opened = try await session.openView("search", query: CommandQuery(text: "sleep 31337"))
         let firstQuit = try XCTUnwrap(opened.root?.rows.first { $0.key == "\(firstPid)" }?.actions.first { $0.title == "Quit Process" })
         let secondQuit = try XCTUnwrap(opened.root?.rows.first { $0.key == "\(secondPid)" }?.actions.first { $0.title == "Quit Process" })
+        XCTAssertNotEqual(firstQuit.confirm, secondQuit.confirm, "each names its own pid")
 
-        try await session.event(firstQuit.id)
-        try await session.event(secondQuit.id)
-        XCTAssertTrue(first.isRunning && second.isRunning, "a first press on each only asks again")
-        let armed = await rows(session, opened.session)
-        XCTAssertEqual(armed.first { $0.key == "\(firstPid)" }?.subtitle, "Press again to quit sleep")
-        XCTAssertEqual(armed.first { $0.key == "\(secondPid)" }?.subtitle, "Press again to quit sleep")
+        let heldA = try await session.event(firstQuit.id)
+        let heldB = try await session.event(secondQuit.id)
+        XCTAssertNotNil(heldA)
+        XCTAssertNotNil(heldB, "a press on B is B's first, not A's second")
+        XCTAssertTrue(first.isRunning && second.isRunning)
 
         // The second press on B ends B, and only B.
         try await session.event(secondQuit.id)

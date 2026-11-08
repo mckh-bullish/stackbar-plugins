@@ -70,6 +70,11 @@ how long reviews have waited.
 A widget keeps the review queue in view.
 <!-- preview: widget -->
 
+## What's new in 1.12.0
+
+- Approve, Mark All as Read and the re-run actions ask through Stackbar, naming what they do.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
+
 ## What's new in 1.11.0
 
 - The palette shows a pull request's checks beside the list as soon as you select it. Your listed pull requests' checks are fetched in the background, in one request and only for those whose checks changed. A setting turns this off.
@@ -81,7 +86,7 @@ A widget keeps the review queue in view.
 - Copy a summary of what failed, to paste into a chat or an issue.
 - In the palette, ⌘I on a pull request opens its checks, and a selected pull request shows them beside the list once loaded.
 - A setting keeps the old click, which opens the browser. ⌘↩ opens it either way.
-- Needs Stackbar 0.31.0 or later.
+- Needs Stackbar 0.35.0 or later.
 
 ## What's new in 1.9.0
 

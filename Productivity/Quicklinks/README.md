@@ -24,6 +24,11 @@ of its own. Links use Raycast's template syntax:
   Import Quicklinks, Export Quicklinks (a file Raycast reads too), plus one
   command per quicklink.
 
+## What's new in 1.7.0
+
+- Delete asks through Stackbar before a quicklink goes.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
+
 ## What's new in 1.6.1
 
 - Copy Link on a quicklink that asks for input is now called Copy Link Template, since it copies the link with its placeholders.

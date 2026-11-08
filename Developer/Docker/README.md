@@ -31,9 +31,14 @@ and each project with Start all, Restart and Stop.
   you press Return on that row.
 - **Open Shell** (⌘T on a running container) opens your terminal app in
   `docker exec -it <container>`, with bash when the image has it.
-- **Requires:** Stackbar 0.26.0 or later.
+- **Requires:** Stackbar 0.35.0 or later.
 - **Agent tool:** `containers` lists every container with its image, state,
   CPU and memory.
+
+## What's new in 1.9.0
+
+- Remove and Remove Stopped Containers ask through Stackbar: press again within 10 seconds, and the prompt names what goes.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 1.8.0
 

@@ -9,11 +9,16 @@ Give any of them an alias or a hotkey in Settings › Commands.
 - **Needs:** system actions (`.systemActions`). macOS asks once to let
   Stackbar control System Events (restart, shut down, log out, dark mode) and
   Finder (the Trash). Locking the screen uses Stackbar's Accessibility access.
-  Stackbar 0.22.0 or later.
+  Stackbar 0.35.0 or later.
 - **Surfaces:** panel, which lists every command.
 - **Commands:** Lock Screen, Sleep, Sleep Displays, Start Screen Saver, Toggle
   Dark Mode, Hide Other Apps, Eject All Disks, Empty Trash, Quit Other Apps,
   Log Out, Restart, Shut Down.
+
+## What's new in 1.1.0
+
+- Restart, Shut Down, Log Out and the other destructive commands ask through Stackbar, naming what they do.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 1.0.2
 

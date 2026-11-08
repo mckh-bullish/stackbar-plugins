@@ -12,7 +12,7 @@ letter. A pinned letter opens the app even when it isn't running. Hold Right
 
 - **Needs:** `.keyLayer` and `.apps`. Stackbar listens to the keyboard and
   switches apps for the plugin, so Stackbar asks for Accessibility access
-  the first time. Stackbar 0.21.0 or later.
+  the first time. Stackbar 0.35.0 or later.
 - **Surfaces:** menu bar, panel, settings.
 - **Settings:** the key you hold (Right ⌘, ⌥, ⌃ or ⇧), what pressing the
   letter of the app in front does, the letter map, automatic letters,
@@ -38,6 +38,11 @@ app even when it isn't running.
 ### Stays out of your way
 Letters with no app pass straight through, so Right ⌘ C still copies. Hold
 Right ⌘ on its own to see the whole letter map.
+
+## What's new in 1.4.0
+
+- Clear every pin asks through Stackbar, naming how many letters it clears.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 1.3.0
 

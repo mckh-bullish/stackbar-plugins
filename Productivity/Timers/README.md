@@ -7,13 +7,18 @@ menu bar, and each ends with a sound, a notification and a message on
 screen. The panel shows every timer with +1m, +5m, Pause and Cancel, and starts the
 lengths you use most with one click.
 
-- **Needs:** nothing beyond Stackbar 0.26.0 or later.
+- **Needs:** nothing beyond Stackbar 0.35.0 or later.
 - **Surfaces:** menu bar (the soonest timer), panel, settings.
 - **Commands:** Start Timer, Show Timers, Stop All Timers.
 - **Settings:** the sound when a timer ends, and whether the menu bar shows
   the countdown.
 - **Note:** `1:30` is a clock time; write `1h30` for an hour and a half.
   `noon`, `midnight` and `at 12` are clock times too.
+
+## What's new in 1.2.0
+
+- Cancel Timer asks through Stackbar, naming the timer.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 1.1.0
 

@@ -24,9 +24,14 @@ echo "Hello ${1:-world}"
 - **Interpreters:** the first line names it: bash, zsh, sh, python3, node,
   ruby, perl, php, swift or osascript.
 - **Needs:** the ~/Script Commands folder, running grep (to read the
-  `@raycast.` lines) and those interpreters. Stackbar 0.22.0 or later.
+  `@raycast.` lines) and those interpreters. Stackbar 0.35.0 or later.
 - **Surfaces:** panel (your scripts; click one to run it).
 - **Commands:** one for each script, Script Commands (the list), and Reload Script Commands.
+
+## What's new in 1.3.0
+
+- A script that asks first is confirmed by Stackbar: press Run again within 10 seconds. One that can't run says why on the first press.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
 
 ## What's new in 1.2.0
 

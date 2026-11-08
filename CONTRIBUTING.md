@@ -23,7 +23,12 @@ A plugin is accepted when all of these hold:
    act on.
 5. **The panel is for doing things.** Preferences set once go on the
    `.settings` surface; quick mid-task controls stay in the panel.
-6. **Destructive actions say so** with `role: .critical`.
+6. **Destructive actions say so** with `role: .critical`, and say what
+   they do with `confirm: "remove web"`: Stackbar then asks for a second
+   press within 10 seconds, the same way on every surface. Use
+   `confirm: .none` when the action needs no question (Undo brings it back,
+   or it is the confirm row of a command view the user opened). Don't keep
+   your own "press again" state. `scripts/lint.py` checks this.
 7. **It renders every surface it declares** and survives the soak in CI.
 8. **Its manifest is complete:** an id starting `io.navbytes.stackbar.plugins.`
    (the plugins that moved here from Stackbar keep their old ids; community

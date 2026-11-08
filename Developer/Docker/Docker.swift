@@ -15,12 +15,12 @@ final class Docker: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.docker",
         name: "Docker",
-        version: "1.8.0",
+        version: "1.9.0",
         summary: "Your containers with live CPU and memory, Compose projects, and start, stop, restart and logs a click away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(15)), .wake],
         capabilities: [.run(commands: ["docker"]), .terminal],
-        minimumStackbar: "0.26.0",
+        minimumStackbar: "0.35.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/Docker",
         accent: .cyan,
         symbol: "shippingbox.fill"
@@ -197,12 +197,6 @@ final class Docker: StackbarPlugin {
     var crashedIDs: Set<String> = []
     /// Containers this plugin is stopping, so their exit isn't a crash.
     var stopping: Set<String> = []
-    /// The destructive action pressed once, waiting for a second press.
-    var armed: String?
-    var armedAt = Date.distantPast
-    static let armWindow: TimeInterval = 10
-    var armedNow: String? { armed.flatMap { Date().timeIntervalSince(armedAt) < Self.armWindow ? $0 : nil } }
-    func arm(_ id: String) { armed = id; armedAt = Date() }
 
     var running: [Container] { containers.filter(\.isRunning) }
     var prunable: [Container] { containers.filter { !$0.isRunning && $0.state != "paused" } }
@@ -572,9 +566,7 @@ final class Docker: StackbarPlugin {
 
     func row(_ container: Container) -> Row {
         var row = Row(container.name, subtitle: "\(container.shortImage) · \(container.status.replacingOccurrences(of: " (unhealthy)", with: "").replacingOccurrences(of: " (healthy)", with: ""))", symbol: container.isRunning ? "circle.fill" : "circle", key: container.id)
-        if armedNow == "rm:\(container.id)" {
-            row = row.badge("press Remove again", role: .critical)
-        } else if busy.contains(container.id) {
+        if busy.contains(container.id) {
             row = row.badge("…")
         } else if container.isUnhealthy {
             row = row.badge("unhealthy", role: .critical)
@@ -612,14 +604,8 @@ final class Docker: StackbarPlugin {
             .navigate("Logs", to: "logs", arguments: ["container": container.id], shortcut: "cmd+l")
             .action("Copy ID", shortcut: "cmd+shift+c") { Stackbar.copy(String(container.id.prefix(12))) }
             .action("Copy Exec Command") { Stackbar.copy("docker exec -it \(container.name) sh") }
-            .action("Remove", shortcut: "ctrl+x", role: .critical) {
+            .action("Remove", shortcut: "ctrl+x", role: .critical, confirm: "remove \(container.name)") {
                 guard !container.isRunning, container.state != "paused" else { throw HostError("Stop \(container.name) before removing it") }
-                guard self.armedNow == "rm:\(container.id)" else {
-                    self.arm("rm:\(container.id)")
-                    Stackbar.hud("Press Remove again within 10 s to delete \(container.name)")
-                    return
-                }
-                self.armed = nil
                 try await self.act("rm", container)
             }
     }
@@ -632,19 +618,13 @@ final class Docker: StackbarPlugin {
             Toggle("When a container crashes, turns unhealthy or keeps restarting", isOn: notifyTrouble) { self.notifyTrouble = $0 }
         }
         Section("Cleanup") {
-            if armedNow == "prune" {
-                let shown = prunable.map(\.id)
-                Button("Click Again to Remove \(shown.count) Stopped Containers", symbol: "trash", role: .critical, key: "prune") {
-                    guard self.armedNow == "prune" else { return self.arm("prune") }
-                    self.armed = nil
-                    guard let ids = try await self.stillListed(shown, among: { self.prunable }) else {
-                        Stackbar.hud("The list changed; open it again")
-                        return
-                    }
-                    Stackbar.hud(try await self.prune(ids))
+            let shown = prunable.map(\.id)
+            Button("Remove Stopped Containers", symbol: "trash", role: .critical, key: "prune", confirm: "remove \(shown.count) stopped container\(shown.count == 1 ? "" : "s")") {
+                guard let ids = try await self.stillListed(shown, among: { self.prunable }) else {
+                    Stackbar.hud("The list changed; open it again")
+                    return
                 }
-            } else {
-                Button("Remove Stopped Containers", symbol: "trash", role: .critical, key: "prune") { self.arm("prune") }
+                Stackbar.hud(try await self.prune(ids))
             }
             Text("Removes stopped containers with docker rm. Images and volumes are left alone.").style(.caption)
         }
@@ -715,7 +695,7 @@ final class Docker: StackbarPlugin {
                     let shown = self.running
                     List {
                         Row("Stop \(shown.count) container\(shown.count == 1 ? "" : "s") now", subtitle: shown.map(\.name).joined(separator: ", "), symbol: "stop.circle", key: "confirm")
-                            .action("Stop All", role: .critical) {
+                            .action("Stop All", role: .critical, confirm: .none) {
                                 guard let ids = try await self.stillListed(shown.map(\.id), among: { self.running }) else {
                                     Stackbar.hud("The list changed; open it again")
                                     return
@@ -735,7 +715,7 @@ final class Docker: StackbarPlugin {
                     let shown = self.prunable
                     List {
                         Row("Remove \(shown.count) stopped container\(shown.count == 1 ? "" : "s") now", subtitle: shown.map(\.name).joined(separator: ", "), symbol: "trash", key: "confirm")
-                            .action("Remove", role: .critical) {
+                            .action("Remove", role: .critical, confirm: .none) {
                                 guard let ids = try await self.stillListed(shown.map(\.id), among: { self.prunable }) else {
                                     Stackbar.hud("The list changed; open it again")
                                     return

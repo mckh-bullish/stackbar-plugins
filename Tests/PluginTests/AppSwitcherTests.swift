@@ -103,7 +103,7 @@ final class AppSwitcherTests: XCTestCase {
         await supervisor.stop()
     }
 
-    func testClearingEveryPinNeedsASecondPress() async throws {
+    func testClearingEveryPinAsksStackbarForASecondPress() async throws {
         let host = Host(self)
         let supervisor = try await host.start("AppSwitcher")
         _ = await waitUntil { self.layer(host) != nil }
@@ -113,11 +113,14 @@ final class AppSwitcherTests: XCTestCase {
         _ = await supervisor.runCommand(command, arguments: ["key": key, "app": app], source: .hotkey)
         XCTAssertNotNil(layer(host)?.binding(for: "k"))
 
-        await supervisor.press("button/clear-pins")
-        XCTAssertNotNil(layer(host)?.binding(for: "k"), "the first click only asks")
+        // Stackbar holds the first click; the plugin says what it confirms.
+        let asks = await waitUntil { await supervisor.views[.settings]?.confirmations["button/clear-pins"] != nil }
+        XCTAssertTrue(asks, "Clear every pin asks first")
+        let settings = await supervisor.views[.settings]
+        XCTAssertEqual(settings?.confirmations["button/clear-pins"], "clear 1 pinned letter")
         await supervisor.press("button/clear-pins")
         let cleared = await waitUntil { self.layer(host)?.binding(for: "k") == nil }
-        XCTAssertTrue(cleared, "the second click clears every pin")
+        XCTAssertTrue(cleared, "the confirmed click clears every pin")
         await supervisor.stop()
     }
 

@@ -71,10 +71,11 @@ final class SystemMonitorTests: XCTestCase {
         let quit = try XCTUnwrap(row.actions.first { $0.title == "Quit Process" })
         XCTAssertEqual(quit.role, .critical)
 
-        try await session.event(quit.id)
-        XCTAssertTrue(sleeper.isRunning, "the first press only asks again")
-        let asked = await session.commandView(opened.session)?.rows.first { $0.key == "\(pid)" }
-        XCTAssertEqual(asked?.subtitle, "Press again to quit sleep")
+        XCTAssertEqual(quit.confirm, "quit sleep (pid \(pid))")
+
+        let held = try await session.event(quit.id)
+        XCTAssertNotNil(held, "Stackbar holds the first press")
+        XCTAssertTrue(sleeper.isRunning, "the first press only asks")
 
         try await session.event(quit.id)
         let ended = await waitUntil(5) { !sleeper.isRunning }

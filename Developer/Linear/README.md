@@ -23,6 +23,11 @@ groups everything assigned to you by state, ordered by priority.
   default team for new issues.
 - **Agent tool:** `assigned` lists your open issues with their branch names.
 
+## What's new in 1.7.0
+
+- Mark All as Read asks through Stackbar, naming how many it marks.
+- Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question.
+
 ## What's new in 1.6.0
 
 - Mark everything in your Linear inbox as read at once, from the panel or Linear Inbox (press twice to confirm).
