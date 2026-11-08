@@ -42,6 +42,7 @@ An update that asks for something new waits for your approval.
 | [Recent Projects](Developer/RecentProjects) | Developer | Open the projects you used lately in VS Code, Cursor, Windsurf or VSCodium from the palette. |
 | [Script Commands](Developer/ScriptCommands) | Developer | Run your own scripts from the palette, in Raycast's Script Commands format. |
 | [LiteLLM](Monitoring/LiteLLM) | Monitoring | Tokens, spend, budget and model mix from your LiteLLM proxy, with charts. |
+| [OpenRouter](Monitoring/OpenRouter) | Monitoring | Spend, credits, limits and model mix for your OpenRouter account, with charts. |
 | [System Monitor](Monitoring/SystemMonitor) | Monitoring | CPU, memory, disk and network speed in the menu bar, the processes using the most, and alerts when one stays high. |
 | [App Switcher](Productivity/AppSwitcher) | Productivity | Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide. |
 | [Browser Tabs](Productivity/BrowserTabs) | Productivity | Switch to any open tab in Safari, Chrome, Arc, Brave or Edge, and search your bookmarks. |
