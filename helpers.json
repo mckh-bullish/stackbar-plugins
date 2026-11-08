@@ -2057,6 +2057,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.git-sync",
+      "protocol": 24,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "b02812e663ca77325e22fe88a83e68d0e11b517f74e504742188dcff055a9fb8",
+      "signature": "vfFIerD13TqkYzhI9OrurJ7IMdSVB9KRG/gf7vgDGEixiFaiKBbgaO9+dCIykLILveOcZjOVfoiD3IJ30lMzCA==",
+      "size": 6460312,
+      "sourceDigest": "6c6d32c1ca708ba7835cab486b4ddb321b209b9ebfda069b46046d4c3d0abf62",
+      "stackbarKit": "6a2ddb217a71b30e690308df8d219cc3494edf3678ddb93032b5ebf3c46b8072",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-6a2ddb217a71b30e/GitSync-6c6d32c1ca70",
+      "version": "1.0.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.homebrew",
       "protocol": 24,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
