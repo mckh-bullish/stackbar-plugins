@@ -12,11 +12,11 @@ final class WorldClock: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.world-clock",
         name: "World Clock",
-        version: "1.6.0",
+        version: "1.7.0",
         summary: "The time in the cities you work with, with offsets and working hours.",
         surfaces: [.menuBar, .panel, .settings, .widget],
         triggers: [.launch, .every(.seconds(30)), .wake],
-        minimumStackbar: "0.22.0",
+        minimumStackbar: "0.32.0",
         homepage: "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/WorldClock",
         accent: .violet,
         symbol: "globe"
@@ -33,6 +33,13 @@ final class WorldClock: StackbarPlugin {
             plugin.offsetHours = 3
         },
         PreviewScene("widget", "Your cities on the desktop", surface: .widget) { _ in },
+        PreviewScene("menu-bar", "In place of the macOS clock", surface: .menuBar) { plugin in
+            plugin.menuBarZone = WorldClock.here
+            plugin.showDate = true
+            plugin.showWeekday = true
+            plugin.showCity = false
+            plugin.showIcon = false
+        },
     ]
 
     /// The real time, from the last refresh.
@@ -46,6 +53,15 @@ final class WorldClock: StackbarPlugin {
     @Stored("use24Hour") var use24Hour = true
     @Stored("workStart") var workStart = 9.0
     @Stored("workEnd") var workEnd = 18.0
+    // The menu-bar clock, set like the macOS one.
+    @Stored("showDate") var showDate = false
+    @Stored("showWeekday") var showWeekday = false
+    @Stored("showSeconds") var showSeconds = false
+    @Stored("showAMPM") var showAMPM = true
+    @Stored("showCity") var showCity = true
+    @Stored("showIcon") var showIcon = true
+    /// A Unicode date pattern that replaces the options above when set.
+    @Stored("menuBarFormat") var menuBarFormat = ""
     /// The name each added city was typed as, by zone, when it isn't the city's own.
     @Stored("names") var names: [String: String] = [:]
     /// Why the last add failed, shown under the field until the next add.
@@ -59,15 +75,49 @@ final class WorldClock: StackbarPlugin {
 
     let theme = Theme.violet
 
+    /// `menuBarZone` for this Mac's own time, which follows the Mac as it travels.
+    static let here = "here"
+
     /// The city in the menu bar: the one picked, or the first city once that one is removed.
     /// A picked city this Mac no longer knows falls back to the first one it does.
     var shownZone: TimeZone? {
-        validZones.first { $0.identifier == menuBarZone } ?? validZones.first
+        if menuBarZone == Self.here { return .current }
+        return validZones.first { $0.identifier == menuBarZone } ?? validZones.first
+    }
+
+    /// The menu bar's pattern: the custom one, or one built from the options
+    /// in the order this Mac's language writes them.
+    var menuBarPattern: String {
+        let custom = menuBarFormat.trimmingCharacters(in: .whitespaces)
+        if !custom.isEmpty { return custom }
+        return Self.pattern(weekday: showWeekday, date: showDate, use24Hour: use24Hour, seconds: showSeconds, amPM: showAMPM)
+    }
+
+    static func pattern(weekday: Bool, date: Bool, use24Hour: Bool, seconds: Bool, amPM: Bool, locale: Locale = .current) -> String {
+        let day = (weekday ? "EEE" : "") + (date ? "dMMM" : "")
+        let time = (use24Hour ? "HHmm" : "hmm") + (seconds ? "ss" : "")
+        let datePart = day.isEmpty ? "" : (DateFormatter.dateFormat(fromTemplate: day, options: 0, locale: locale) ?? day)
+        var timePart = DateFormatter.dateFormat(fromTemplate: time + (use24Hour ? "" : "a"), options: 0, locale: locale) ?? "HH:mm"
+        if use24Hour {
+            // A 12-hour language can still answer with a period; 24-hour has none.
+            timePart = timePart.replacingOccurrences(of: "a", with: "").trimmingCharacters(in: .whitespaces)
+        } else if !amPM {
+            timePart = timePart.replacingOccurrences(of: "\u{202F}a", with: "").replacingOccurrences(of: " a", with: "")
+                .replacingOccurrences(of: "a ", with: "").replacingOccurrences(of: "a", with: "").trimmingCharacters(in: .whitespaces)
+        }
+        // A comma between the date and the time reads oddly in a menu bar.
+        let joined = [datePart, timePart].filter { !$0.isEmpty }.joined(separator: " ")
+        return joined.replacingOccurrences(of: ",", with: "")
     }
 
     var menuBar: ViewContent {
         if let zone = shownZone {
-            Label("\(city(zone.identifier)) \(time(realNow, in: zone))", symbol: "globe").role(.primary)
+            HStack(spacing: Space.xs) {
+                if showIcon { Image(systemName: "globe") }
+                if showCity, menuBarZone != Self.here { Text(city(zone.identifier)) }
+                // Without a zone the clock follows the Mac's own, even after it changes.
+                Clock(menuBarPattern, timeZone: menuBarZone == Self.here ? nil : zone)
+            }
         } else {
             Label("", symbol: "globe").role(.secondary)
         }
@@ -98,7 +148,7 @@ final class WorldClock: StackbarPlugin {
     @ViewBuilder var timeTravel: ViewContent {
         HStack(spacing: Space.s) {
             Image(systemName: "clock.arrow.2.circlepath").opacity(0.6)
-            Slider(offsetHours == 0 ? "Slide to see another time" : Self.shift(offsetHours) + " · \(time(now, in: .current)) here", value: offsetHours, in: -12...12, step: 0.5, key: "time-travel") { value in
+            Slider(offsetHours == 0 ? "Slide to see another time" : Self.shift(offsetHours) + " · \(time(now, in: .current)) here", value: offsetHours, in: -12...12, step: 0.5, key: "time-travel", live: true) { value in
                 self.offsetHours = value
             }
             if offsetHours != 0 {
@@ -219,6 +269,15 @@ final class WorldClock: StackbarPlugin {
         }
     }
 
+    /// What the menu bar reads right now, for Settings.
+    var menuBarPreview: String {
+        let formatter = DateFormatter()
+        formatter.locale = .current
+        formatter.timeZone = shownZone ?? .current
+        formatter.dateFormat = menuBarPattern
+        return formatter.string(from: Date())
+    }
+
     static let hours = (0...24).map { String(format: "%02d:00", $0) }
 
     var settings: ViewContent {
@@ -236,7 +295,22 @@ final class WorldClock: StackbarPlugin {
             Text("Type a city name (Tokyo, New York) or a zone (Asia/Tokyo).").style(.caption).role(.secondary)
         }
         Section("Menu bar") {
-            Picker("City", options: validZones.map(\.identifier), selection: shownZone?.identifier) { self.menuBarZone = $0 }
+            Picker("Shows", options: ["This Mac"] + validZones.map { city($0.identifier) },
+                   selection: menuBarZone == Self.here ? "This Mac" : shownZone.map { city($0.identifier) }, key: "menu-bar-city") { choice in
+                self.menuBarZone = choice == "This Mac" ? Self.here : self.validZones.first { self.city($0.identifier) == choice }?.identifier ?? self.menuBarZone
+            }
+            Toggle("Show the date", isOn: showDate) { self.showDate = $0 }
+            Toggle("Show the day of the week", isOn: showWeekday) { self.showWeekday = $0 }
+            Toggle("Use a 24-hour clock", isOn: use24Hour) { self.use24Hour = $0 }
+            if !use24Hour { Toggle("Show AM/PM", isOn: showAMPM) { self.showAMPM = $0 } }
+            Toggle("Show the seconds", isOn: showSeconds) { self.showSeconds = $0 }
+            if menuBarZone != Self.here { Toggle("Show the city's name", isOn: showCity) { self.showCity = $0 } }
+            Toggle("Show the globe", isOn: showIcon) { self.showIcon = $0 }
+            TextField("Custom format, like EEE d MMM HH:mm", text: menuBarFormat, key: "menu-bar-format") { submitted in
+                self.menuBarFormat = submitted.trimmingCharacters(in: .whitespaces)
+            }
+            Text("Now: \(menuBarPreview). A custom format replaces the options above; leave it empty to use them. y year, MMM month, d day, EEE weekday, HH or h hour, mm minutes, ss seconds, a AM/PM.")
+                .style(.caption).role(.secondary)
         }
         Section("Working hours") {
             Picker("Start", options: Array(Self.hours.dropLast()), selection: Self.hours[Self.hourIndex(workStart, in: 0...23)], key: "work-start") { self.workStart = Double(Self.hours.firstIndex(of: $0) ?? 9) }

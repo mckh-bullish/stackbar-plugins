@@ -97,4 +97,56 @@ final class WorldClockTests: XCTestCase {
         XCTAssertTrue(bar.contains("Tokyo"), "the first city this Mac knows takes the menu bar: \(bar)")
         await supervisor.stop()
     }
+
+    /// The clocks anywhere in a tree, as (pattern, zone).
+    private func clocks(_ node: ViewNode?) -> [(pattern: String, zone: String?)] {
+        guard let node else { return [] }
+        if case .clock(let face) = node { return [(face.pattern, face.timeZone)] }
+        return node.children.flatMap(clocks)
+    }
+
+    func testTheMenuBarIsAClockTheHostKeepsCurrent() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("WorldClock")
+        let bar = await supervisor.views[.menuBar]
+        XCTAssertEqual(clocks(bar).first?.zone, "Europe/London")
+        XCTAssertEqual(clocks(bar).first?.pattern, "HH:mm")
+        XCTAssertTrue(bar.map { TreeTextRenderer.render($0) }?.contains("London") == true)
+        await supervisor.stop()
+    }
+
+    func testThisMacsOwnTimeWithTheDateLikeTheMacOSClock() async throws {
+        let host = Host(self)
+        let id = "io.navbytes.stackbar.plugins.world-clock"
+        try await host.services.storage.set("menuBarZone", #""here""#, for: id)
+        try await host.services.storage.set("showDate", "true", for: id)
+        try await host.services.storage.set("showWeekday", "true", for: id)
+        try await host.services.storage.set("showSeconds", "true", for: id)
+        try await host.services.storage.set("showIcon", "false", for: id)
+        let supervisor = try await host.start("WorldClock")
+        let bar = await supervisor.views[.menuBar]
+        let clock = try XCTUnwrap(clocks(bar).first)
+        XCTAssertNil(clock.zone, "this Mac's time follows the Mac")
+        for field in ["EEE", "d", "MMM", "HH", "mm", "ss"] { XCTAssertTrue(clock.pattern.contains(field), clock.pattern) }
+        let text = bar.map { TreeTextRenderer.render($0) } ?? ""
+        XCTAssertFalse(text.contains("London") || text.contains("globe"), "no city and no icon: \(text)")
+
+        try await host.services.storage.set("menuBarFormat", #""yyyy-MM-dd HH:mm""#, for: id)
+        let custom = try await host.start("WorldClock")
+        let customBar = await custom.views[.menuBar]
+        XCTAssertEqual(clocks(customBar).first?.pattern, "yyyy-MM-dd HH:mm", "a custom format wins")
+        await supervisor.stop()
+        await custom.stop()
+    }
+
+    func testTheTimeTravelSliderFollowsTheThumb() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("WorldClock")
+        let panel = await supervisor.views[.panel].map { TreeTextRenderer.render($0) } ?? ""
+        XCTAssertTrue(panel.contains("(-12...12) live"), panel)
+        await supervisor.press("slider/time-travel", value: .number(2.5))
+        let moved = await supervisor.views[.panel].map { TreeTextRenderer.render($0) } ?? ""
+        XCTAssertTrue(moved.contains("+2h 30m from now"), moved)
+        await supervisor.stop()
+    }
 }

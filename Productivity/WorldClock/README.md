@@ -5,11 +5,12 @@ lists them all with the offset from you, whether it is already tomorrow or
 still yesterday there, and whether it is working hours (weekdays, 9 to 18 by
 default).
 
-- **Needs:** nothing beyond Stackbar 0.22.0 or later. No network, files or secrets.
+- **Needs:** nothing beyond Stackbar 0.32.0 or later. No network, files or secrets.
 - **Surfaces:** menu bar, panel, widget, settings.
 - **Settings:** the cities (type a time zone like `Asia/Tokyo`, or a city name
-  like `Tokyo`), which one the menu bar shows, 12- or 24-hour time, and your
-  working hours.
+  like `Tokyo`), whether the menu bar shows this Mac's time or a city, the
+  menu-bar clock's date, weekday, 24-hour, AM/PM, seconds, city name and globe
+  (or a custom format), and your working hours.
 - **In the panel:** tap a city to show it in the menu bar. The time-travel
   slider moves every clock up to 12 hours either way in half-hour steps, so
   you can see what time it is everywhere when it's 3pm here; Now puts it back.
@@ -37,6 +38,13 @@ Add `Tokyo` or `Asia/Tokyo`, and pick which city the menu bar shows.
 ### On your desktop too
 A widget keeps your cities on the desktop.
 <!-- preview: widget -->
+
+## What's new in 1.7.0
+
+- **Use it in place of the macOS clock.** The menu bar can show this Mac's own time, and Settings has the macOS clock's options: the date, the day of the week, 24-hour time, AM/PM, seconds, the city's name and the globe. A custom format (like `EEE d MMM HH:mm`) replaces them all.
+- The menu-bar clock now changes on the minute (or the second) exactly, instead of up to 30 seconds late, and keeps one width so the menu bar doesn't shift.
+- The time-travel slider moves every clock while you drag it, not only when you let go.
+- Needs Stackbar 0.32.0 or later.
 
 ## What's new in 1.6.0
 
