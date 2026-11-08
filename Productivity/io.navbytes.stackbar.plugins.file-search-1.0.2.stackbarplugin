@@ -1,0 +1,44 @@
+{
+  "format" : 1,
+  "manifest" : {
+    "accent" : "cyan",
+    "capabilities" : [
+      {
+        "fileSearch" : {
+
+        }
+      },
+      {
+        "openURLs" : {
+          "schemes" : [
+            "*"
+          ]
+        }
+      }
+    ],
+    "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/FileSearch",
+    "id" : "io.navbytes.stackbar.plugins.file-search",
+    "minimumStackbar" : "0.20.0",
+    "name" : "File Search",
+    "summary" : "Find files and folders by name from the command palette, most recently used first.",
+    "surfaces" : [
+      "panel"
+    ],
+    "symbol" : "doc.text.magnifyingglass",
+    "triggers" : [
+      {
+        "launch" : {
+
+        }
+      }
+    ],
+    "version" : "1.0.2"
+  },
+  "publisher" : {
+    "name" : "navbytes",
+    "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w="
+  },
+  "signature" : "Sl+oapHO6EZ6zVNp0amu81pjRYAl5SKWYJIS9PwVPTkl6lBGc6R8qofgFyN84WC0oyGevGdhzDVhx85F0++hBA==",
+  "source" : "import StackbarKit\nimport Foundation\n\n/// Files and folders by name in the command palette, from Spotlight's index:\n/// type three letters or more and the best matches show under Files, most\n/// recently used first. Return opens one; ⌘K shows it in Finder or copies\n/// its path. Apps, hidden files and Library internals are left out.\n@main\nfinal class FileSearch: StackbarPlugin {\n    static let manifest = Manifest(\n        id: \"io.navbytes.stackbar.plugins.file-search\",\n        name: \"File Search\",\n        version: \"1.0.2\",\n        summary: \"Find files and folders by name from the command palette, most recently used first.\",\n        surfaces: [.panel],\n        triggers: [.launch],\n        // Names from Spotlight; opening what you pick, in its app.\n        capabilities: [.fileSearch, .openURLs(schemes: [\"*\"])],\n        minimumStackbar: \"0.20.0\",\n        homepage: \"https://github.com/navbytes/stackbar-plugins/tree/main/Productivity/FileSearch\",\n        accent: .cyan,\n        symbol: \"doc.text.magnifyingglass\"\n    )\n\n    static let previews: [PreviewScene<FileSearch>] = [\n        PreviewScene(\"hero\", \"Any file, a few letters away\") { plugin in\n            plugin.recent = try await Stackbar.findFiles(\"plan\")\n        },\n        PreviewScene(\"folders\", \"Folders too, with their Finder icons\") { plugin in\n            plugin.recent = try await Stackbar.findFiles(\"plan\").filter(\\.isFolder) + (try await Stackbar.findFiles(\"readme\"))\n        },\n    ]\n\n    let theme = Theme.cyan\n\n    var results: [FoundFile] = []\n    var problem: String?\n    /// Recent searches and their results, so going back over one doesn't ask\n    /// Spotlight again. Errors aren't kept.\n    var cache: [String: (at: Date, files: [FoundFile])] = [:]\n    /// What was opened from here lately, for the panel.\n    @Stored(\"recent\") var recent: [FoundFile] = []\n\n    /// Shorter text matches half the disk.\n    static let minimumLength = 3\n\n    func search(_ text: String, limit: Int) async {\n        let text = text.trimmingCharacters(in: .whitespaces)\n        guard text.count >= Self.minimumLength else {\n            results = []\n            problem = nil\n            return\n        }\n        let key = text.lowercased()\n        if let cached = cache[key], Date().timeIntervalSince(cached.at) < 30 {\n            results = cached.files\n            problem = nil\n            return\n        }\n        do {\n            results = try await Stackbar.findFiles(text, limit: limit)\n            problem = nil\n            cache[key] = (Date(), results)\n            if cache.count > 20, let oldest = cache.min(by: { $0.value.at < $1.value.at }) {\n                cache[oldest.key] = nil\n            }\n        } catch {\n            results = []\n            problem = \"Spotlight didn't answer: \\(error)\"\n        }\n    }\n\n    func open(_ file: FoundFile) async throws {\n        try await Stackbar.open(file.path, with: nil)\n        recent = Array(([file] + recent.filter { $0.path != file.path }).prefix(8))\n    }\n\n    static func folder(of file: FoundFile) -> String {\n        URL(fileURLWithPath: file.path).deletingLastPathComponent().path\n    }\n\n    func row(_ file: FoundFile) -> Row {\n        Row(file.name, subtitle: file.folder, symbol: file.isFolder ? \"folder\" : \"doc\", key: file.path)\n            .fileIcon(file.path)\n            .action(\"Open\") { try await self.open(file) }\n            .action(\"Show in Finder\", shortcut: \"cmd+return\") { try await Stackbar.open(Self.folder(of: file), with: nil) }\n            .action(\"Copy Path\", shortcut: \"cmd+shift+c\") { Stackbar.copy(file.path) }\n    }\n\n    // MARK: Commands\n\n    var commands: [Command] {\n        Command(\"search\", title: \"Search Files\", subtitle: \"Find a file or folder by name\", symbol: \"doc.text.magnifyingglass\", keywords: [\"file\", \"folder\", \"find\", \"spotlight\", \"document\"])\n            .view(search: { invocation in\n                await self.search(invocation.text, limit: 20)\n            }) { invocation in\n                if let problem = self.problem {\n                    ContentUnavailableView(\"Can't search\", symbol: \"exclamationmark.triangle\", message: problem)\n                } else if invocation.text.trimmingCharacters(in: .whitespaces).count < Self.minimumLength {\n                    ContentUnavailableView(\"Type a file name\", symbol: \"doc.text.magnifyingglass\", message: \"Three letters or more. Every word must be in the name.\")\n                } else if self.results.isEmpty {\n                    ContentUnavailableView(\"No files found\", symbol: \"doc.questionmark\", message: \"Spotlight has nothing by that name in your home folder.\")\n                } else {\n                    List {\n                        ForEach(self.results) { file in self.row(file) }\n                    }\n                }\n            }\n            .rootSearch(section: \"Files\")\n    }\n\n    // MARK: Panel\n\n    var panel: ViewContent {\n        PanelHeader(\"File Search\", subtitle: \"Type a file name in the palette\", symbol: \"doc.text.magnifyingglass\", theme: theme)\n        if recent.isEmpty {\n            EmptyState(\"Find files from the palette\", symbol: \"doc.text.magnifyingglass\", message: \"Press ⌃⌥Space and type three letters or more of a file's name. Return opens it; ⌘K shows it in Finder.\", theme: theme)\n        } else {\n            Card(\"Opened lately\", spacing: 0, padding: Space.s) {\n                ForEach(recent) { file in self.row(file) }\n            }\n        }\n    }\n}\n",
+  "sourceDigest" : "c9b5d7c3bd5953596a2936cf96e365f1368e3e37aa3aa8c59d8972fdc70ff163"
+}

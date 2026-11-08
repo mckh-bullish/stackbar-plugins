@@ -4,6 +4,15 @@
       "changes": [
         {
           "notes": [
+            "Paste Last Copy as Plain Text, the Last Copied card and agent tools now always use your latest copy, even when the history is sorted by most used or first copied.",
+            "Clearing the history in Settings asks for a second click, so one stray click can't wipe it.",
+            "Clear Clipboard History in the palette clears everything but your pinned items, or everything.",
+            "The Last Copied label is easier to read in light and dark mode."
+          ],
+          "version": "1.12.0"
+        },
+        {
+          "notes": [
             "With \"Show matching copies in the palette's results\" off, copies (and their Copy, Pin and Delete actions) no longer show in the palette at all. Before, the palette also listed every row of the history panel."
           ],
           "version": "1.11.0"
@@ -83,7 +92,7 @@
         },
         {
           "label": "Commands",
-          "text": "Search Clipboard History, Paste Last Copy as Plain Text, Pause Clipboard History, Ignore Next Copy."
+          "text": "Search Clipboard History, Paste Last Copy as Plain Text, Pause Clipboard History, Ignore Next Copy, Clear Clipboard History."
         },
         {
           "label": "Agent tools",
@@ -94,10 +103,19 @@
           "text": "Stackbar 0.31.0 or later."
         }
       ],
-      "version": "1.11.0"
+      "version": "1.12.0"
     },
     "io.navbytes.stackbar.plugins.app-switcher": {
       "changes": [
+        {
+          "notes": [
+            "Pin a Letter to an App takes an app's name, like Slack, and says so when no such app is installed, instead of pinning a letter that does nothing.",
+            "Clearing every pin asks you to click again first, in Settings and in the palette.",
+            "Leave an app out of the letters from its row's menu, and bring it back in Settings.",
+            "If a pinned app can't be opened, the panel says why."
+          ],
+          "version": "1.3.0"
+        },
         {
           "notes": [
             "Checks the key layer once a minute instead of every 20 seconds while idle; launching and quitting apps still update it at once."
@@ -127,7 +145,7 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "`.keyLayer` and `.apps`. Stackbar listens to the keyboard and switches apps for the plugin, so Stackbar asks for Accessibility access the first time. Stackbar 0.16.0 or later."
+          "text": "`.keyLayer` and `.apps`. Stackbar listens to the keyboard and switches apps for the plugin, so Stackbar asks for Accessibility access the first time. Stackbar 0.21.0 or later."
         },
         {
           "label": "Surfaces",
@@ -135,7 +153,7 @@
         },
         {
           "label": "Settings",
-          "text": "the key you hold (Right \u2318, \u2325, \u2303 or \u21e7), what pressing the letter of the app in front does, the letter map, automatic letters, and opening pinned apps."
+          "text": "the key you hold (Right \u2318, \u2325, \u2303 or \u21e7), what pressing the letter of the app in front does, the letter map, automatic letters, opening pinned apps, and apps left out of the letters."
         },
         {
           "label": "Commands",
@@ -150,10 +168,18 @@
           "text": "jumping between Spaces and a window grid. To find an app by name, type it in the palette (the Applications plugin); to snap windows, use Windows. While an app has Secure Input on, such as in a password field, macOS blocks every keyboard listener. The panel tells you which app has it on."
         }
       ],
-      "version": "1.2.1"
+      "version": "1.3.0"
     },
     "io.navbytes.stackbar.plugins.applications": {
       "changes": [
+        {
+          "notes": [
+            "System Settings panes open again: picking Wi-Fi, Displays or any other pane brings it up.",
+            "Typing in the palette always answers straight away. The app list refreshes in the background every few minutes instead of making a keystroke wait.",
+            "Your most opened apps in the panel no longer show up a second time in the palette's results."
+          ],
+          "version": "1.2.2"
+        },
         {
           "notes": [
             "A failed app listing is retried after a few seconds instead of on every keystroke."
@@ -189,7 +215,7 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "the list of installed apps and opening them (`.apps`), and opening System Settings panes by their link. Stackbar 0.20.0 or later."
+          "text": "the list of installed apps and opening them (`.apps`), and opening System Settings panes by their link. Stackbar 0.31.0 or later."
         },
         {
           "label": "Surfaces",
@@ -204,10 +230,20 @@
           "text": "/Applications (one folder deep), ~/Applications and the system's own apps, plus every pane System Settings lists."
         }
       ],
-      "version": "1.2.1"
+      "version": "1.2.2"
     },
     "io.navbytes.stackbar.plugins.browser-tabs": {
       "changes": [
+        {
+          "notes": [
+            "Switching to or closing a tab checks that it's still the same page first. After you rearrange tabs, Close no longer closes a different tab, and a tab that has gone says so.",
+            "Copy as Markdown Link on every tab and bookmark.",
+            "When a browser doesn't answer, or its bookmarks can't be read, the panel says which one instead of showing nothing.",
+            "Tabs from the panel no longer show up in the palette's results with out-of-date titles.",
+            "A page title with a tab in it no longer breaks that tab's address."
+          ],
+          "version": "1.1.0"
+        },
         {
           "notes": [
             "Tabs are read from every running browser at the same time, so one slow browser no longer holds up the rest.",
@@ -227,7 +263,7 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "running `osascript` to read and switch tabs (macOS asks once to let Stackbar control each browser), `cat` to read each Chromium browser's `Bookmarks` file in its profile folder, and the list of running apps, so a browser that isn't open is never started. Stackbar 0.22.0 or later."
+          "text": "running `osascript` to read and switch tabs (macOS asks once to let Stackbar control each browser), `cat` to read each Chromium browser's `Bookmarks` file in its profile folder, and the list of running apps, so a browser that isn't open is never started. Stackbar 0.31.0 or later."
         },
         {
           "label": "Surfaces",
@@ -242,10 +278,23 @@
           "text": "Safari's bookmarks, which macOS keeps behind Full Disk Access, and browser profiles other than the default one."
         }
       ],
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     "io.navbytes.stackbar.plugins.calculator": {
       "changes": [
+        {
+          "notes": [
+            "Adding or taking off a percent works the way you'd expect: 100 + 10% is 110 and 200 - 15% is 170.",
+            "Speeds: 60 mph in km/h, 10 m/s in mph, knots.",
+            "The constant e works, as in 2*e or e^2.",
+            "On a Mac that writes decimal commas, answers use a decimal comma too, so they paste straight into your spreadsheet.",
+            "Opening Calculate with nothing typed lists your recent answers.",
+            "A currency sum with no exchange rates says why (offline, or conversion turned off), and dividing by zero says so, instead of asking for a sum.",
+            "Accented city names work: now in s\u00e3o paulo.",
+            "Removed Paste Answer, which never worked: Calculator has no clipboard access. Return still copies the answer."
+          ],
+          "version": "1.6.0"
+        },
         {
           "notes": [
             "Mixed amounts convert: `5 ft 10 in to cm`, `1h 30min in min`."
@@ -289,7 +338,7 @@
           "version": "1.0.0"
         }
       ],
-      "description": "Sums, unit and currency conversions and times across zones, answered right in\nthe command palette. Type `12*(3+4)`, `2^10`, `15% * 80`, `sqrt(2)`,\n`3h in min`, `72 f to c`, `5 km in mi`, `100 usd in eur`, `$50 to gbp`,\n`5pm london in tokyo` or `now in sf`, and the answer comes first in the\nresults. Return copies it and \u2318Return pastes it. Plain numbers and words get\nno answer, so it never crowds a normal search. The panel keeps your last ten\nanswers.",
+      "description": "Sums, unit and currency conversions and times across zones, answered right in\nthe command palette. Type `12*(3+4)`, `2^10`, `15% * 80`, `sqrt(2)`,\n`3h in min`, `72 f to c`, `5 km in mi`, `100 usd in eur`, `$50 to gbp`,\n`5pm london in tokyo` or `now in sf`, and the answer comes first in the\nresults. Return copies it. Plain numbers and words get\nno answer, so it never crowds a normal search. The panel keeps your last ten\nanswers.",
       "facts": [
         {
           "label": "Needs",
@@ -309,7 +358,7 @@
         },
         {
           "label": "Units",
-          "text": "length, mass, time, data, volume and temperature, including mixed amounts such as `5 ft 10 in to cm` or `1h 30min in min`."
+          "text": "length, mass, time, data, volume, speed and temperature, including mixed amounts such as `5 ft 10 in to cm` or `1h 30min in min`."
         },
         {
           "label": "Currencies",
@@ -320,10 +369,19 @@
           "text": "any city in a time zone's name (`tokyo`, `new york`), plus common ones like `sf`, `nyc`, `bangalore`, `uk` and abbreviations like `pst` and `ist`. Without a starting place, the time is yours."
         }
       ],
-      "version": "1.5.0"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.plugins.color-picker": {
       "changes": [
+        {
+          "notes": [
+            "Convert Color: type a hex color like #0A60C8 in the palette and copy it as RGB, HSL or SwiftUI.",
+            "A new SwiftUI format: Color(red:green:blue:).",
+            "Copying a picked color in another format now uses \u2318\u21e7X, \u2318\u21e7R, \u2318\u21e7L and \u2318\u21e7S, so \u23181 to \u23189 pick rows again.",
+            "Clearing picked colors asks for a second click."
+          ],
+          "version": "1.1.0"
+        },
         {
           "notes": [
             "First version: pick, copy as hex, RGB or HSL, and a list of recent colors."
@@ -331,17 +389,41 @@
           "version": "1.0.0"
         }
       ],
-      "description": "Pick a color from anywhere on screen and copy it. Run **Pick Color** from the palette (or press the button in the panel), click any pixel with the magnifier, and the color is on your clipboard as hex, RGB or HSL.\n\n**Picked Colors** lists the last 30 colors you picked. Return copies a color in your chosen format, and \u23181, \u23182 and \u23183 copy it as hex, RGB or HSL.\n\n## What it needs\n\nNothing. The magnifier is macOS's own, and Stackbar 0.26.0 or later.\n\n## Settings\n\n- **Clear Picked Colors** empties the list.",
+      "description": "Pick a color from anywhere on screen and copy it. Run **Pick Color** from the palette (or press the button in the panel), click any pixel with the magnifier, and the color is on your clipboard as hex, RGB or HSL.\n\n**Picked Colors** lists the last 30 colors you picked. Return copies a color in your chosen format, and \u2318\u21e7X, \u2318\u21e7R, \u2318\u21e7L and \u2318\u21e7S copy it as hex, RGB, HSL or SwiftUI.",
       "facts": [
         {
-          "label": "Copy as",
-          "text": "hex (`#0A60C8`), RGB (`rgb(10, 96, 200)`) or HSL (`hsl(213, 90%, 41%)`)."
+          "label": "Needs",
+          "text": "nothing. The magnifier is macOS's own."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel, settings."
+        },
+        {
+          "label": "Commands",
+          "text": "Pick Color, Picked Colors, Convert Color (type a hex color like #0A60C8 in the palette)."
+        },
+        {
+          "label": "Settings",
+          "text": "copy as hex (`#0A60C8`), RGB (`rgb(10, 96, 200)`), HSL (`hsl(213, 90%, 41%)`) or SwiftUI (`Color(red: 0.039, green: 0.376, blue: 0.784)`), and Clear Picked Colors."
+        },
+        {
+          "label": "Requires",
+          "text": "Stackbar 0.26.0 or later."
         }
       ],
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     "io.navbytes.stackbar.plugins.dictionary": {
       "changes": [
+        {
+          "notes": [
+            "Look a word up right in the panel, and click a recent word to see its definition again.",
+            "Picking a recent word in Define Word shows its definition instead of the list again.",
+            "Type any word in the palette and Define Word is offered under the results."
+          ],
+          "version": "1.2.0"
+        },
         {
           "notes": [
             "Open in Dictionary (\u2318O) works: it now declares the dict:// link it opens, which Stackbar shows on the install sheet. If something is refused you see why.",
@@ -356,12 +438,41 @@
           "version": "1.0.0"
         }
       ],
-      "description": "Look words up in the Mac's own Dictionary without leaving what you're doing. Open the palette, type **Define Word**, then the word, and the definition shows as you type. It works offline.\n\nReturn copies the definition, \u2318\u21e7C copies the word, and \u2318O opens it in the Dictionary app. Words you used stay in a Recent list.\n\n## What it needs\n\nStackbar 0.26.0 or later, and permission to open `dict://` links (that is how \u2318O opens the Dictionary app). It uses the dictionaries turned on in the Dictionary app's settings, so other languages work too.",
-      "facts": [],
-      "version": "1.1.0"
+      "description": "Look words up in the Mac's own Dictionary without leaving what you're doing. Open the palette, type **Define Word**, then the word, and the definition shows as you type. It works offline.\n\nReturn copies the definition, \u2318\u21e7C copies the word, and \u2318O opens it in the Dictionary app. Words you used stay in a Recent list.",
+      "facts": [
+        {
+          "label": "Needs",
+          "text": "permission to open `dict://` links (how \u2318O opens the Dictionary app). Definitions come from the dictionaries turned on in the Dictionary app's settings, so other languages work too."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel."
+        },
+        {
+          "label": "Commands",
+          "text": "Define Word (also offered under the palette's results for any text)."
+        },
+        {
+          "label": "Requires",
+          "text": "Stackbar 0.26.0 or later."
+        }
+      ],
+      "version": "1.2.0"
     },
     "io.navbytes.stackbar.plugins.docker": {
       "changes": [
+        {
+          "notes": [
+            "Stop All Docker Containers: press Return on the row that says what it will stop. Remove Stopped Docker Containers: press Return on the row that says what it will remove. Remove Stopped Containers in Settings asks for a second press within 10 seconds.",
+            "Removing a container asks for a second press, since its files are gone afterwards. Stopping one still takes a single click, because Start brings it back.",
+            "A notice shows while a container or project is stopping, starting or restarting.",
+            "Paused containers can be resumed; Start used to fail on them.",
+            "\"Docker isn't running\" now also shows for newer Docker versions and for a Docker that has stopped answering.",
+            "A crash notification has a Show Logs button.",
+            "The CPU and memory totals no longer count containers that have stopped."
+          ],
+          "version": "1.8.0"
+        },
         {
           "notes": [
             "The logs window stops refreshing on its own two minutes after you open it or press Refresh, instead of polling for the rest of the session.",
@@ -411,7 +522,7 @@
         },
         {
           "label": "Surfaces",
-          "text": "menu bar, panel, settings."
+          "text": "menu bar, panel, window (logs), widget, settings."
         },
         {
           "label": "How it checks",
@@ -427,11 +538,11 @@
         },
         {
           "label": "Settings",
-          "text": "show stopped containers, group by Compose project, the trouble notification (on by default), and Remove Stopped Containers (`docker container prune`; images and volumes are left alone)."
+          "text": "group by Compose project, the trouble notification (on by default), and Remove Stopped Containers (press again within 10 seconds; it removes the stopped containers with `docker rm`, and images and volumes are left alone)."
         },
         {
           "label": "Commands",
-          "text": "Docker Containers, Docker Compose Projects, Stop All Docker Containers, Docker Logs (the last 200 lines of one container), Remove Stopped Docker Containers."
+          "text": "Docker Containers, Docker Compose Projects, Stop All Docker Containers, Docker Logs (the last 200 lines of one container), Remove Stopped Docker Containers. Stop All Docker Containers and Remove Stopped Docker Containers each show the containers they will act on, and act when you press Return on that row."
         },
         {
           "label": "Requires",
@@ -442,10 +553,20 @@
           "text": "`containers` lists every container with its image, state, CPU and memory."
         }
       ],
-      "version": "1.7.1"
+      "version": "1.8.0"
     },
     "io.navbytes.stackbar.plugins.emoji": {
       "changes": [
+        {
+          "notes": [
+            "Pick a skin tone in Settings, and hands and people paste in it.",
+            "Everyday words find their emoji: happy, lol, love, yes, thanks, party, fire and more.",
+            "Accents and apostrophes no longer get in the way: \"pinata\" finds \ud83e\ude85, \"cote\" finds C\u00f4te d\u2019Ivoire, \"oclock\" finds the clocks.",
+            "Paste an emoji into the search to find it and its name.",
+            "At the palette's root, :thumbs-up and :100 work."
+          ],
+          "version": "1.2.0"
+        },
         {
           "notes": [
             "Hyphenated names are found: left-facing, heart-eyes, upside-down, star-struck.",
@@ -471,11 +592,15 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "the clipboard, to paste (your clipboard is put back afterwards). Stackbar 0.20.0 or later, which draws grids in the palette."
+          "text": "the clipboard, to paste (your clipboard is put back afterwards). Stackbar 0.21.0 or later, which draws grids in the palette."
         },
         {
           "label": "Surfaces",
-          "text": "panel."
+          "text": "panel, settings."
+        },
+        {
+          "label": "Settings",
+          "text": "a skin tone for hands and people."
         },
         {
           "label": "Commands",
@@ -483,13 +608,21 @@
         },
         {
           "label": "Data",
-          "text": "Unicode's Emoji 15.1 list and English names, without skin-tone variants. Nothing leaves your Mac."
+          "text": "Unicode's Emoji 15.1 list and English names, with your chosen skin tone applied. Nothing leaves your Mac."
         }
       ],
-      "version": "1.1.1"
+      "version": "1.2.0"
     },
     "io.navbytes.stackbar.plugins.file-search": {
       "changes": [
+        {
+          "notes": [
+            "Opening a file and Show in Finder work again. Before, picking a file did nothing.",
+            "The files you opened lately stay in the panel after Stackbar restarts.",
+            "Going back over a search you just typed answers straight away instead of asking Spotlight again."
+          ],
+          "version": "1.0.2"
+        },
         {
           "notes": [
             "A Spotlight error no longer lingers when you clear the search back to a short query."
@@ -518,10 +651,23 @@
           "text": "Search Files, which also feeds the palette's results."
         }
       ],
-      "version": "1.0.1"
+      "version": "1.0.2"
     },
     "io.navbytes.stackbar.plugins.homebrew": {
       "changes": [
+        {
+          "notes": [
+            "Homebrew Services: see which background services are running, and start, stop or restart them from the palette.",
+            "The new-updates notification has an Upgrade All button.",
+            "A notice shows when an upgrade or Update Homebrew starts, since they can take minutes.",
+            "Searching Outdated Homebrew Packages no longer re-runs brew on every keystroke.",
+            "Casks and formulae with the same name upgrade the right one.",
+            "Pinned formulae offer to copy the unpin command instead of an Upgrade that would fail.",
+            "Cask versions drop the build number (4.98.0 instead of 4.98.0,245422).",
+            "Needs Stackbar 0.26.0."
+          ],
+          "version": "1.6.0"
+        },
         {
           "notes": [
             "The desktop widget has a button: Upgrade All when there are updates, Check when there aren't. Needs Stackbar 0.21.0."
@@ -541,7 +687,7 @@
           "version": "1.3.1"
         }
       ],
-      "description": "What Homebrew can upgrade, in the menu bar. The number is how many formulae\nand casks are outdated; the panel lists them with Upgrade on each row and\nUpgrade All at the bottom.",
+      "description": "What Homebrew can upgrade, in the menu bar. The number is how many formulae\nand casks are outdated; the panel lists them with Upgrade on each row and\nUpgrade All at the top.",
       "facts": [
         {
           "label": "Needs",
@@ -549,7 +695,7 @@
         },
         {
           "label": "Surfaces",
-          "text": "menu bar, panel, settings."
+          "text": "menu bar, panel, widget, settings."
         },
         {
           "label": "How it checks",
@@ -561,17 +707,31 @@
         },
         {
           "label": "Commands",
-          "text": "Upgrade All Homebrew Packages, Update Homebrew, Outdated Homebrew Packages."
+          "text": "Upgrade All Homebrew Packages, Update Homebrew, Outdated Homebrew Packages, Homebrew Services (the background services, like postgresql or redis, with Start, Stop and Restart)."
         },
         {
           "label": "Agent tool",
           "text": "`outdated` lists what can be upgraded."
+        },
+        {
+          "label": "Requires",
+          "text": "Stackbar 0.26.0 or later."
         }
       ],
-      "version": "1.5.0"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.plugins.jira": {
       "changes": [
+        {
+          "notes": [
+            "Paste a Jira issue link into Search Jira to open that issue.",
+            "Switching to another API token no longer announces every issue on that account as newly assigned, and Assign to Me and Watch act as the new account.",
+            "Projects created since you set up Jira show up in Create Jira Issue (the list refreshes hourly).",
+            "Search Jira waits until you pause typing instead of asking Jira on every keystroke.",
+            "A slow or unreachable Jira holds up clicks for less time."
+          ],
+          "version": "1.6.0"
+        },
         {
           "notes": [
             "Your assigned and done lists load past the first 50 issues (up to 200).",
@@ -618,7 +778,7 @@
         },
         {
           "label": "Surfaces",
-          "text": "menu bar, panel, settings."
+          "text": "menu bar, panel, widget, settings."
         },
         {
           "label": "On each issue",
@@ -630,7 +790,7 @@
         },
         {
           "label": "Commands",
-          "text": "My Jira Issues, Search Jira (text, or a key like `ABC-123`), Change Jira Issue Status, Comment on Jira Issue, Create Jira Issue (project, type, summary, description)."
+          "text": "My Jira Issues, Search Jira (text, a key like `ABC-123`, or a pasted issue link), Change Jira Issue Status, Comment on Jira Issue, Create Jira Issue (project, type, summary, description)."
         },
         {
           "label": "Settings",
@@ -641,10 +801,22 @@
           "text": "`assigned` lists your open issues."
         }
       ],
-      "version": "1.5.1"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.plugins.kill-process": {
       "changes": [
+        {
+          "notes": [
+            "Quit Process, Force Quit and Quit All ask once more: press again within ten seconds, so a stray Return doesn't end a process.",
+            "A process that has quit leaves the results at once, and Stackbar says whether it ended or is still running.",
+            "Processes with the same name show their command line, so you can tell a helper from the app. Search finds a process by its command line too.",
+            "An optional alert, in Settings, for a process that stays busy for two minutes. Its Show button opens the search for it.",
+            "The panel's title names the busiest process and its CPU.",
+            "A failed scan keeps the list you had, under a note.",
+            "Processes of Stackbar plugins are labelled \"Stackbar plugin: name\", and Dock is left alone."
+          ],
+          "version": "1.2.0"
+        },
         {
           "notes": [
             "The panel's process list now refreshes every minute, and has a Refresh button, instead of showing what was running at launch."
@@ -658,29 +830,42 @@
           "version": "1.0.0"
         }
       ],
-      "description": "Find a stuck process by name and end it from the palette. Choose Kill\nProcess and type part of the name (or a pid): each row shows its CPU and\nmemory, Return asks it to quit, and \u2318\u21e7Return force quits it. When several\nprocesses share a name, one action quits them all. The panel lists the\nheaviest processes, by CPU or memory.",
+      "description": "Find a stuck process by name and end it from the palette. Choose Kill\nProcess and type part of the name, its command line or a pid: each row shows\nthe command it runs and its CPU and memory. Return asks it to quit, and\n\u2318\u21e7Return force quits it. Quitting asks once more: press again within ten\nseconds. When several processes share a name, one action quits them all. The\npanel lists the heaviest processes, by CPU or memory, each with its command\nline.\n\n- To free a port, use Ports; for the whole-system view, use System Monitor.",
       "facts": [
         {
           "label": "Needs",
-          "text": "running `ps` and `kill`. Stackbar 0.22.0 or later."
+          "text": "running `ps` and `kill`. Stackbar 0.26.0 or later."
         },
         {
           "label": "Surfaces",
-          "text": "panel (the heaviest processes now)."
+          "text": "panel (the heaviest processes now), settings."
         },
         {
           "label": "Commands",
           "text": "Kill Process."
         },
         {
+          "label": "Settings",
+          "text": "an alert when one of your processes stays busy: on or off, and the line it has to stay above (50%, 90% or 150% of a core)."
+        },
+        {
           "label": "Leaves alone",
-          "text": "other users' processes, and loginwindow, WindowServer, launchd and Stackbar itself, which would log you out or freeze the screen."
+          "text": "other users' processes, and loginwindow, WindowServer, Dock, launchd and Stackbar itself, which would log you out or freeze the screen."
         }
       ],
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     "io.navbytes.stackbar.plugins.linear": {
       "changes": [
+        {
+          "notes": [
+            "Mark everything in your Linear inbox as read at once, from the panel or Linear Inbox (press twice to confirm).",
+            "Switching to an API key for another account no longer announces its whole inbox as new.",
+            "Without an API key the menu bar stays quiet and the widget offers to connect, instead of showing an error.",
+            "Searching issue titles waits until you pause typing, and a slow Linear holds up clicks for less time."
+          ],
+          "version": "1.6.0"
+        },
         {
           "notes": [
             "Assigned issues load past the first 100 (up to 400).",
@@ -727,7 +912,7 @@
         },
         {
           "label": "Surfaces",
-          "text": "menu bar, panel, settings."
+          "text": "menu bar, panel, widget, settings."
         },
         {
           "label": "On each issue",
@@ -735,7 +920,7 @@
         },
         {
           "label": "Inbox",
-          "text": "assignments, mentions and comments, with a notification for each new one. Open marks it read."
+          "text": "assignments, mentions and comments, with a notification for each new one. Open marks it read, and Mark All as Read clears the lot (press twice to confirm)."
         },
         {
           "label": "Commands",
@@ -750,10 +935,20 @@
           "text": "`assigned` lists your open issues with their branch names."
         }
       ],
-      "version": "1.5.1"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.plugins.litellm": {
       "changes": [
+        {
+          "notes": [
+            "Switching to another proxy or user starts its history fresh instead of mixing in the old one's numbers.",
+            "A key with its own budget shows that budget when your user has none.",
+            "LiteLLM Spend lists your top models, says when the proxy can't be reached, and no longer refetches on every keystroke.",
+            "Without a key the panel asks for one instead of saying it can't reach the proxy.",
+            "Charts in the window draw faster, and a slow proxy holds up clicks for less time."
+          ],
+          "version": "1.5.0"
+        },
         {
           "notes": [
             "A failed half-year history request no longer fails the whole refresh or repeats every 2 minutes.",
@@ -788,7 +983,7 @@
         },
         {
           "label": "Calls",
-          "text": "`/user/info` and `/user/daily/activity`, every two minutes for the last 30 days and every six hours for the six months before that."
+          "text": "`/user/info` (and `/key/info` when your user has no budget of its own) and `/user/daily/activity`, every two minutes for the last 30 days and every six hours for the six months before that."
         },
         {
           "label": "Surfaces",
@@ -803,10 +998,17 @@
           "text": "`usage_summary`."
         }
       ],
-      "version": "1.4.1"
+      "version": "1.5.0"
     },
     "io.navbytes.stackbar.plugins.menu-search": {
       "changes": [
+        {
+          "notes": [
+            "Typos, initials and dots are forgiven: \"zom in\" finds Zoom In, \"nw\" finds New Window and \"export...\" finds Export as PDF\u2026.",
+            "The panel lists the menu items you choose most, across your apps. Click one to choose it again."
+          ],
+          "version": "1.1.0"
+        },
         {
           "notes": [
             "A failed menu read is remembered for a few seconds, so typing no longer repeats the whole menu walk on every key."
@@ -824,11 +1026,11 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "reading the menus of the app you were in and choosing an item (`.menus`), which uses Accessibility access. Stackbar 0.25.0 or later."
+          "text": "reading the menus of the app you were in and choosing an item (`.menus`), which uses Accessibility access. Stackbar 0.31.0 or later."
         },
         {
           "label": "Surfaces",
-          "text": "panel (how to use it)."
+          "text": "panel (your most chosen menu items)."
         },
         {
           "label": "Commands",
@@ -839,10 +1041,20 @@
           "text": "the Apple menu, submenu titles and separators. Dimmed items show at the bottom and can't be chosen."
         }
       ],
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     "io.navbytes.stackbar.plugins.music": {
       "changes": [
+        {
+          "notes": [
+            "Songs and streams whose titles contain line breaks or tabs now show up, instead of \"Nothing playing\".",
+            "Play, Pause and Skip respond faster.",
+            "With the player paused, it checks every 15 seconds instead of every 5. Any click still updates it right away.",
+            "New commands: Skip Forward 15 Seconds and Skip Back 15 Seconds.",
+            "You can choose to get a notification for each new track (Settings \u203a Notifications)."
+          ],
+          "version": "1.5.0"
+        },
         {
           "notes": [
             "With neither Music nor Spotify open, it checks every 30 seconds instead of every 5, and goes back to 5 as soon as a player is running or you click.",
@@ -874,7 +1086,7 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "to run `osascript`, the only way to talk to Music and Spotify. The install sheet warns that osascript can run any program; this plugin only sends the fixed scripts in its source. macOS asks once whether Stackbar may control Music or Spotify."
+          "text": "to run `osascript`, the only way to talk to Music and Spotify. The install sheet warns that osascript can run any program; this plugin only sends the fixed scripts in its source. macOS asks once whether Stackbar may control Music or Spotify. Stackbar 0.22.0 or later."
         },
         {
           "label": "Surfaces",
@@ -882,25 +1094,34 @@
         },
         {
           "label": "How it checks",
-          "text": "every 5 seconds, and only players that are already running; it never opens one."
+          "text": "every 5 seconds while playing, 15 while paused and 30 with no player open, and only players that are already running; it never opens one."
         },
         {
           "label": "Settings",
-          "text": "which player to follow (whichever is playing, Music or Spotify) and what the menu bar shows (title and artist, title, or just the icon)."
+          "text": "which player to follow (whichever is playing, Music or Spotify) and what the menu bar shows (title and artist, title, or just the icon), and whether to announce each new track."
         },
         {
           "label": "Commands",
-          "text": "Play or Pause Music, Next Track, Previous Track, Copy Current Track."
+          "text": "Play or Pause Music, Next Track, Previous Track, Copy Current Track, Skip Forward 15 Seconds and Skip Back 15 Seconds."
         },
         {
           "label": "Agent tool",
           "text": "`now_playing` describes the current track."
         }
       ],
-      "version": "1.4.1"
+      "version": "1.5.0"
     },
     "io.navbytes.stackbar.plugins.pomodoro": {
       "changes": [
+        {
+          "notes": [
+            "Start a Focus Session and Take a Break take lengths like \"45 minutes\", \"45m\", \"1h\" or \"1 hour\", not only a bare number.",
+            "Reset and Skip from the palette, a hotkey or a Shortcut now ask first once a session is a minute in: run it again within 30 seconds to confirm.",
+            "A daily goal: pick 4 to 12 sessions in Settings, see \"3/8\" under the timer and a goal line on the week chart.",
+            "A session that ended while your Mac was asleep counts on the day it ended, and Auto no longer starts the next session hours later."
+          ],
+          "version": "1.8.0"
+        },
         {
           "notes": [
             "Start a Focus Session and Take a Break no longer throw away a session that is more than a minute in without asking: the first run says so, and running it again within 30 seconds replaces the session.",
@@ -965,25 +1186,35 @@
         },
         {
           "label": "Commands",
-          "text": "Start or Pause Pomodoro, Start a Focus Session (optional minutes and tag), Take a Break (optional minutes), Skip and Reset. Run them from the palette, give them a hotkey, or call them from a Shortcut or a `stackbar://commands/io.navbytes.stackbar.plugins.pomodoro/<command>` link."
+          "text": "Start or Pause Pomodoro, Start a Focus Session (optional minutes and tag), Take a Break (optional minutes), Skip and Reset. Skip and Reset ask once a session is a minute in: run them again within 30 seconds to confirm. Run them from the palette, give them a hotkey, or call them from a Shortcut or a `stackbar://commands/io.navbytes.stackbar.plugins.pomodoro/<command>` link."
         },
         {
           "label": "Settings",
-          "text": "custom focus, break and long-break lengths, how many sessions before a long break, auto-start, the sound, and your tags."
+          "text": "custom focus, break and long-break lengths, how many sessions before a long break, a daily goal, auto-start, the sound, and your tags."
         },
         {
           "label": "Agent tool",
-          "text": "`status` returns the mode, the time left, today's focus and the last seven days."
+          "text": "`status` returns the mode, the time left, today's focus and the last seven days, and your daily goal."
         },
         {
           "label": "Requires",
           "text": "Stackbar 0.26.0 or later."
         }
       ],
-      "version": "1.7.1"
+      "version": "1.8.0"
     },
     "io.navbytes.stackbar.plugins.ports": {
       "changes": [
+        {
+          "notes": [
+            "Kill Port shows which process holds the port and stops it only when you press Return, so you see what you're about to end.",
+            "Stop Process and Force Quit in the panel ask for a second press within 10 seconds.",
+            "Stopping a process no longer makes the plugin pause for a moment.",
+            "A process listening on both localhost and all interfaces is marked as reachable from the network.",
+            "Searching Listening Ports reuses the list from the last few seconds."
+          ],
+          "version": "1.4.2"
+        },
         {
           "notes": [
             "Ports slows its scan from every 30 seconds to every two minutes while nothing has changed, and returns to 30 seconds when a port opens or closes."
@@ -1021,7 +1252,7 @@
         },
         {
           "label": "In the panel",
-          "text": "every listening port with its process and pid, marked local (127.0.0.1 or ::1 only) or open (all interfaces). Each row can open `http://localhost:<port>`, stop the process (SIGTERM), force quit it (SIGKILL) or copy its pid."
+          "text": "every listening port with its process and pid, marked local (127.0.0.1 or ::1 only) or open (all interfaces). Each row can open `http://localhost:<port>`, stop the process (SIGTERM), force quit it (SIGKILL) or copy its pid. Stop and Force Quit ask for a second press."
         },
         {
           "label": "Settings",
@@ -1029,17 +1260,26 @@
         },
         {
           "label": "Commands",
-          "text": "Kill Port (port, and TERM or KILL), Listening Ports."
+          "text": "Kill Port (port, and TERM or KILL): shows what holds the port; Return stops it. Listening Ports."
         },
         {
           "label": "Agent tool",
           "text": "`listening` lists ports with their processes."
         }
       ],
-      "version": "1.4.1"
+      "version": "1.4.2"
     },
     "io.navbytes.stackbar.plugins.recent-projects": {
       "changes": [
+        {
+          "notes": [
+            "Show in Finder on every project.",
+            "The panel lists all your recent projects, with search, not only the latest 8.",
+            "If VS Code's projects are missing because VS Code moved its list, or an editor's list can't be read, the panel says so instead of looking empty.",
+            "Typing in the palette answers from the list read in the last few minutes, so results show faster."
+          ],
+          "version": "1.2.0"
+        },
         {
           "notes": [
             "A default editor in Settings, picked from the editors installed on your Mac, Zed, Xcode, Sublime Text and JetBrains IDEs included. Return opens projects there; \u2318K still offers the others.",
@@ -1058,7 +1298,7 @@
       "facts": [
         {
           "label": "How it finds projects",
-          "text": "VS Code, Cursor, Windsurf and VSCodium each keep their recently opened list in `state.vscdb` under `~/Library/Application Support/<Editor>/User/globalStorage`. The plugin reads its `history.recentlyOpenedPathsList` entry, up to 30 from each editor, and lists each folder or workspace once."
+          "text": "VS Code, Cursor, Windsurf and VSCodium each keep their recently opened list in `state.vscdb` under `~/Library/Application Support/<Editor>/User/globalStorage`. The plugin reads its `history.recentlyOpenedPathsList` entry, up to 30 from each editor, and lists each folder or workspace once. VS Code 1.118 and later keep this list in a new place that this version can't read yet."
         },
         {
           "label": "Settings",
@@ -1070,7 +1310,7 @@
         },
         {
           "label": "Surfaces",
-          "text": "panel (the latest projects) and settings."
+          "text": "panel (your recent projects, searchable) and settings."
         },
         {
           "label": "Commands",
@@ -1081,10 +1321,19 @@
           "text": "single files and remote (SSH, container) projects."
         }
       ],
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     "io.navbytes.stackbar.plugins.script-commands": {
       "changes": [
+        {
+          "notes": [
+            "Click a script in the panel, or press Return on it in Script Commands, to run it. A script that asks first needs a second press.",
+            "Dropdown arguments from Raycast scripts show their choices in the palette.",
+            "A script that fails in a full-output view says so, with its exit status.",
+            "With no Script Commands folder, the panel shows one clear message instead of two."
+          ],
+          "version": "1.2.0"
+        },
         {
           "notes": [
             "A folder with an unreadable file or subfolder no longer stops the script list from refreshing.",
@@ -1109,7 +1358,7 @@
         },
         {
           "label": "Also read",
-          "text": "`packageName`, `description`, `icon` (an emoji), `argument1` to `argument3`, and `needsConfirmation`, which asks before the script runs."
+          "text": "`packageName`, `description`, `icon` (an emoji), `argument1` to `argument3` (`dropdown` arguments show their choices in the palette), and `needsConfirmation`, which asks before the script runs."
         },
         {
           "label": "Interpreters",
@@ -1121,17 +1370,24 @@
         },
         {
           "label": "Surfaces",
-          "text": "panel (your scripts)."
+          "text": "panel (your scripts; click one to run it)."
         },
         {
           "label": "Commands",
           "text": "one for each script, Script Commands (the list), and Reload Script Commands."
         }
       ],
-      "version": "1.1.0"
+      "version": "1.2.0"
     },
     "io.navbytes.stackbar.plugins.system-commands": {
       "changes": [
+        {
+          "notes": [
+            "When an action can't run (for example, Stackbar isn't allowed to control System Events, or there's no disk to eject), it now says why instead of doing nothing.",
+            "Clicking a confirmation that has run out now tells you to click again within 10 seconds."
+          ],
+          "version": "1.0.2"
+        },
         {
           "notes": [
             "Restart, Shut Down, Log Out, Empty Trash and Quit Other Apps in the panel forget their first click after 10 seconds, so a click out of habit later can't run one on its own."
@@ -1160,10 +1416,23 @@
           "text": "Lock Screen, Sleep, Sleep Displays, Start Screen Saver, Toggle Dark Mode, Hide Other Apps, Eject All Disks, Empty Trash, Quit Other Apps, Log Out, Restart, Shut Down."
         }
       ],
-      "version": "1.0.1"
+      "version": "1.0.2"
     },
     "io.navbytes.stackbar.plugins.system-monitor": {
       "changes": [
+        {
+          "notes": [
+            "Top Processes lists every process, not just the first eight, and searching it no longer re-reads the Mac on every keystroke.",
+            "The CPU chart and the busy alert count real minutes, so opening Top Processes or changing the sort no longer makes the chart fill faster.",
+            "Memory alerts follow memory pressure, as macOS reports it, instead of a fixed 90% used. The panel shows the pressure and the swap in use.",
+            "Quit Process asks you to press it again within ten seconds, and tells you whether the process ended.",
+            "When a reading can't be taken, the panel says how old its numbers are instead of showing zeros. Network speed shows a dash until it can be read again.",
+            "Busy alerts have a Show Processes button that opens Top Processes.",
+            "Disk sizes match Finder (1 GB is 1,000 MB). Memory is still counted the way Activity Monitor counts it.",
+            "Process names show the program's file name, also for programs started from a relative path."
+          ],
+          "version": "1.7.0"
+        },
         {
           "notes": [
             "A reading that flaps around a threshold no longer notifies again within the 30 minutes (six hours for the disk) after an alert."
@@ -1216,33 +1485,49 @@
         },
         {
           "label": "How it measures",
-          "text": "every 10 seconds, `ps` gives every process's CPU and memory (total CPU is their sum over the cores), `sysctl` the load, `vm_stat` memory the way Activity Monitor counts it (app memory, wired and compressed, not the file cache), `netstat` the bytes through Wi-Fi and Ethernet, and `df` the disk. Each answers at once, so nothing waits a second between two samples the way `top` does."
+          "text": "every 10 seconds, `ps` gives every process's CPU and memory (total CPU is their sum over the cores), `sysctl` the load, memory pressure and swap, `vm_stat` memory the way Activity Monitor counts it (app memory, wired and compressed, not the file cache), `netstat` the bytes through Wi-Fi and Ethernet, and `df` the disk. Each answers at once, so nothing waits a second between two samples the way `top` does."
         },
         {
           "label": "In the panel",
-          "text": "a CPU chart for the last five minutes, load averages, memory and disk, download and upload speeds with their recent history, CPU, GPU, SSD and battery temperatures and fan speeds (where the Mac reports them), and the top eight processes, each with Copy PID and Quit Process."
+          "text": "memory pressure and swap, a CPU chart for the last five minutes, load averages, memory and disk bars, download and upload speeds with their recent history, CPU, GPU, SSD and battery temperatures and fan speeds (where the Mac reports them), and the top eight processes, each with Copy PID and Quit Process. Top Processes lists every process."
+        },
+        {
+          "label": "Quitting",
+          "text": "Quit Process asks once more: press it again within ten seconds. Stackbar says whether the process ended. It never offers to quit loginwindow, WindowServer, Dock, launchd, kernel_task or Stackbar itself."
         },
         {
           "label": "Alerts",
-          "text": "a notification when CPU stays above your line (85% by default) or memory above 90% for a minute, naming the busiest process, and when the disk is 95% full. Once per spell, then quiet for 30 minutes."
+          "text": "a notification when CPU stays above your line (85% by default) for a minute, naming the busiest process; when memory pressure is Warning or Critical for a minute; and when the disk is 95% full. Once per spell, then quiet for 30 minutes (six hours for the disk)."
         },
         {
           "label": "Settings",
-          "text": "what the menu bar shows (CPU and memory, CPU, memory, or download speed, or CPU temperature), alerts and the CPU line, and whether processes are sorted by CPU or memory."
+          "text": "what the menu bar shows (CPU and memory, CPU, memory, download speed, or CPU temperature), and the alerts and the CPU line."
         },
         {
           "label": "Agent tool",
-          "text": "`usage` returns CPU, memory, disk, network, temperatures and the busiest processes."
+          "text": "`usage` returns CPU, memory, pressure, swap, disk, network, temperatures and the busiest processes."
         },
         {
           "label": "Requires",
           "text": "Stackbar 0.26.0 or later."
         }
       ],
-      "version": "1.6.1"
+      "version": "1.7.0"
     },
     "io.navbytes.stackbar.plugins.timers": {
       "changes": [
+        {
+          "notes": [
+            "\"tea for 3 min\", \"in 10 minutes pasta\" and \"at 5 pm call\" no longer put \"for\", \"in\" or \"at\" in the timer's name.",
+            "\"lunch at 12\" sets an alarm for the next 12 o'clock instead of a 12-minute timer; \"noon\", \"midnight\" and \"5.30pm\" work too.",
+            "Clock times are right on the days the clocks change.",
+            "Pause and resume a timer from the panel or Show Timers.",
+            "The \"done\" notification has Again and 5 More Minutes buttons.",
+            "Stop All Timers asks you to run it again within 10 seconds when more than one is running.",
+            "Several timers ending together come as one notification."
+          ],
+          "version": "1.1.0"
+        },
         {
           "notes": [
             "A unit written after the number is now respected: \"30 seconds\" is 30 seconds, \"1 hour tea\" is an hour, \"2 hours 15 min\" is two and a quarter hours, and \"10minutes\" works. \"5 pm\" with a space is a time, not 5 minutes."
@@ -1256,11 +1541,11 @@
           "version": "1.0.0"
         }
       ],
-      "description": "Countdown timers from the palette. Choose Start Timer and type a length and\na name (\"10m tea\", \"tea 1h30\", \"90s\", \"5m30s eggs\") or a clock time\n(\"17:45 call\", \"5pm\"). Several run at once; the soonest counts down in the\nmenu bar, and each ends with a sound, a notification and a message on\nscreen. The panel shows every timer with +1m, +5m and Cancel, and starts the\nlengths you use most with one click.",
+      "description": "Countdown timers from the palette. Choose Start Timer and type a length and\na name (\"10m tea\", \"tea 1h30\", \"90s\", \"5m30s eggs\") or a clock time\n(\"17:45 call\", \"5pm\"). Several run at once; the soonest counts down in the\nmenu bar, and each ends with a sound, a notification and a message on\nscreen. The panel shows every timer with +1m, +5m, Pause and Cancel, and starts the\nlengths you use most with one click.",
       "facts": [
         {
           "label": "Needs",
-          "text": "nothing beyond Stackbar 0.22.0 or later."
+          "text": "nothing beyond Stackbar 0.26.0 or later."
         },
         {
           "label": "Surfaces",
@@ -1276,13 +1561,26 @@
         },
         {
           "label": "Note",
-          "text": "`1:30` is a clock time; write `1h30` for an hour and a half."
+          "text": "`1:30` is a clock time; write `1h30` for an hour and a half. `noon`, `midnight` and `at 12` are clock times too."
         }
       ],
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     "io.navbytes.stackbar.plugins.todo": {
       "changes": [
+        {
+          "notes": [
+            "\"This evening at 7\", \"tonight at 9\", \"tomorrow evening at 8\" and \"Friday night at 9\" now mean the evening, and the words no longer stay in the task's title.",
+            "Dates written with numbers work: \"dentist 14/11\" or \"11/14\" (and \"on 3/4\", in your Mac's date order).",
+            "\"by 5\", \"on the 3rd\" or \"on 3rd\", and \"by midnight\" are understood.",
+            "\"at 8\" typed in the afternoon means 8 tonight, not tomorrow morning.",
+            "A due-task notification has Done and Snooze 1 Hour buttons.",
+            "New Search Todos command: find any open task in the palette and tick it off, snooze it or move it to today.",
+            "Agents can only read your tasks once you turn the tasks tool on in Settings \u203a Agents, since they're private.",
+            "The morning summary and the nudge no longer arrive hours late when your Mac was off at the time."
+          ],
+          "version": "2.2.0"
+        },
         {
           "notes": [
             "A task Reminders refuses to save no longer makes every sync add the tasks before it to Reminders again, and no longer stops changes from your other devices arriving.",
@@ -1352,7 +1650,7 @@
         },
         {
           "label": "Typing dates",
-          "text": "today, tonight, tomorrow, the day after tomorrow, friday, this friday, next friday (the Friday of next week), this weekend, next week, next month, in 3 days, in 2 hours, in half an hour, Nov 5, 5 November, the 12th, 2027-03-12. Times: 2pm, 2:30pm, 14:30, at 9, noon, this morning, this afternoon, this evening. Repeats: every day, every weekday, every monday, every week, every month, daily, weekly, monthly. A `!` on its own marks the task important. Words in \"double quotes\" are kept as they are."
+          "text": "today, tonight, tomorrow, the day after tomorrow, friday, this friday, next friday (the Friday of next week), this weekend, next week, next month, in 3 days, in 2 hours, in half an hour, Nov 5, 5 November, the 12th, on 3rd, 2027-03-12, 14/11. Times: 2pm, 2:30pm, 14:30, at 9, by 5, noon, midnight, this morning, this afternoon, this evening, tomorrow night, friday night. Repeats: every day, every weekday, every monday, every week, every month, daily, weekly, monthly. A `!` on its own marks the task important. Words in \"double quotes\" are kept as they are."
         },
         {
           "label": "In the panel",
@@ -1364,7 +1662,7 @@
         },
         {
           "label": "Alerts",
-          "text": "in Reminders, a task with a time gets a Reminders alert, on every device, with Done and Snooze. On this Mac only, Todo sends one notification when it is due; one the Mac slept through by more than half a day is let go quietly."
+          "text": "in Reminders, a task with a time gets a Reminders alert, on every device, with Done and Snooze. On this Mac only, Todo sends one notification when it is due, with Done and Snooze 1 Hour buttons; one the Mac slept through by more than half a day is let go quietly."
         },
         {
           "label": "One nudge",
@@ -1380,7 +1678,7 @@
         },
         {
           "label": "Commands",
-          "text": "Add a Todo, Mark a Todo Done, Snooze a Todo (to a time you type, or an hour or a day later) and Today's Todos (a list to tick off from the palette). Run them from the palette, give them a hotkey, or call them from a Shortcut or a `stackbar://commands/io.navbytes.stackbar.plugins.todo/add?task=\u2026` link."
+          "text": "Add a Todo, Mark a Todo Done, Snooze a Todo (to a time you type, or an hour or a day later), Today's Todos (a list to tick off from the palette) and Search Todos (every open task, to tick off, snooze or move to today). Run them from the palette, give them a hotkey, or call them from a Shortcut or a `stackbar://commands/io.navbytes.stackbar.plugins.todo/add?task=\u2026` link."
         },
         {
           "label": "Settings",
@@ -1388,17 +1686,28 @@
         },
         {
           "label": "Agent tools",
-          "text": "`tasks` lists open tasks with their dates; `add` adds one from plain words."
+          "text": "`tasks` (off until you turn it on in Settings \u203a Agents) lists open tasks with their dates; `add` adds one from plain words."
         },
         {
           "label": "Requires",
-          "text": "Stackbar 0.18.0 or later."
+          "text": "Stackbar 0.26.0 or later."
         }
       ],
-      "version": "2.1.1"
+      "version": "2.2.0"
     },
     "io.navbytes.stackbar.plugins.translate": {
       "changes": [
+        {
+          "notes": [
+            "Translate and Replace Selection pastes the translation straight over the text you selected.",
+            "Translate and Replace Selection won't replace a selection longer than 5,000 characters when Google or DeepL translates it, so nothing is lost; select less text.",
+            "Long texts in Chinese, Japanese, Korean and other non-Latin scripts translate with Google instead of failing with an error.",
+            "Text that is already in your main language goes straight to your second language, so it stays on your Mac when that pair is downloaded instead of going to Google first.",
+            "A DeepL key pasted with a stray space or line break now works, and a rejected key says which DeepL server it tried.",
+            "The language name on a translation is easier to read in light and dark mode."
+          ],
+          "version": "1.7.0"
+        },
         {
           "notes": [
             "If Apple's translation fails for a language pair that is downloaded, you now see the error instead of the text going to Google. Settings says exactly when text leaves your Mac.",
@@ -1452,17 +1761,24 @@
         },
         {
           "label": "Commands",
-          "text": "Translate Selection, Translate Text on Screen (drag over any text, even in an image or a video; the translation is copied), Translate Selection in Google Translate."
+          "text": "Translate Selection, Translate Text on Screen (drag over any text, even in an image or a video; the translation is copied), Translate Selection in Google Translate, Translate and Replace Selection (pastes the translation over what you selected)."
         },
         {
           "label": "Requires",
           "text": "Stackbar 0.26.0 or later."
         }
       ],
-      "version": "1.6.1"
+      "version": "1.7.0"
     },
     "io.navbytes.stackbar.plugins.window-switcher": {
       "changes": [
+        {
+          "notes": [
+            "The panel's window list refreshes whenever an app opens or quits, and a Refresh button reads it again on demand. The header shows when it was last read.",
+            "Windows from the panel no longer show up in the palette's results, where closed windows used to linger."
+          ],
+          "version": "1.1.0"
+        },
         {
           "notes": [
             "Typing reuses the window list read when the view opened, instead of asking Accessibility again on every key."
@@ -1480,7 +1796,7 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "listing and focusing windows (`.windows`), which uses Accessibility access. Stackbar 0.25.0 or later."
+          "text": "listing and focusing windows (`.windows`), which uses Accessibility access. Stackbar 0.31.0 or later."
         },
         {
           "label": "Surfaces",
@@ -1495,10 +1811,20 @@
           "text": "front to back when nothing is typed; with more than one display, each row says which display the window is on."
         }
       ],
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     "io.navbytes.stackbar.plugins.workspaces": {
       "changes": [
+        {
+          "notes": [
+            "Snap buttons in the panel now say when nothing could move, for example \"Only one display\" or when an app won't let its window move.",
+            "Restoring a layout saved with a display that's no longer connected keeps every window on a screen you have.",
+            "Deleting a layout, or all of them, asks you to click again first.",
+            "Pressing Left, Right, Top or Bottom Half again cycles the window through two thirds and one third. You can turn this off in Settings.",
+            "New Previous Display command."
+          ],
+          "version": "2.1.0"
+        },
         {
           "notes": [
             "Window Layouts is now part of Workspaces, and together they are called Windows. The panel has a row of snap buttons above your saved layouts, and every snap is still a command.",
@@ -1538,11 +1864,11 @@
         },
         {
           "label": "Snapping",
-          "text": "halves, the four quarters, First / Center / Last Third, First / Last Two Thirds, Maximize, Almost Maximize, Center, Next Display and Undo Snap, which puts the window back where it was before its last snap."
+          "text": "halves, the four quarters, First / Center / Last Third, First / Last Two Thirds, Maximize, Almost Maximize, Center, Next Display, Previous Display (palette only) and Undo Snap, which puts the window back where it was before its last snap. Pressing Left, Right, Top or Bottom Half again cycles through two thirds and one third."
         },
         {
           "label": "Settings",
-          "text": "the gap left around snapped windows, bring back the starred layout when displays change, open apps that aren't running, and the menu bar icon."
+          "text": "the gap left around snapped windows, bring back the starred layout when displays change, open apps that aren't running, cycle sizes on repeated halves, and the menu bar icon."
         },
         {
           "label": "Commands",
@@ -1557,10 +1883,22 @@
           "text": "windows in full screen and on other Spaces, and browser tabs."
         }
       ],
-      "version": "2.0.0"
+      "version": "2.1.0"
     },
     "io.navbytes.stackbar.plugins.world-clock": {
       "changes": [
+        {
+          "notes": [
+            "Type the cities people actually say: Mumbai, Bangalore, San Francisco, Beijing, S\u00e3o Paulo, and in \"time in \u2026\" also NYC, SF, PST or UTC. A question mark at the end is fine, and so is the curly apostrophe in \"what\u2019s the time in\".",
+            "A name typed in full wins: \"time in ist\" shows India and \"time in la\" Los Angeles first, ahead of cities that only start with those letters.",
+            "A city added by its own name keeps that name, so Mumbai shows as Mumbai.",
+            "Settings tells you when it can't find a city, or when it's already in your list.",
+            "Copy times: one click copies every city's time at the slider's time, ready to paste into an invite. Also a Copy My Cities' Times command.",
+            "Removing the city shown in the menu bar now moves the menu bar to your next city, and so does a city this Mac no longer recognises, instead of an empty menu bar.",
+            "Lighter on redraws: each clock no longer rebuilds its date formatter."
+          ],
+          "version": "1.6.0"
+        },
         {
           "notes": [
             "Night-shift working hours (like 22:00 to 06:00) now work.",
@@ -1591,7 +1929,7 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "nothing. No network, files or secrets."
+          "text": "nothing beyond Stackbar 0.22.0 or later. No network, files or secrets."
         },
         {
           "label": "Surfaces",
@@ -1603,21 +1941,34 @@
         },
         {
           "label": "In the panel",
-          "text": "tap a city to show it in the menu bar. The time-travel slider moves every clock up to 12 hours either way in half-hour steps, so you can see what time it is everywhere when it's 3pm here; Now puts it back. The menu bar and widget always show the real time."
+          "text": "tap a city to show it in the menu bar. The time-travel slider moves every clock up to 12 hours either way in half-hour steps, so you can see what time it is everywhere when it's 3pm here; Now puts it back. Copy times copies every city's time, at the slider's time, for an invite. The menu bar and widget always show the real time."
         },
         {
           "label": "Commands",
-          "text": "World Clock lists your cities with their times; each row can be copied or shown in the menu bar."
+          "text": "World Clock lists your cities with their times; each row can be copied or shown in the menu bar. Copy My Cities' Times copies every city's time now."
         },
         {
           "label": "Agent tool",
           "text": "`times` returns the time in every city."
         }
       ],
-      "version": "1.5.1"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.pr-cockpit": {
       "changes": [
+        {
+          "notes": [
+            "GitHub Inbox in the palette, and Mark All as Read there and in the panel's Inbox tab (press twice to confirm).",
+            "Approve a pull request straight from your review queue.",
+            "Approve asks for a second press within 10 seconds, so a stray click doesn't approve anything.",
+            "Switching to another GitHub token no longer announces everything on the new account as new, and its repositories replace the old ones at once.",
+            "Many merges or mentions at once arrive as one notification instead of a burst.",
+            "The window shows how to connect GitHub instead of empty lists, and a failed Mark as Read says so.",
+            "The review and Mine lists say when they show only the 40 most recent.",
+            "Agent tools report a missing token instead of \"nothing waiting\", and pull request search gives up on a slow GitHub sooner."
+          ],
+          "version": "1.9.0"
+        },
         {
           "notes": [
             "Mentions in your inbox are announced even when the inbox was empty before.",
@@ -1660,7 +2011,7 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "network access to `api.github.com` only, and a `GITHUB_TOKEN` secret kept in the Keychain. A fine-grained token with read access to pull requests, issues and metadata covers everything except creating issues, which needs write access to issues. On GitHub Enterprise Server, turn it on in Settings and enter the server as `GITHUB_ENTERPRISE_URL`; the plugin then reaches that server and no other."
+          "text": "network access to `api.github.com` only, and a `GITHUB_TOKEN` secret kept in the Keychain. A fine-grained token with read access to pull requests, issues and metadata covers everything except creating issues, which needs write access to issues. Approving needs write access to pull requests. On GitHub Enterprise Server, turn it on in Settings and enter the server as `GITHUB_ENTERPRISE_URL`; the plugin then reaches that server and no other."
         },
         {
           "label": "Surfaces",
@@ -1672,24 +2023,23 @@
         },
         {
           "label": "Commands",
-          "text": "Search Pull Requests, Review Queue, Open Next Review, Search GitHub Repositories (yours first, recently opened on top, then GitHub search; each row opens the repository, its pull requests, issues or Actions, copies the clone URL, or starts a new issue), My GitHub Issues, Create GitHub Issue, Refresh Pull Requests."
+          "text": "Search Pull Requests, Review Queue, Open Next Review, Search GitHub Repositories (yours first, recently opened on top, then GitHub search; each row opens the repository, its pull requests, issues or Actions, copies the clone URL, or starts a new issue), My GitHub Issues, GitHub Inbox (with Mark All as Read), Create GitHub Issue, Refresh Pull Requests."
         },
         {
           "label": "Agent tools",
           "text": "`review_queue`, `my_pull_requests` and `my_issues`."
         }
       ],
-      "version": "1.8.1"
+      "version": "1.9.0"
     },
     "io.navbytes.stackbar.quicklinks": {
       "changes": [
         {
           "notes": [
-            "Links written as host:port, like localhost:3000 or example.com:8080/path, now open: local servers over http, other hosts over https.",
-            "Importing a big export saves once instead of once per link.",
-            "Links to a box on your network open over plain http too: nas:5000, 192.168.x.x, 10.x.x.x, 172.16-31.x.x, 169.254.x.x and [::1]."
+            "Copy Link on a quicklink that asks for input is now called Copy Link Template, since it copies the link with its placeholders.",
+            "The store page says that site icons come from DuckDuckGo and are off until you turn them on, and shows the tag filter."
           ],
-          "version": "1.5.1"
+          "version": "1.6.1"
         },
         {
           "notes": [
@@ -1697,6 +2047,14 @@
             "**Site icons are off until you turn them on** in Settings. They come from DuckDuckGo's icon service, which sees the domain of each web link shown."
           ],
           "version": "1.6.0"
+        },
+        {
+          "notes": [
+            "Links written as host:port, like localhost:3000 or example.com:8080/path, now open: local servers over http, other hosts over https.",
+            "Importing a big export saves once instead of once per link.",
+            "Links to a box on your network open over plain http too: nas:5000, 192.168.x.x, 10.x.x.x, 172.16-31.x.x, 169.254.x.x and [::1]."
+          ],
+          "version": "1.5.1"
         },
         {
           "notes": [
@@ -1721,7 +2079,7 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "opening links and folders (in the app each quicklink names), the clipboard, and what you had selected, for `{clipboard}` and `{selection}`."
+          "text": "opening links and folders (in the app each quicklink names), the clipboard, and what you had selected, for `{clipboard}` and `{selection}`, and DuckDuckGo's icon service (`icons.duckduckgo.com`) for site icons, which are off until you turn them on in Settings and then see the domain of each web link in the launcher."
         },
         {
           "label": "Surfaces",
@@ -1744,10 +2102,18 @@
           "text": "Search Quicklinks, Create Quicklink, Browse Quicklink Library, Import Quicklinks, Export Quicklinks (a file Raycast reads too), plus one command per quicklink."
         }
       ],
-      "version": "1.6.0"
+      "version": "1.6.1"
     },
     "io.navbytes.stackbar.snippets": {
       "changes": [
+        {
+          "notes": [
+            "A keyword that starts another one, like ;sig and ;sign, is refused when you save it and left off when you import (the snippet is kept), because the shorter one would always expand first. Settings points out any you already have.",
+            "Create Snippet starts with the text you had selected.",
+            "Copy on a snippet that asks for input is now called Copy Template, since it copies the snippet with its placeholders."
+          ],
+          "version": "1.6.0"
+        },
         {
           "notes": [
             "Importing a big snippet file saves once instead of once per snippet, and editing a snippet saves once.",
@@ -1780,7 +2146,7 @@
           "version": "1.2.1"
         }
       ],
-      "description": "Text you paste by name, with placeholders filled in. Each snippet becomes a\ncommand of its own that pastes into the app you were in, then puts your\nclipboard back. Snippets use Raycast's template syntax: `{clipboard}`,\n`{selection}`, `{date format=\"d MMM\"}`, `{argument name=\"who\"}` asks first,\n`{cursor}` leaves the caret there, and `{snippet name=\"Signature\"}` pulls in\nanother snippet.\n\n\n## Bring your snippets with you\n\nImport Snippets reads:\n\n\nDuplicates are skipped, and keywords already taken are left off.",
+      "description": "Text you paste by name, with placeholders filled in. Each snippet becomes a\ncommand of its own that pastes into the app you were in, then puts your\nclipboard back. Snippets use Raycast's template syntax: `{clipboard}`,\n`{selection}`, `{date format=\"d MMM\"}`, `{argument name=\"who\"}` asks first,\n`{cursor}` leaves the caret there, and `{snippet name=\"Signature\"}` pulls in\nanother snippet.\n\n\n## Bring your snippets with you\n\nImport Snippets reads:\n\n\nDuplicates are skipped, and keywords already taken, or that would clash, are left off.",
       "facts": [
         {
           "label": "Needs",
@@ -1792,7 +2158,7 @@
         },
         {
           "label": "Settings",
-          "text": "your snippets, importing from Raycast, TextExpander, Espanso or Apple's Text Replacements, and whether keywords are expanding."
+          "text": "your snippets, importing from Raycast, TextExpander, Espanso or Apple's Text Replacements, and whether keywords are expanding, and keywords that would stop another from expanding."
         },
         {
           "label": "Commands",
@@ -1819,10 +2185,21 @@
           "text": "select them in System Settings > Keyboard > Text Replacements and drag them to the Desktop, then import the plist."
         }
       ],
-      "version": "1.5.1"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.stay-awake": {
       "changes": [
+        {
+          "notes": [
+            "Type durations and times the way you'd say them: \"2 hours\", \"45 mins\", \"1 hour 30 minutes\", \"for 2h\", \"at 5pm\", \"noon\", \"until midnight\". The panel's box takes \"17:30\" or \"until 17:30\" too.",
+            "\"until 12\" late in the evening means midnight, not noon tomorrow, and \"0\" is no longer read as midnight.",
+            "When \"while plugged in\", a display, a VPN, downloads or the schedule keeps your Mac awake, Allow Sleep, Toggle and a click on the cup pause those rules for an hour instead of saying the Mac can sleep when it can't.",
+            "An overnight schedule with \"Weekdays only\" now runs through Friday night and leaves Sunday night alone.",
+            "\"Until 17:30\" is right on the days the clocks change.",
+            "The \"sleep in 5 minutes\" and \"time's up\" notifications have a button to keep it awake an hour longer."
+          ],
+          "version": "1.6.0"
+        },
         {
           "notes": [
             "A very large duration (like 1e20) no longer crashes the plugin.",
@@ -1854,7 +2231,7 @@
       "facts": [
         {
           "label": "Needs",
-          "text": "power management (the sleep assertion), through the host."
+          "text": "power management (the sleep assertion), through the host. Requires Stackbar 0.26.0 or later."
         },
         {
           "label": "Surfaces",
@@ -1866,17 +2243,38 @@
         },
         {
           "label": "Commands",
-          "text": "Toggle Stay Awake, Keep Awake For\u2026 (`90m`, `2h` or `17:30`) and Allow Sleep. Give them a hotkey or an alias in Stackbar's Settings, or run them from Spotlight, Shortcuts or a `stackbar://` link."
+          "text": "Toggle Stay Awake, Keep Awake For\u2026 (\"2 hours\", \"90m\", \"17:30\" or \"until 17:30\", \"noon\"; \"1:30\" is an hour and a half) and Allow Sleep. Allow Sleep and Toggle pause the rules for an hour when a rule is holding the Mac awake. Give them a hotkey or an alias in Stackbar's Settings, or run them from Spotlight, Shortcuts or a `stackbar://` link."
         },
         {
           "label": "Agent tools",
           "text": "`awake_status`, `keep_awake` and `allow_sleep`."
         }
       ],
-      "version": "1.5.1"
+      "version": "1.6.0"
     },
     "io.navbytes.stackbar.up-next": {
       "changes": [
+        {
+          "notes": [
+            "Join on time opens only the meeting you're in, in the Zoom or Teams app if you chose that, and never a tentative one.",
+            "Joining from a reminder or alert counts, so auto-join won't open that call again, even after a restart.",
+            "Add Calendar Event understands \"at 5 pm\", \"at 1\" (1 pm), \"at 12\", \"for 30 minutes\", \"for 3 days\" (an all-day event spanning them), \"10.30am\" and \"friday\" anywhere in the text. It shows the event before adding it, with a choice of calendar, and adds it once.",
+            "\u2303\u2325J joins the next call.",
+            "Agent tools are off until you allow them.",
+            "Two meetings at once get one full-screen alert.",
+            "Waking or launching just before a meeting gives one reminder, not two.",
+            "Join buttons only for real meeting-service addresses (Zoom, Meet, Teams, Webex and the rest), matched by host and path, so a look-alike link gets none. Outlook Safe Links and meeting links written without https work too.",
+            "Join buttons refuse addresses whose host hides a slash, dot or other odd character in encoded form, so a look-alike address gets none.",
+            "The add-event preview shows the day a timed event ends, when that's a different day.",
+            "Today's Meetings: faster search that also matches calendar and place, and timed meetings are listed before all-day ones.",
+            "A Join button on the widget.",
+            "Hide a meeting from the countdown, and show it again from its row.",
+            "Snoozing a meeting that's no longer on your calendar says so, instead of snoozing another one.",
+            "Clearer messages when Up Next can't read or add to your calendar: a permission problem says which setting to change.",
+            "Fixes for daylight-saving days and meetings past midnight."
+          ],
+          "version": "1.7.0"
+        },
         {
           "notes": [
             "Reminders, auto-join and alerts no longer repeat after weeks of uptime.",
@@ -1920,7 +2318,7 @@
           "version": "1.3.1"
         }
       ],
-      "description": "Your next meeting in the menu bar, with a countdown and one-click join. It\nfinds the video link in the location, URL or notes (Zoom, Meet, Teams, Webex\nand a dozen more), reminds you a few minutes before, and can open the call for\nyou when it starts.\n\n- **Reminders** have Join and Snooze 5 Min buttons.",
+      "description": "Your next meeting in the menu bar, with a countdown and one-click join. It\nfinds the video link in the location, URL or notes (Zoom, Meet, Teams, Webex\nand a dozen more), reminds you a few minutes before, and can open the call for\nyou when it starts.\n\n- **Reminders and alerts** have Join and Snooze 5 Min buttons. A Join from\n  either counts as joining, so auto-join won't open that call again.",
       "facts": [
         {
           "label": "Needs",
@@ -1928,26 +2326,30 @@
         },
         {
           "label": "Surfaces",
-          "text": "menu bar, panel, window, widget, settings. Hotkey \u2303\u2325J joins."
+          "text": "menu bar, panel, window, widget, settings. Hotkey \u2303\u2325J joins the next call."
         },
         {
           "label": "Settings",
-          "text": "calendars to hide, all-day and declined events, only meetings with a link or with other people, the reminder lead time, auto-join, a full-screen alert, how the title shows in the menu bar, and opening calls in their apps."
+          "text": "calendars to hide, all-day and declined events, only meetings with a link or with other people, the reminder lead time, auto-join (the meeting you're in, never a tentative or unanswered invite), a full-screen alert, how the title shows in the menu bar, and opening calls in their apps."
         },
         {
           "label": "Commands",
-          "text": "Join Next Meeting, Copy Next Meeting Link, Today's Meetings, Add Calendar Event (\"Lunch with Sam tomorrow 1pm for 45m\", \"Offsite fri\" for all day) and Snooze Meeting Reminder. Give them a hotkey or an alias in Stackbar's Settings, or run them from Spotlight, Shortcuts or a `stackbar://` link."
+          "text": "Join Next Meeting, Copy Next Meeting Link, Today's Meetings, Add Calendar Event (\"Lunch with Sam tomorrow 1pm for 45m\", \"Offsite fri\" for all day; it shows the event and lets you pick the calendar) and Snooze Meeting Reminder. Give them a hotkey or an alias in Stackbar's Settings, or run them from Spotlight, Shortcuts or a `stackbar://` link."
+        },
+        {
+          "label": "Hide from countdown",
+          "text": "a meeting's row action keeps it out of the countdown, reminders and auto-join, and Show Again brings it back."
         },
         {
           "label": "Agent tools",
-          "text": "`next_meeting`, `agenda` and `join_next`."
+          "text": "`next_meeting`, `agenda` and `join_next`, off until you turn them on in Settings \u2192 Agents."
         },
         {
           "label": "Requires",
-          "text": "Stackbar 0.26.0 or later."
+          "text": "Stackbar 0.27.0 or later."
         }
       ],
-      "version": "1.6.1"
+      "version": "1.7.0"
     }
   },
   "demos": {
@@ -1955,6 +2357,12 @@
       "1.11.0": {
         "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/dark/demo/b07000be5086/panel.png",
         "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/light/demo/b07000be5086/panel.png",
+        "seconds": 7.2,
+        "surface": "panel"
+      },
+      "1.12.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.12.0/dark/demo/b07000be5086/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.12.0/light/demo/b07000be5086/panel.png",
         "seconds": 7.2,
         "surface": "panel"
       },
@@ -2031,6 +2439,28 @@
         "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.1/light/demo/136e9e2e0dae/panel.png",
         "seconds": 4.0,
         "surface": "panel"
+      },
+      "1.8.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.8.0/dark/demo/136e9e2e0dae/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.8.0/light/demo/136e9e2e0dae/panel.png",
+        "seconds": 4.0,
+        "surface": "panel"
+      }
+    },
+    "io.navbytes.stackbar.plugins.system-commands": {
+      "1.0.2": {
+        "dark": "System/shots/io.navbytes.stackbar.plugins.system-commands/1.0.2/dark/demo/b5f75b640304/panel.png",
+        "light": "System/shots/io.navbytes.stackbar.plugins.system-commands/1.0.2/light/demo/b5f75b640304/panel.png",
+        "seconds": 4.0,
+        "surface": "panel"
+      }
+    },
+    "io.navbytes.stackbar.plugins.timers": {
+      "1.1.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.1.0/dark/demo/30c77ef4e16e/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.1.0/light/demo/30c77ef4e16e/panel.png",
+        "seconds": 5.5,
+        "surface": "panel"
       }
     },
     "io.navbytes.stackbar.plugins.world-clock": {
@@ -2049,6 +2479,12 @@
       "1.5.1": {
         "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.5.1/dark/demo/6b74b0a73db2/panel.png",
         "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.5.1/light/demo/6b74b0a73db2/panel.png",
+        "seconds": 5.75,
+        "surface": "panel"
+      },
+      "1.6.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/dark/demo/6b74b0a73db2/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/light/demo/6b74b0a73db2/panel.png",
         "seconds": 5.75,
         "surface": "panel"
       }
@@ -2077,6 +2513,12 @@
         "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.1/light/demo/526649a16612/panel.png",
         "seconds": 5.0,
         "surface": "panel"
+      },
+      "1.9.0": {
+        "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/dark/demo/526649a16612/panel.png",
+        "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/light/demo/526649a16612/panel.png",
+        "seconds": 5.0,
+        "surface": "panel"
       }
     }
   },
@@ -2091,6 +2533,16 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/light/panel.png"
+        }
+      },
+      "1.12.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.12.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.12.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.12.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.12.0/light/panel.png"
         }
       },
       "1.4.0": {
@@ -2224,6 +2676,16 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.2.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.2.1/light/panel.png"
         }
+      },
+      "1.3.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.3.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.3.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.3.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.3.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.applications": {
@@ -2256,6 +2718,12 @@
           "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.2.1/dark/panel.png",
           "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.2.1/light/panel.png"
         }
+      },
+      "1.2.2": {
+        "panel": {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.2.2/dark/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.2.2/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.browser-tabs": {
@@ -2269,6 +2737,12 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.0.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.0.1/light/panel.png"
+        }
+      },
+      "1.1.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.1.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.1.0/light/panel.png"
         }
       }
     },
@@ -2308,6 +2782,12 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.5.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.5.0/light/panel.png"
         }
+      },
+      "1.6.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.6.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.6.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.color-picker": {
@@ -2315,6 +2795,12 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.color-picker/1.0.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.color-picker/1.0.0/light/panel.png"
+        }
+      },
+      "1.1.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.color-picker/1.1.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.color-picker/1.1.0/light/panel.png"
         }
       }
     },
@@ -2329,6 +2815,12 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.dictionary/1.1.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.dictionary/1.1.0/light/panel.png"
+        }
+      },
+      "1.2.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.dictionary/1.2.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.dictionary/1.2.0/light/panel.png"
         }
       }
     },
@@ -2402,6 +2894,16 @@
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.7.1/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.7.1/light/panel.png"
         }
+      },
+      "1.8.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.8.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.8.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.8.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.8.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.emoji": {
@@ -2422,6 +2924,12 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.1.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.1.1/light/panel.png"
         }
+      },
+      "1.2.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.2.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.2.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.file-search": {
@@ -2435,6 +2943,12 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.file-search/1.0.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.file-search/1.0.1/light/panel.png"
+        }
+      },
+      "1.0.2": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.file-search/1.0.2/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.file-search/1.0.2/light/panel.png"
         }
       }
     },
@@ -2477,6 +2991,16 @@
         "panel": {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.homebrew/1.5.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.homebrew/1.5.0/light/panel.png"
+        }
+      },
+      "1.6.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.homebrew/1.6.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.homebrew/1.6.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.homebrew/1.6.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.homebrew/1.6.0/light/panel.png"
         }
       }
     },
@@ -2540,6 +3064,16 @@
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.5.1/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.5.1/light/panel.png"
         }
+      },
+      "1.6.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.6.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.6.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.6.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.6.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.kill-process": {
@@ -2553,6 +3087,12 @@
         "panel": {
           "dark": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.1.0/dark/panel.png",
           "light": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.1.0/light/panel.png"
+        }
+      },
+      "1.2.0": {
+        "panel": {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.2.0/dark/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.2.0/light/panel.png"
         }
       }
     },
@@ -2616,6 +3156,16 @@
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.5.1/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.5.1/light/panel.png"
         }
+      },
+      "1.6.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.6.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.6.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.6.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.6.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.litellm": {
@@ -2668,6 +3218,16 @@
           "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.litellm/1.4.1/dark/panel.png",
           "light": "Monitoring/shots/io.navbytes.stackbar.plugins.litellm/1.4.1/light/panel.png"
         }
+      },
+      "1.5.0": {
+        "menuBar": {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.litellm/1.5.0/dark/menuBar.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.litellm/1.5.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.litellm/1.5.0/dark/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.litellm/1.5.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.menu-search": {
@@ -2681,6 +3241,12 @@
         "panel": {
           "dark": "System/shots/io.navbytes.stackbar.plugins.menu-search/1.0.1/dark/panel.png",
           "light": "System/shots/io.navbytes.stackbar.plugins.menu-search/1.0.1/light/panel.png"
+        }
+      },
+      "1.1.0": {
+        "panel": {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.menu-search/1.1.0/dark/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.menu-search/1.1.0/light/panel.png"
         }
       }
     },
@@ -2733,6 +3299,16 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.music/1.4.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.music/1.4.1/light/panel.png"
+        }
+      },
+      "1.5.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.music/1.5.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.music/1.5.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.music/1.5.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.music/1.5.0/light/panel.png"
         }
       }
     },
@@ -2806,6 +3382,16 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.7.1/light/panel.png"
         }
+      },
+      "1.8.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.8.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.8.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.8.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.8.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.ports": {
@@ -2838,6 +3424,12 @@
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.ports/1.4.1/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.ports/1.4.1/light/panel.png"
         }
+      },
+      "1.4.2": {
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.ports/1.4.2/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.ports/1.4.2/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.recent-projects": {
@@ -2851,6 +3443,12 @@
         "panel": {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.1.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.1.0/light/panel.png"
+        }
+      },
+      "1.2.0": {
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.2.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.2.0/light/panel.png"
         }
       }
     },
@@ -2866,6 +3464,12 @@
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.1.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.1.0/light/panel.png"
         }
+      },
+      "1.2.0": {
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.2.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.2.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.system-commands": {
@@ -2879,6 +3483,12 @@
         "panel": {
           "dark": "System/shots/io.navbytes.stackbar.plugins.system-commands/1.0.1/dark/panel.png",
           "light": "System/shots/io.navbytes.stackbar.plugins.system-commands/1.0.1/light/panel.png"
+        }
+      },
+      "1.0.2": {
+        "panel": {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.system-commands/1.0.2/dark/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.system-commands/1.0.2/light/panel.png"
         }
       }
     },
@@ -2952,6 +3562,16 @@
           "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.6.1/dark/panel.png",
           "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.6.1/light/panel.png"
         }
+      },
+      "1.7.0": {
+        "menuBar": {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.7.0/dark/menuBar.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.7.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.7.0/dark/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.7.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.timers": {
@@ -2973,6 +3593,16 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.0.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.0.1/light/panel.png"
+        }
+      },
+      "1.1.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.1.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.1.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.1.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.1.0/light/panel.png"
         }
       }
     },
@@ -3036,6 +3666,16 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.todo/2.1.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.todo/2.1.1/light/panel.png"
         }
+      },
+      "2.2.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.todo/2.2.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.todo/2.2.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.todo/2.2.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.todo/2.2.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.translate": {
@@ -3074,6 +3714,12 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.6.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.6.1/light/panel.png"
         }
+      },
+      "1.7.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.7.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.7.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.window-layouts": {
@@ -3095,6 +3741,12 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.window-switcher/1.0.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.window-switcher/1.0.1/light/panel.png"
+        }
+      },
+      "1.1.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.window-switcher/1.1.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.window-switcher/1.1.0/light/panel.png"
         }
       }
     },
@@ -3137,6 +3789,16 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.0.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.0.0/light/panel.png"
+        }
+      },
+      "2.1.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.1.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.1.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.1.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.1.0/light/panel.png"
         }
       }
     },
@@ -3189,6 +3851,16 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.5.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.5.1/light/panel.png"
+        }
+      },
+      "1.6.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/light/panel.png"
         }
       }
     },
@@ -3282,6 +3954,16 @@
           "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.1/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.8.1/light/panel.png"
         }
+      },
+      "1.9.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.quicklinks": {
@@ -3320,6 +4002,12 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.6.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.6.0/light/panel.png"
         }
+      },
+      "1.6.1": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.6.1/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.6.1/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.snippets": {
@@ -3357,6 +4045,12 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.snippets/1.5.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.snippets/1.5.1/light/panel.png"
+        }
+      },
+      "1.6.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.snippets/1.6.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.snippets/1.6.0/light/panel.png"
         }
       }
     },
@@ -3409,6 +4103,16 @@
         "panel": {
           "dark": "System/shots/io.navbytes.stackbar.stay-awake/1.5.1/dark/panel.png",
           "light": "System/shots/io.navbytes.stackbar.stay-awake/1.5.1/light/panel.png"
+        }
+      },
+      "1.6.0": {
+        "menuBar": {
+          "dark": "System/shots/io.navbytes.stackbar.stay-awake/1.6.0/dark/menuBar.png",
+          "light": "System/shots/io.navbytes.stackbar.stay-awake/1.6.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "System/shots/io.navbytes.stackbar.stay-awake/1.6.0/dark/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.stay-awake/1.6.0/light/panel.png"
         }
       }
     },
@@ -3482,6 +4186,16 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.1/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.1/light/panel.png"
         }
+      },
+      "1.7.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.7.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.7.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.7.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.7.0/light/panel.png"
+        }
       }
     }
   },
@@ -3505,6 +4219,29 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/dark/previews/insights/window.png",
           "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.11.0/light/previews/insights/window.png",
+          "name": "insights",
+          "surface": "window",
+          "title": "What you copy, and from where"
+        }
+      ],
+      "1.12.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.12.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.12.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Everything you copied, one keystroke away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.12.0/dark/previews/pinned/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.12.0/light/previews/pinned/panel.png",
+          "name": "pinned",
+          "surface": "panel",
+          "title": "Pin what you paste every day"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.12.0/dark/previews/insights/window.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.12.0/light/previews/insights/window.png",
           "name": "insights",
           "surface": "window",
           "title": "What you copy, and from where"
@@ -3699,6 +4436,29 @@
           "surface": "panel",
           "title": "Hold Right \u2318 and press a letter"
         }
+      ],
+      "1.3.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.3.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.3.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Hold Right \u2318 and press a letter"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.3.0/dark/previews/pinned/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.3.0/light/previews/pinned/panel.png",
+          "name": "pinned",
+          "surface": "panel",
+          "title": "Pinned letters open apps that aren't running"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.3.0/dark/previews/settings/settings.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.app-switcher/1.3.0/light/previews/settings/settings.png",
+          "name": "settings",
+          "surface": "settings",
+          "title": "Pick the key you hold"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.applications": {
@@ -3746,6 +4506,22 @@
           "surface": "panel",
           "title": "Every app a few letters away"
         }
+      ],
+      "1.2.2": [
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.2.2/dark/previews/hero/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.2.2/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every app a few letters away"
+        },
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.applications/1.2.2/dark/previews/settings/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.applications/1.2.2/light/previews/settings/panel.png",
+          "name": "settings",
+          "surface": "panel",
+          "title": "System Settings panes too"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.browser-tabs": {
@@ -3765,6 +4541,22 @@
           "name": "hero",
           "surface": "panel",
           "title": "Every tab, a few letters away"
+        }
+      ],
+      "1.1.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.1.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.1.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every tab, a few letters away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.1.0/dark/previews/browsers/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.browser-tabs/1.1.0/light/previews/browsers/panel.png",
+          "name": "browsers",
+          "surface": "panel",
+          "title": "Safari, Chrome, Arc, Brave and Edge in one list"
         }
       ]
     },
@@ -3821,6 +4613,58 @@
           "name": "hero",
           "surface": "panel",
           "title": "Answers as you type"
+        }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.6.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.6.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Answers as you type"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.6.0/dark/previews/conversions/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.6.0/light/previews/conversions/panel.png",
+          "name": "conversions",
+          "surface": "panel",
+          "title": "Currencies and time zones too"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.color-picker": {
+      "1.1.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.color-picker/1.1.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.color-picker/1.1.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Any pixel, copied as hex, RGB or HSL"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.color-picker/1.1.0/dark/previews/rgb/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.color-picker/1.1.0/light/previews/rgb/panel.png",
+          "name": "rgb",
+          "surface": "panel",
+          "title": "Copy in the format your code wants"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.dictionary": {
+      "1.2.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.dictionary/1.2.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.dictionary/1.2.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Definitions as you type, offline"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.dictionary/1.2.0/dark/previews/recent/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.dictionary/1.2.0/light/previews/recent/panel.png",
+          "name": "recent",
+          "surface": "panel",
+          "title": "Words you looked up, one click away"
         }
       ]
     },
@@ -3939,6 +4783,36 @@
           "surface": "widget",
           "title": "Your stack's health on the desktop"
         }
+      ],
+      "1.8.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.8.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.8.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every container, grouped by Compose project"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.8.0/dark/previews/trouble/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.8.0/light/previews/trouble/panel.png",
+          "name": "trouble",
+          "surface": "panel",
+          "title": "Catch the container that keeps crashing"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.8.0/dark/previews/logs/window.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.8.0/light/previews/logs/window.png",
+          "name": "logs",
+          "surface": "window",
+          "title": "Follow a container's logs beside your editor"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.8.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.8.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your stack's health on the desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.emoji": {
@@ -3968,6 +4842,29 @@
           "surface": "panel",
           "title": "Every emoji, a few letters away"
         }
+      ],
+      "1.2.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.2.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.2.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every emoji, a few letters away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.2.0/dark/previews/skin-tone/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.2.0/light/previews/skin-tone/panel.png",
+          "name": "skin-tone",
+          "surface": "panel",
+          "title": "Your skin tone, every time"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.2.0/dark/previews/first-run/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.emoji/1.2.0/light/previews/first-run/panel.png",
+          "name": "first-run",
+          "surface": "panel",
+          "title": "Every emoji, grouped"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.file-search": {
@@ -3987,6 +4884,22 @@
           "name": "hero",
           "surface": "panel",
           "title": "Any file, a few letters away"
+        }
+      ],
+      "1.0.2": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.file-search/1.0.2/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.file-search/1.0.2/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Any file, a few letters away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.file-search/1.0.2/dark/previews/folders/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.file-search/1.0.2/light/previews/folders/panel.png",
+          "name": "folders",
+          "surface": "panel",
+          "title": "Folders too, with their Finder icons"
         }
       ]
     },
@@ -4018,6 +4931,22 @@
         {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.homebrew/1.5.0/dark/previews/widget/widget.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.homebrew/1.5.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Updates waiting, on your desktop"
+        }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.homebrew/1.6.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.homebrew/1.6.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every outdated formula and cask, one click to upgrade"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.homebrew/1.6.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.homebrew/1.6.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "Updates waiting, on your desktop"
@@ -4081,6 +5010,22 @@
           "surface": "widget",
           "title": "What you're on, on your desktop"
         }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.6.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.6.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your issues, grouped by where they stand"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.6.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.jira/1.6.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "What you're on, on your desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.kill-process": {
@@ -4100,6 +5045,29 @@
           "name": "hero",
           "surface": "panel",
           "title": "The heaviest processes, one key from gone"
+        }
+      ],
+      "1.2.0": [
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.2.0/dark/previews/hero/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.2.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "The heaviest processes, one key from gone"
+        },
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.2.0/dark/previews/memory/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.2.0/light/previews/memory/panel.png",
+          "name": "memory",
+          "surface": "panel",
+          "title": "Sort by memory to find the heavy one"
+        },
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.2.0/dark/previews/unavailable/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.kill-process/1.2.0/light/previews/unavailable/panel.png",
+          "name": "unavailable",
+          "surface": "panel",
+          "title": "A failed scan keeps the last list"
         }
       ]
     },
@@ -4156,6 +5124,22 @@
         {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.5.1/dark/previews/widget/widget.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.5.1/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "What you're on, on your desktop"
+        }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.6.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.6.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your Linear issues, by state and priority"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.6.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.6.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "What you're on, on your desktop"
@@ -4231,6 +5215,47 @@
           "surface": "widget",
           "title": "Today's spend on the desktop"
         }
+      ],
+      "1.5.0": [
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.litellm/1.5.0/dark/previews/hero/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.litellm/1.5.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Spend, tokens and budget for your LLM proxy"
+        },
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.litellm/1.5.0/dark/previews/dashboard/window.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.litellm/1.5.0/light/previews/dashboard/window.png",
+          "name": "dashboard",
+          "surface": "window",
+          "title": "Half a year of usage, by model"
+        },
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.litellm/1.5.0/dark/previews/widget/widget.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.litellm/1.5.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Today's spend on the desktop"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.menu-search": {
+      "1.1.0": [
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.menu-search/1.1.0/dark/previews/hero/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.menu-search/1.1.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your most used menu items, one click away"
+        },
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.menu-search/1.1.0/dark/previews/first-run/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.menu-search/1.1.0/light/previews/first-run/panel.png",
+          "name": "first-run",
+          "surface": "panel",
+          "title": "Every menu, a few letters away"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.music": {
@@ -4277,6 +5302,22 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.music/1.4.1/dark/previews/widget/widget.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.music/1.4.1/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Now playing, on your desktop"
+        }
+      ],
+      "1.5.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.music/1.5.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.music/1.5.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "What's playing, with controls a click away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.music/1.5.0/dark/previews/widget/widget.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.music/1.5.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "Now playing, on your desktop"
@@ -4398,6 +5439,29 @@
           "surface": "widget",
           "title": "Your focus timer on the desktop"
         }
+      ],
+      "1.8.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.8.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.8.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Twenty-five focused minutes, counting down"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.8.0/dark/previews/break/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.8.0/light/previews/break/panel.png",
+          "name": "break",
+          "surface": "panel",
+          "title": "A real break between sessions"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.8.0/dark/previews/widget/widget.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.pomodoro/1.8.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your focus timer on the desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.ports": {
@@ -4427,6 +5491,22 @@
           "surface": "panel",
           "title": "What's listening, and one click to stop it"
         }
+      ],
+      "1.4.2": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.ports/1.4.2/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.ports/1.4.2/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "What's listening, and one click to stop it"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.ports/1.4.2/dark/previews/confirm/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.ports/1.4.2/light/previews/confirm/panel.png",
+          "name": "confirm",
+          "surface": "panel",
+          "title": "Asks before it stops anything"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.recent-projects": {
@@ -4447,6 +5527,22 @@
           "surface": "panel",
           "title": "Your projects, a few letters away"
         }
+      ],
+      "1.2.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.2.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.2.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your projects, a few letters away"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.2.0/dark/previews/editors/settings.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.2.0/light/previews/editors/settings.png",
+          "name": "editors",
+          "surface": "settings",
+          "title": "Open projects in the editor you prefer"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.script-commands": {
@@ -4466,6 +5562,40 @@
           "name": "hero",
           "surface": "panel",
           "title": "Your scripts, as commands"
+        }
+      ],
+      "1.2.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.2.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.2.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your scripts, as commands"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.2.0/dark/previews/first-run/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.2.0/light/previews/first-run/panel.png",
+          "name": "first-run",
+          "surface": "panel",
+          "title": "Start with one line in a script"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.system-commands": {
+      "1.0.2": [
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.system-commands/1.0.2/dark/previews/hero/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.system-commands/1.0.2/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Lock, sleep or switch to dark mode by name"
+        },
+        {
+          "dark": "System/shots/io.navbytes.stackbar.plugins.system-commands/1.0.2/dark/previews/asks-first/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.plugins.system-commands/1.0.2/light/previews/asks-first/panel.png",
+          "name": "asks-first",
+          "surface": "panel",
+          "title": "Restart and Shut Down ask once more"
         }
       ]
     },
@@ -4584,6 +5714,36 @@
           "surface": "widget",
           "title": "Your Mac's load on the desktop"
         }
+      ],
+      "1.7.0": [
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.7.0/dark/previews/hero/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.7.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "CPU, memory and disk at a glance"
+        },
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.7.0/dark/previews/memory/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.7.0/light/previews/memory/panel.png",
+          "name": "memory",
+          "surface": "panel",
+          "title": "Find what is eating your memory"
+        },
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.7.0/dark/previews/sensors/panel.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.7.0/light/previews/sensors/panel.png",
+          "name": "sensors",
+          "surface": "panel",
+          "title": "Temperatures and fans, as the Mac reports them"
+        },
+        {
+          "dark": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.7.0/dark/previews/widget/widget.png",
+          "light": "Monitoring/shots/io.navbytes.stackbar.plugins.system-monitor/1.7.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your Mac's load on the desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.timers": {
@@ -4603,6 +5763,29 @@
           "name": "hero",
           "surface": "panel",
           "title": "Several timers, the soonest in the menu bar"
+        }
+      ],
+      "1.1.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.1.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.1.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Several timers, the soonest in the menu bar"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.1.0/dark/previews/start/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.1.0/light/previews/start/panel.png",
+          "name": "start",
+          "surface": "panel",
+          "title": "Start one with a click, or type \u201c10m tea\u201d"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.1.0/dark/previews/paused/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.timers/1.1.0/light/previews/paused/panel.png",
+          "name": "paused",
+          "surface": "panel",
+          "title": "Pause a timer and pick it up later"
         }
       ]
     },
@@ -4670,6 +5853,22 @@
           "surface": "widget",
           "title": "Today's list on your desktop"
         }
+      ],
+      "2.2.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.todo/2.2.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.todo/2.2.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Type it the way you'd say it; dates are understood"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.todo/2.2.0/dark/previews/widget/widget.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.todo/2.2.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Today's list on your desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.translate": {
@@ -4708,6 +5907,22 @@
           "surface": "panel",
           "title": "Translate on your Mac, without leaving the app you're in"
         }
+      ],
+      "1.7.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.7.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.7.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Translate on your Mac, without leaving the app you're in"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.7.0/dark/previews/deepl/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.translate/1.7.0/light/previews/deepl/panel.png",
+          "name": "deepl",
+          "surface": "panel",
+          "title": "DeepL, formal or informal"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.window-layouts": {
@@ -4718,6 +5933,24 @@
           "name": "hero",
           "surface": "panel",
           "title": "Snap the front window from the palette"
+        }
+      ]
+    },
+    "io.navbytes.stackbar.plugins.window-switcher": {
+      "1.1.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.window-switcher/1.1.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.window-switcher/1.1.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Any window, a few letters away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.window-switcher/1.1.0/dark/previews/displays/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.window-switcher/1.1.0/light/previews/displays/panel.png",
+          "name": "displays",
+          "surface": "panel",
+          "title": "Says which display each window is on"
         }
       ]
     },
@@ -4747,6 +5980,29 @@
           "name": "hero",
           "surface": "panel",
           "title": "Snap a window, or bring back every window for your desk"
+        }
+      ],
+      "2.1.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.1.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.1.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Snap a window, or bring back every window for your desk"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.1.0/dark/previews/restored/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.1.0/light/previews/restored/panel.png",
+          "name": "restored",
+          "surface": "panel",
+          "title": "Back where they were, apps opened for you"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.1.0/dark/previews/settings/settings.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.1.0/light/previews/settings/settings.png",
+          "name": "settings",
+          "surface": "settings",
+          "title": "Gaps, auto-restore and more"
         }
       ]
     },
@@ -4815,6 +6071,29 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.5.1/dark/previews/widget/widget.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.5.1/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your cities on the desktop"
+        }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every city you work with, and their working hours"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/dark/previews/plan/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/light/previews/plan/panel.png",
+          "name": "plan",
+          "surface": "panel",
+          "title": "Slide to find a time that works everywhere"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/dark/previews/widget/widget.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.world-clock/1.6.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "Your cities on the desktop"
@@ -4913,6 +6192,36 @@
           "surface": "widget",
           "title": "Your review queue on the desktop"
         }
+      ],
+      "1.9.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every pull request waiting on you"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/dark/previews/mine/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/light/previews/mine/panel.png",
+          "name": "mine",
+          "surface": "panel",
+          "title": "Your own PRs: checks, reviews and conflicts"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/dark/previews/dashboard/window.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/light/previews/dashboard/window.png",
+          "name": "dashboard",
+          "surface": "window",
+          "title": "Both lists, what merged and how long reviews wait"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.9.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your review queue on the desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.quicklinks": {
@@ -4951,6 +6260,22 @@
           "surface": "panel",
           "title": "Your searches, sites and folders by name"
         }
+      ],
+      "1.6.1": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.6.1/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.6.1/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your searches, sites and folders by name"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.6.1/dark/previews/tags/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.quicklinks/1.6.1/light/previews/tags/panel.png",
+          "name": "tags",
+          "surface": "panel",
+          "title": "Filter by tag"
+        }
       ]
     },
     "io.navbytes.stackbar.snippets": {
@@ -4988,6 +6313,22 @@
           "name": "hero",
           "surface": "panel",
           "title": "Text you type often, a keystroke away"
+        }
+      ],
+      "1.6.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.snippets/1.6.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.snippets/1.6.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Text you type often, a keystroke away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.snippets/1.6.0/dark/previews/tags/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.snippets/1.6.0/light/previews/tags/panel.png",
+          "name": "tags",
+          "surface": "panel",
+          "title": "Filter by tag, paste in one click"
         }
       ]
     },
@@ -5056,6 +6397,29 @@
         {
           "dark": "System/shots/io.navbytes.stackbar.stay-awake/1.5.1/dark/previews/widget/widget.png",
           "light": "System/shots/io.navbytes.stackbar.stay-awake/1.5.1/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your Mac's sleep state on the desktop"
+        }
+      ],
+      "1.6.0": [
+        {
+          "dark": "System/shots/io.navbytes.stackbar.stay-awake/1.6.0/dark/previews/hero/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.stay-awake/1.6.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Awake for the next hour, then back to normal"
+        },
+        {
+          "dark": "System/shots/io.navbytes.stackbar.stay-awake/1.6.0/dark/previews/while-app/panel.png",
+          "light": "System/shots/io.navbytes.stackbar.stay-awake/1.6.0/light/previews/while-app/panel.png",
+          "name": "while-app",
+          "surface": "panel",
+          "title": "Awake while your build runs"
+        },
+        {
+          "dark": "System/shots/io.navbytes.stackbar.stay-awake/1.6.0/dark/previews/widget/widget.png",
+          "light": "System/shots/io.navbytes.stackbar.stay-awake/1.6.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "Your Mac's sleep state on the desktop"
@@ -5173,6 +6537,29 @@
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.1/dark/previews/widget/widget.png",
           "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.6.1/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "What's next, on your desktop"
+        }
+      ],
+      "1.7.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.7.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.7.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your next meeting, one click from joining"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.7.0/dark/previews/week/window.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.7.0/light/previews/week/window.png",
+          "name": "week",
+          "surface": "window",
+          "title": "The day and the week's meeting load"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.up-next/1.7.0/dark/previews/widget/widget.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.up-next/1.7.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "What's next, on your desktop"
