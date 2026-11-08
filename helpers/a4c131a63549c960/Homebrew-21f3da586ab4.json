@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.homebrew",
+  "protocol" : 23,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "7f38dfa6aecc760e1361db85763847fa610cc78cc07f9727f945e93f5b818bec",
+  "signature" : "GyhxDZ5CmZJ12yvT4WnhVqWU+UGTNzbbnVk46Vm+P1RTCe4VHsrvrcoSlIyP4b+lqB31sanc3ML/eSuz3VKAAQ==",
+  "size" : 5869656,
+  "sourceDigest" : "21f3da586ab4759b1dda68dea13262771b1a2fce3b421f051856ab4df1581691",
+  "stackbarKit" : "a4c131a63549c9609f8d3cf11490dce90eefa36600327fe523e37f9b36d38b59",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-a4c131a63549c960/Homebrew-21f3da586ab4",
+  "version" : "1.6.0"
+}

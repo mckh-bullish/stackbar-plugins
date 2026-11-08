@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.jira",
+  "protocol" : 23,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "151b097d295770ad92604402adb3fa6999762b8fa99ac88007a0e72873623b10",
+  "signature" : "gxBSpPodQRjpBfgF9y/xQaKE5NSu/NUWO2HF4humlUpLdHYkWo8u8ckiFqeEe5Q0z5zjATo9kvHoQWVkS2wWBA==",
+  "size" : 6174744,
+  "sourceDigest" : "5daabe8a4acb912f02ade4b705f27e6b0d8f3563c5b05f163b0c674d0a03b05f",
+  "stackbarKit" : "a4c131a63549c9609f8d3cf11490dce90eefa36600327fe523e37f9b36d38b59",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-a4c131a63549c960/Jira-5daabe8a4acb",
+  "version" : "1.6.0"
+}
