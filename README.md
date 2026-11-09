@@ -46,6 +46,7 @@ An update that asks for something new waits for your approval.
 | [OpenRouter](Monitoring/OpenRouter) | Monitoring | Spend, credits, limits and model mix for your OpenRouter account, with charts. |
 | [System Monitor](Monitoring/SystemMonitor) | Monitoring | CPU, memory, disk and network speed in the menu bar, the processes using the most, and alerts when one stays high. |
 | [App Switcher](Productivity/AppSwitcher) | Productivity | Hold Right ⌘ and press an app's first letter to switch to it. Press again to cycle or hide. |
+| [Ask AI](Productivity/AskAI) | Productivity | Ask Claude, ChatGPT or a local model from the palette, and fix or summarize selected text, with your own key. |
 | [Browser Tabs](Productivity/BrowserTabs) | Productivity | Switch to any open tab in Safari, Chrome, Arc, Brave or Edge, and search your bookmarks. |
 | [Calculator](Productivity/Calculator) | Productivity | Sums, units, currencies and time zones answered right in the command palette. |
 | [Clipboard History](Productivity/Clipboard) | Productivity | Everything you copy, searchable and one keystroke from pasting back. |

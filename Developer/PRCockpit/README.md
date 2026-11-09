@@ -79,6 +79,11 @@ how long reviews have waited.
 A widget keeps the review queue in view.
 <!-- preview: widget -->
 
+## What's new in 1.14.0
+
+- When your organization uses SAML single sign-on, PR Cockpit says to authorize the token for it (Configure SSO on github.com), instead of a bare 403.
+- Signed in to the gh command-line tool? The empty state tells you how to reuse its token: `gh auth token | pbcopy`.
+
 ## What's new in 1.13.0
 
 - Merge your own pull request from the panel or the palette once it is approved with green checks, the way its repository merges (squash, rebase or a merge commit).

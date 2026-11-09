@@ -15,7 +15,7 @@ final class Linear: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.linear",
         name: "Linear",
-        version: "1.7.0",
+        version: "1.8.0",
         summary: "Your assigned Linear issues and inbox: change status and priority, start work, comment, and new issues from the palette.",
         surfaces: [.menuBar, .panel, .widget, .settings],
         triggers: [.launch, .minutes(5), .wake],
@@ -761,18 +761,20 @@ final class Linear: StackbarPlugin {
             }
             .rootSearch(section: "Linear", matching: #"[A-Za-z][A-Za-z0-9]*-\d+"#)
             .stackbarOnly()
+        // `create Fix the login page` (or a link with ?title=) starts the
+        // form with the title filled in.
         Command("create", title: "Create Linear Issue", symbol: "plus.circle", keywords: ["linear", "issue", "new", "ticket"])
-            .stackbarOnly()
-            .view { _ in self.form }
+            .argument("title", placeholder: "Title", required: false)
+            .view { invocation in self.form(title: invocation["title"] ?? "") }
     }
 
-    @ViewBuilder var form: ViewContent {
+    @ViewBuilder func form(title: String = "") -> ViewContent {
         if teams.isEmpty {
             ContentUnavailableView("No teams yet", symbol: "person.3", message: problem ?? "Add your Linear API key, then try again.")
         } else {
             Form(submit: "Create Issue", key: "issue") {
                 FormField.picker("Team", name: "team", options: teams.map(\.name), selection: teams.first { $0.id == defaultTeam }?.name ?? teams[0].name)
-                FormField.text("Title", name: "title", error: formError)
+                FormField.text("Title", name: "title", value: title, error: formError)
                 FormField.multiline("Description", name: "description", placeholder: "Markdown")
                 FormField.picker("Priority", name: "priority", options: ["No priority", "Urgent", "High", "Medium", "Low"], selection: "No priority")
                 FormField.toggle("Assign to me", name: "mine", isOn: true)

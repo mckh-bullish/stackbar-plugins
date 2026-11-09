@@ -46,6 +46,11 @@ key or card number is masked, kept away from agent tools, and dropped after
 The window shows how much you copy, and from which apps.
 <!-- preview: insights -->
 
+## What's new in 1.14.0
+
+- Searching the history finds words anywhere in a long copy, not only in its first 2,000 characters, and the preview shows the part where it was found.
+- Settings explains that ⌘⇧V is also Paste and Match Style in Chrome, Slack, Pages and Mail, and how to pick another hotkey to keep theirs.
+
 ## What's new in 1.13.0
 
 - Clearing the history from Settings asks through Stackbar, naming how many items go.

@@ -23,6 +23,10 @@ groups everything assigned to you by state, ordered by priority.
   default team for new issues.
 - **Agent tool:** `assigned` lists your open issues with their branch names.
 
+## What's new in 1.8.0
+
+- Create Linear Issue takes the title as you type it: `create linear issue Fix the login page` (or an alias and the title) opens the form with it filled in. It can now run from links and Spotlight too.
+
 ## What's new in 1.7.0
 
 - Mark All as Read asks through Stackbar, naming how many it marks.

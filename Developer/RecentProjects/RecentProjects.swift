@@ -77,7 +77,7 @@ final class RecentProjects: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.recent-projects",
         name: "Recent Projects",
-        version: "1.3.0",
+        version: "1.4.0",
         summary: "Open the projects you used lately in VS Code, Cursor, Windsurf or VSCodium from the palette.",
         surfaces: [.panel, .settings],
         triggers: [.launch, .minutes(5), .wake],
@@ -148,6 +148,9 @@ final class RecentProjects: StackbarPlugin {
     var installed: Set<String> = []
     /// Editors whose list couldn't be read, and why: a locked database, say.
     var problems: [String] = []
+    /// Remote projects (SSH, containers, WSL) the editors listed, which
+    /// open only through the editor, so they are left out.
+    var remoteSkipped = 0
 
     // MARK: Reading
 
@@ -156,6 +159,7 @@ final class RecentProjects: StackbarPlugin {
         var all: [Project] = []
         var seen: [String] = []
         var failures: [String] = []
+        var remote = 0
         for editor in Self.editors {
             var list: [Project] = []
             var read = false
@@ -176,6 +180,7 @@ final class RecentProjects: StackbarPlugin {
                 }
                 read = true
                 list += Self.parse(result.text, editor: editor.name)
+                remote += Self.remoteCount(result.text)
             }
             // A folder that couldn't be read counts only when no other one
             // of this editor's could: VS Code before 1.118 has no shared one.
@@ -191,6 +196,7 @@ final class RecentProjects: StackbarPlugin {
         projects = all.filter { paths.insert($0.path).inserted }
         found = seen
         problems = failures
+        remoteSkipped = remote
         if let list = try? await Stackbar.installedApps() {
             let ids = Set(list.map(\.id))
             installed = Set(Self.apps.map(\.bundleID).filter(ids.contains))
@@ -228,6 +234,12 @@ final class RecentProjects: StackbarPlugin {
             if let uri = entry.workspace?.configPath, let path = localPath(uri) { return Project(path: path, kind: .workspace, editor: editor) }
             return nil
         }
+    }
+
+    /// How many folders and workspaces in that JSON are remote
+    /// (`vscode-remote://ssh-remote+…`).
+    static func remoteCount(_ text: String) -> Int {
+        text.components(separatedBy: "\"vscode-remote://").count - 1
     }
 
     static func localPath(_ uri: String) -> String? {
@@ -362,6 +374,9 @@ final class RecentProjects: StackbarPlugin {
             EmptyState("Open a project in your editor", symbol: "folder", message: "Folders and workspaces you open in VS Code, Cursor, Windsurf or VSCodium show up here and in the palette.", theme: theme)
         } else {
             List(projects, searchable: projects.count > 8) { project in self.row(project) }
+        }
+        if remoteSkipped > 0 {
+            Text("\(remoteSkipped) remote \(remoteSkipped == 1 ? "project" : "projects") (SSH, containers) left out: open \(remoteSkipped == 1 ? "it" : "them") from your editor.").style(.caption).role(.secondary)
         }
     }
 }

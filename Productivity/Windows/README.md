@@ -17,18 +17,33 @@ can uninstall it from its page in Settings.
 - **Surfaces:** menu bar (off by default), panel, settings.
 - **Snapping:** halves, the four quarters, First / Center / Last Third,
   First / Last Two Thirds, Maximize, Almost Maximize, Center, Next Display,
-  Previous Display (palette only) and Undo Snap, which puts the window back
+  Previous Display, Make Larger and Make Smaller (these three from the
+  palette or a hotkey only) and Undo Snap, which puts the window back
   where it was before its last snap. Pressing Left, Right, Top or Bottom Half
   again cycles through two thirds and one third.
 - **Settings:** the gap left around snapped windows, bring back the starred
   layout when displays change, open apps that aren't running, cycle sizes on
   repeated halves, and the menu bar icon.
-- **Commands:** one per snap, Save Window Layout, Restore Window Layout, and
+- **Commands:** one per snap, Save Window Layout (optionally only some
+  apps), Restore Window Layout, Edit Window Layout, Export and Import Window
+  Layouts, and
   one Restore command per layout, so each layout can have its own hotkey or
   alias.
 - **Agent tools:** `snap`, `layouts`, `save_layout` and `restore_layout`.
 - **Not covered:** windows in full screen and on other Spaces, and browser
   tabs.
+
+## What's new in 2.4.0
+
+- Save Window Layout can keep only some apps: fill in "apps" with `Xcode, Safari` and only their windows are saved.
+- Edit Window Layout lists a layout's windows so you can take one out.
+- Export and Import Window Layouts keep your layouts in a file, for a backup or another Mac.
+- On Stackbar 0.36.0 and later, two identical monitors keep their own layouts when they are reconnected in a different order.
+
+## What's new in 2.3.0
+
+- Next Display and Previous Display keep the window's share of the screen: a half on your laptop is a half on the big display, not the same number of pixels.
+- Make Larger and Make Smaller grow or shrink the front window by a tenth of the screen from its middle, staying on screen.
 
 ## What's new in 2.2.0
 

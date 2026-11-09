@@ -30,6 +30,10 @@ rank higher, and they show up in the palette's own results too.
   results.
 - **Leaves out:** single files and remote (SSH, container) projects.
 
+## What's new in 1.4.0
+
+- The panel says how many remote projects (SSH, containers, WSL) your editors listed and were left out, so a missing project isn't a mystery.
+
 ## What's new in 1.3.0
 
 - VS Code 1.118 and later: your recent projects show up again. VS Code moved its list to `~/.vscode-shared/sharedStorage`, and the plugin now reads it there as well as in the old place. Updating asks you once to allow reading that folder.

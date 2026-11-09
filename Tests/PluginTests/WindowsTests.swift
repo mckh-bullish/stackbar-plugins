@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 import StackbarHostCore
 import StackbarProtocol
+@testable import Plugin_Windows
 
 final class WindowsTests: XCTestCase {
     /// The sample desk with every window piled into one corner.
@@ -202,5 +203,54 @@ final class WindowsTests: XCTestCase {
         XCTAssertFalse(panel.contains("snap-previous-display"), "the panel grid leaves it out")
         XCTAssertTrue(panel.contains("snap-next-display"), "Next Display stays in the grid")
         await supervisor.stop()
+    }
+
+    func testNextDisplayKeepsTheWindowsShareOfTheScreen() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Windows")
+        let before = host.system.currentWindows
+        let front = before.windows.first { !$0.isMinimized }!
+        func frontWindow() -> WindowInfo? { host.system.currentWindows.windows.first { $0.appID == front.appID && $0.title == front.title } }
+        guard case .message = await supervisor.runCommand("left-half", arguments: [:], source: .hotkey) else { return XCTFail("left half snaps") }
+        let from = before.display(for: frontWindow()!.frame)!
+        guard case .message = await supervisor.runCommand("next-display", arguments: [:], source: .hotkey) else { return XCTFail("it moves") }
+        let to = host.system.currentWindows.displays.first { $0.id != from.id }!
+        XCTAssertEqual(frontWindow()?.frame.width, (to.visibleFrame.width / 2).rounded(), "a half stays a half")
+        XCTAssertEqual(frontWindow()?.frame.x, to.visibleFrame.x, "on the left")
+        await supervisor.stop()
+    }
+
+    @MainActor
+    func testMakeLargerAndSmallerStayOnScreen() {
+        let visible = WindowRect(x: 0, y: 0, width: 1000, height: 800)
+        let larger = Windows.snaps.first { $0.id == "make-larger" }!
+        let smaller = Windows.snaps.first { $0.id == "make-smaller" }!
+        let grown = Windows.frame(larger, window: WindowRect(x: 0, y: 0, width: 400, height: 400), visible: visible)
+        XCTAssertEqual(grown, WindowRect(x: 0, y: 0, width: 500, height: 480), "pushed back on screen at the corner")
+        let full = Windows.frame(larger, window: visible, visible: visible)
+        XCTAssertEqual(full, visible, "never larger than the screen")
+        let shrunk = Windows.frame(smaller, window: WindowRect(x: 100, y: 100, width: 200, height: 160), visible: visible)
+        XCTAssertEqual(shrunk?.width, 200, "never smaller than a fifth")
+    }
+
+    func testALayoutCanKeepOnlySomeAppsAndLoseAWindow() async throws {
+        let host = Host(self)
+        let supervisor = try await host.start("Windows")
+        let desk = host.system.currentWindows
+        let first = desk.windows[0]
+        guard case .message(let saved) = await supervisor.runCommand("save", arguments: ["name": "Code", "apps": first.appName], source: .palette) else { return XCTFail("save saves") }
+        let count = desk.windows.filter { $0.appID == first.appID }.count
+        XCTAssertTrue(saved?.contains(count == 1 ? "1 window" : "\(count) windows") == true, saved ?? "")
+        guard case .failure = await supervisor.runCommand("save", arguments: ["name": "None", "apps": "No Such App"], source: .palette) else { return XCTFail("nothing to save") }
+        await supervisor.stop()
+    }
+
+    @MainActor
+    func testAppNamesMatchByNameOrBundleID() {
+        let placement = WindowPlacement(appID: "com.apple.Safari", appName: "Safari", frame: WindowRect(x: 0, y: 0, width: 1, height: 1))
+        XCTAssertTrue(Windows.matches(placement, Windows.appNames(" xcode , SAFARI")))
+        XCTAssertTrue(Windows.matches(placement, Windows.appNames("com.apple.safari")))
+        XCTAssertFalse(Windows.matches(placement, Windows.appNames("Xcode")))
+        XCTAssertTrue(Windows.matches(placement, []))
     }
 }

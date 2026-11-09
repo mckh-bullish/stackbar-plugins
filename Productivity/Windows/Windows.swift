@@ -17,7 +17,7 @@ final class Windows: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.workspaces",
         name: "Windows",
-        version: "2.2.0",
+        version: "2.4.0",
         summary: "Snap the front window to halves, thirds or quarters, and save where your windows go for each monitor setup.",
         surfaces: [.menuBar, .panel, .settings],
         triggers: [.launch, .wake, .displays],
@@ -148,13 +148,16 @@ final class Windows: StackbarPlugin {
 
     // MARK: - Actions
 
+    /// `apps` (names or bundle ids, comma-separated) saves only their
+    /// windows; empty saves every window.
     @discardableResult
-    func save(_ rawName: String) async -> CommandResult {
+    func save(_ rawName: String, apps: String = "") async -> CommandResult {
         let name = String(rawName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40))
         guard !name.isEmpty else { return .failure("Give the layout a name, like Desk") }
         guard await look(), let snapshot else { return .failure(problem ?? "Can't read your windows") }
-        let placements = Array(WindowPlacement.capture(snapshot).prefix(WindowPlacement.maxPerCall))
-        guard !placements.isEmpty else { return .failure("There are no windows to save") }
+        let wanted = Self.appNames(apps)
+        let placements = Array(WindowPlacement.capture(snapshot).filter { Self.matches($0, wanted) }.prefix(WindowPlacement.maxPerCall))
+        guard !placements.isEmpty else { return .failure(wanted.isEmpty ? "There are no windows to save" : "None of those apps has a window open") }
         let setupName = Self.setupName(snapshot)
         var verb = "Saved"
         if let index = layouts.firstIndex(where: { $0.setupID == snapshot.setupID && $0.name.caseInsensitiveCompare(name) == .orderedSame }) {
@@ -170,6 +173,53 @@ final class Windows: StackbarPlugin {
         let text = "\(verb) “\(name)” with \(Self.count(placements.count, "window")) on \(setupName)"
         notice = text
         return .message(text)
+    }
+
+    /// `Xcode, safari` → ["xcode", "safari"].
+    static func appNames(_ text: String) -> [String] {
+        text.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces).lowercased() }.filter { !$0.isEmpty }
+    }
+
+    /// Whether the placement's app is one of `names` (by name or bundle id);
+    /// every app when there are none.
+    static func matches(_ placement: WindowPlacement, _ names: [String]) -> Bool {
+        names.isEmpty || names.contains(placement.appName.lowercased()) || names.contains(placement.appID.lowercased())
+    }
+
+    /// Takes one window out of a saved layout.
+    func remove(_ index: Int, from layoutID: String) {
+        guard let at = layouts.firstIndex(where: { $0.id == layoutID }), layouts[at].placements.indices.contains(index) else { return }
+        let gone = layouts[at].placements.remove(at: index)
+        notice = "Removed \(gone.appName) from “\(layouts[at].name)”"
+    }
+
+    /// Every layout as JSON, to keep in a file or move to another Mac.
+    func exportLayouts() async throws -> String {
+        guard !layouts.isEmpty else { return "No layouts to export" }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        guard let path = try await Stackbar.saveFile("Window Layouts.json", data: try encoder.encode(layouts)) else { return "Export cancelled" }
+        return "Exported \(Self.count(layouts.count, "layout")) to \(path)"
+    }
+
+    /// Layouts from a file: one with the same id is replaced, the rest added.
+    func importLayouts() async throws -> String {
+        guard let file = try await Stackbar.chooseFile(types: ["json"]) else { return "Import cancelled" }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let incoming: [Layout]
+        do {
+            incoming = try decoder.decode([Layout].self, from: file.data)
+        } catch {
+            throw HostError("\(file.name) is not a window layouts export: \(error.localizedDescription)")
+        }
+        var all = layouts
+        for layout in incoming {
+            if let at = all.firstIndex(where: { $0.id == layout.id }) { all[at] = layout } else { all.append(layout) }
+        }
+        layouts = all
+        return "Imported \(Self.count(incoming.count, "layout"))"
     }
 
     func restore(_ layout: Layout, automatic: Bool = false) async -> CommandResult {
@@ -261,6 +311,8 @@ final class Windows: StackbarPlugin {
         Snap(id: "center", title: "Center", symbol: "rectangle.center.inset.filled", group: "Screen", keywords: ["middle"]),
         Snap(id: "next-display", title: "Next Display", symbol: "rectangle.portrait.and.arrow.forward", group: "Screen", keywords: ["monitor", "screen", "move"]),
         Snap(id: "previous-display", title: "Previous Display", symbol: "arrow.left.to.line", group: "Screen", keywords: ["monitor", "screen", "move", "back"]),
+        Snap(id: "make-larger", title: "Make Larger", symbol: "arrow.up.left.and.arrow.down.right", group: "Screen", keywords: ["grow", "bigger", "resize"]),
+        Snap(id: "make-smaller", title: "Make Smaller", symbol: "arrow.down.right.and.arrow.up.left", group: "Screen", keywords: ["shrink", "resize"]),
         Snap(id: "undo-snap", title: "Undo Snap", symbol: "arrow.uturn.backward", group: "Screen", keywords: ["restore", "undo", "back"]),
     ]
 
@@ -282,6 +334,15 @@ final class Windows: StackbarPlugin {
                 height: (area.height * unit.height - top - bottom).rounded()
             )
         }
+        if snap.id == "make-larger" || snap.id == "make-smaller" {
+            // A tenth of the screen at a time, from the window's middle, kept on screen.
+            let sign = snap.id == "make-larger" ? 1.0 : -1.0
+            let width = min(max(frame.width + sign * area.width / 10, area.width / 5), area.width)
+            let height = min(max(frame.height + sign * area.height / 10, area.height / 5), area.height)
+            let x = min(max(frame.midX - width / 2, area.x), area.x + area.width - width)
+            let y = min(max(frame.midY - height / 2, area.y), area.y + area.height - height)
+            return WindowRect(x: x.rounded(), y: y.rounded(), width: width.rounded(), height: height.rounded())
+        }
         if snap.id == "center" {
             let width = min(frame.width, area.width)
             let height = min(frame.height, area.height)
@@ -290,20 +351,24 @@ final class Windows: StackbarPlugin {
         return nil
     }
 
-    /// The same place, relative to its display, on `next`.
+    /// The same place and size, relative to its display, on `next`: a half
+    /// on the laptop is a half on the big display.
     static func moved(_ frame: WindowRect, from current: WindowRect, to next: WindowRect) -> WindowRect {
-        let width = min(frame.width, next.width)
-        let height = min(frame.height, next.height)
-        let fx = current.width > width ? (frame.x - current.x) / (current.width - width) : 0
-        let fy = current.height > height ? (frame.y - current.y) / (current.height - height) : 0
         let clamp = { (value: Double) in min(max(value, 0), 1) }
+        let width = min(next.width * clamp(frame.width / max(current.width, 1)), next.width)
+        let height = min(next.height * clamp(frame.height / max(current.height, 1)), next.height)
+        let fx = current.width > frame.width ? (frame.x - current.x) / (current.width - frame.width) : 0
+        let fy = current.height > frame.height ? (frame.y - current.y) / (current.height - frame.height) : 0
         return WindowRect(
             x: (next.x + clamp(fx) * (next.width - width)).rounded(),
             y: (next.y + clamp(fy) * (next.height - height)).rounded(),
-            width: width,
-            height: height
+            width: width.rounded(),
+            height: height.rounded()
         )
     }
+
+    /// Snaps that are commands only, to keep the panel's grid to one row.
+    static let commandOnly: Set<String> = ["previous-display", "make-larger", "make-smaller"]
 
     /// The four halves: the snaps that cycle through two thirds and one third.
     static let halfIDs: Set<String> = ["left-half", "right-half", "top-half", "bottom-half"]
@@ -444,7 +509,7 @@ final class Windows: StackbarPlugin {
         }
         Card("Snap the front window", spacing: Space.xs, padding: Space.s) {
             Grid(columns: 9, spacing: Space.xs) {
-                ForEach(Self.snaps.filter { $0.id != "previous-display" }) { snap in
+                ForEach(Self.snaps.filter { !Self.commandOnly.contains($0.id) }) { snap in
                     IconButton(snap.symbol, label: snap.title, theme: theme, key: "snap-\(snap.id)") {
                         switch await self.apply(snap) {
                         case .failure(let text):
@@ -511,6 +576,13 @@ final class Windows: StackbarPlugin {
         .hover(scale: nil, highlight: .hoverWash, lift: false)
     }
 
+    /// A window of a layout being edited, by its place in the layout.
+    struct EditedWindow: Identifiable {
+        var index: Int
+        var placement: WindowPlacement
+        var id: Int { index }
+    }
+
     static let gaps: [(title: String, points: Double)] = [("None", 0), ("Small", 4), ("Medium", 8), ("Large", 16)]
 
     var settings: ViewContent {
@@ -556,9 +628,32 @@ final class Windows: StackbarPlugin {
             }
         }
         Command("save", title: "Save Window Layout", subtitle: "Remember where every window is on these displays", symbol: "square.and.arrow.down", keywords: ["workspace", "layout", "windows", "save", "snapshot"]) { invocation in
-            await self.save(invocation["name"] ?? "")
+            await self.save(invocation["name"] ?? "", apps: invocation["apps"] ?? "")
         }
         .argument("name", placeholder: "Desk")
+        .argument("apps", placeholder: "Only these apps: Xcode, Safari", required: false)
+        Command("edit", title: "Edit Window Layout", subtitle: "Take windows out of a saved layout", symbol: "slider.horizontal.3", keywords: ["workspace", "layout", "windows", "remove"])
+            .argument("layout", placeholder: "Layout", options: (here + elsewhere).prefix(20).map(\.name))
+            .view { invocation in
+                if let layout = self.find(invocation["layout"] ?? "") {
+                    List(Array(layout.placements.enumerated()).map { EditedWindow(index: $0.offset, placement: $0.element) }, searchable: true) { item in
+                        Row(item.placement.appName, subtitle: item.placement.title.isEmpty ? "Window \(item.placement.ordinal + 1)" : item.placement.title, symbol: "macwindow", key: "w\(item.index)-\(item.placement.appID)")
+                            .appIcon(item.placement.appID)
+                            .action("Remove from \(layout.name)", role: .critical, confirm: .none) { self.remove(item.index, from: layout.id) }
+                    }
+                } else {
+                    ContentUnavailableView("Which layout?", symbol: "rectangle.3.group", message: "Pick one of your saved layouts.")
+                }
+            }
+            .stackbarOnly()
+        Command("export", title: "Export Window Layouts", subtitle: "To a file, for a backup or another Mac", symbol: "square.and.arrow.up", keywords: ["workspace", "layout", "windows", "backup"]) { _ in
+            .message(try await self.exportLayouts())
+        }
+        .stackbarOnly()
+        Command("import", title: "Import Window Layouts", subtitle: "From an exported file", symbol: "square.and.arrow.down", keywords: ["workspace", "layout", "windows"]) { _ in
+            .message(try await self.importLayouts())
+        }
+        .stackbarOnly()
         Command("restore", title: "Restore Window Layout", subtitle: "Put windows back as a layout saved them", symbol: "rectangle.3.group", keywords: ["workspace", "layout", "windows", "restore"]) { invocation in
             await self.look()
             guard let layout = self.find(invocation["layout"] ?? "") ?? (invocation["layout"] == nil ? self.defaultLayout(for: self.setupID) : nil) else {

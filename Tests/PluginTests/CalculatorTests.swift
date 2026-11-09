@@ -138,4 +138,25 @@ final class CalculatorTests: XCTestCase {
         XCTAssertEqual(Calculator.Math.format(7.5, decimalComma: false), "7.5")
         XCTAssertEqual(Calculator.Math.format(1.5e20, decimalComma: true), "1.5e+20")
     }
+
+    func testDateMath() {
+        let utc = TimeZone(identifier: "UTC")!
+        // Monday, 9 November 2026, mid-afternoon.
+        let now = ISO8601DateFormatter().date(from: "2026-11-09T15:00:00Z")!
+        func answer(_ text: String) -> String? { Calculator.Math.answer(text, now: now, here: utc)?.display }
+        XCTAssertEqual(answer("days until dec 20"), "41 days")
+        XCTAssertEqual(answer("days until christmas"), "46 days")
+        XCTAssertEqual(answer("weeks until christmas"), "6 weeks")
+        XCTAssertEqual(answer("days until jan 1"), "53 days", "a date already past this year is next year's")
+        XCTAssertEqual(answer("days since 2026-01-01"), "312 days")
+        XCTAssertEqual(answer("days since nov 1"), "8 days")
+        XCTAssertEqual(answer("days until tomorrow"), "1 day")
+        XCTAssertEqual(answer("today + 3 weeks"), "Mon, 30 Nov 2026")
+        XCTAssertEqual(answer("in 10 days"), "Thu, 19 Nov 2026")
+        XCTAssertEqual(answer("friday - 2 days"), "Wed, 11 Nov 2026")
+        XCTAssertEqual(answer("dec 20 + 1 month"), "Wed, 20 Jan 2027")
+        XCTAssertNil(answer("days until someday"))
+        XCTAssertNil(answer("in the morning"))
+        XCTAssertEqual(answer("5pm london in tokyo")?.hasSuffix("Tokyo"), true, "time zones still win")
+    }
 }

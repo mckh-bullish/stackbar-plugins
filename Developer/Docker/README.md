@@ -35,6 +35,11 @@ and each project with Start all, Restart and Stop.
 - **Agent tool:** `containers` lists every container with its image, state,
   CPU and memory.
 
+## What's new in 1.10.0
+
+- Follow Logs in Terminal (⌘⇧L) runs `docker logs --follow` in your terminal, which you can pick in Stackbar's Settings from 0.36.0.
+- Docker Desktop's and OrbStack's own `docker` are found even when they aren't linked into /usr/local/bin (Stackbar 0.36.0).
+
 ## What's new in 1.9.0
 
 - Remove and Remove Stopped Containers ask through Stackbar: press again within 10 seconds, and the prompt names what goes.

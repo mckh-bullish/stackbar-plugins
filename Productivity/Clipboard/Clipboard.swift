@@ -15,7 +15,7 @@ final class Clipboard: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.clipboard",
         name: "Clipboard History",
-        version: "1.13.0",
+        version: "1.14.0",
         summary: "Everything you copy, searchable and one keystroke from pasting back.",
         surfaces: [.menuBar, .panel, .window, .settings],
         // The minute tick only lets secrets expire on time.
@@ -627,6 +627,8 @@ final class Clipboard: StackbarPlugin {
         Section("Menu bar") {
             Toggle("Show the icon in the menu bar", isOn: menuBarIcon) { self.menuBarIcon = $0 }
             Text("Without it, press ⌘⇧V or use the palette. The icon comes back by itself while recording is paused.").role(.secondary)
+            // ⌘⇧V is taken from every app while Stackbar runs.
+            Text("⌘⇧V is also Paste and Match Style in Chrome, Slack, Pages and Mail, which can't get it while Clipboard has it. To keep theirs, give Search Clipboard History another hotkey (⌥⌘V, say) in Stackbar Settings › Commands.").role(.secondary)
         }
         Section("History") {
             Picker("Order", options: Order.allCases.map(\.rawValue), selection: order.rawValue, style: .segmented) { self.order = Order(rawValue: $0) ?? .recent }
@@ -700,11 +702,11 @@ final class Clipboard: StackbarPlugin {
     }
 
     /// `inPalette` adds what the panel's header buttons do to ⌘K.
-    func row(_ entry: Entry, paste pasteDirectly: Bool, inPalette: Bool = false) -> Row {
+    func row(_ entry: Entry, paste pasteDirectly: Bool, inPalette: Bool = false, query: String = "") -> Row {
         let source = [entry.appName, Self.relative(entry.lastCopied), entry.count > 1 ? "×\(entry.count)" : nil, entry.kind == .text && entry.secret == nil ? "\(stats(entry).characters) chars" : nil]
             .compactMap { $0 }.joined(separator: " · ")
         var row = Row(entry.title, subtitle: source, symbol: entry.pinned ? "pin.fill" : entry.symbol, key: entry.id).appIcon(entry.appID)
-        if let preview = preview(entry) { row = preview(row) }
+        if let preview = preview(entry, query: query) { row = preview(row) }
         row = row.action(pasteDirectly ? "Paste" : "Copy") { await self.use(entry, paste: self.pasteDirectly) }
         if entry.plainText != nil, entry.contentID != nil || entry.kind == .files {
             row = row.action(pasteDirectly ? "Paste as plain text" : "Copy as plain text", shortcut: "option+return") { await self.use(entry, paste: self.pasteDirectly, plain: true) }
@@ -729,7 +731,7 @@ final class Clipboard: StackbarPlugin {
 
     /// The selected row's preview: the text past its first line, the image,
     /// or the files, with when and how often it was copied.
-    func preview(_ entry: Entry) -> ((Row) -> Row)? {
+    func preview(_ entry: Entry, query: String = "") -> ((Row) -> Row)? {
         var caption = ["First copied \(Self.relative(entry.firstCopied))"]
         if entry.count > 1 { caption.append("copied \(entry.count) times") }
         switch entry.kind {
@@ -750,8 +752,21 @@ final class Clipboard: StackbarPlugin {
             guard let text = entry.text else { return nil }
             let (characters, lines) = stats(entry)
             caption.insert("\(characters) characters" + (lines > 1 ? ", \(lines) lines" : ""), at: 0)
-            return { $0.preview(text: String(text.prefix(2000)), caption: caption.joined(separator: " · ")) }
+            return { $0.preview(text: Self.excerpt(text, around: query), caption: caption.joined(separator: " · ")) }
         }
+    }
+
+    /// The first 2,000 characters of a copy, or, when `query` is only found
+    /// further in, the part around it: the palette searches what a preview
+    /// holds, so a long copy is found by any of its words and shows where.
+    static func excerpt(_ text: String, around query: String, length: Int = 2000) -> String {
+        let head = String(text.prefix(length))
+        let typed = query.trimmingCharacters(in: .whitespaces)
+        guard !typed.isEmpty, text.count > length, head.range(of: typed, options: [.caseInsensitive, .diacriticInsensitive]) == nil,
+              let found = text.range(of: typed, options: [.caseInsensitive, .diacriticInsensitive]) else { return head }
+        let start = text.index(found.lowerBound, offsetBy: -length / 3, limitedBy: text.startIndex) ?? text.startIndex
+        let end = text.index(start, offsetBy: length, limitedBy: text.endIndex) ?? text.endIndex
+        return (start == text.startIndex ? "" : "…") + String(text[start..<end]) + (end == text.endIndex ? "" : "…")
     }
 
     static func relative(_ date: Date, now: Date = Date(), future: Bool = false) -> String {
@@ -770,8 +785,9 @@ final class Clipboard: StackbarPlugin {
 
     var commands: [Command] {
         let search = Command("search", title: "Search Clipboard History", subtitle: "Paste anything you copied", symbol: "list.clipboard", keywords: ["paste", "copy", "history"])
-            .view { _ in
+            .view { invocation in
                 let all = self.sorted
+                let typed = invocation.text
                 if all.isEmpty {
                     ContentUnavailableView("Nothing copied yet", symbol: "list.clipboard", message: self.paused ? "Recording is paused." : "Copy something in any app and it shows up here.")
                 } else {
@@ -779,11 +795,11 @@ final class Clipboard: StackbarPlugin {
                         let pinned = all.filter(\.pinned)
                         if !pinned.isEmpty {
                             Section("Pinned") {
-                                ForEach(pinned) { entry in self.row(entry, paste: true, inPalette: true) }
+                                ForEach(pinned) { entry in self.row(entry, paste: true, inPalette: true, query: typed) }
                             }
                         }
                         Section(self.paused ? "History · paused, new copies aren't kept" : pinned.isEmpty ? nil : "History") {
-                            ForEach(all.filter { !$0.pinned }) { entry in self.row(entry, paste: true, inPalette: true) }
+                            ForEach(all.filter { !$0.pinned }) { entry in self.row(entry, paste: true, inPalette: true, query: typed) }
                         }
                     }
                 }

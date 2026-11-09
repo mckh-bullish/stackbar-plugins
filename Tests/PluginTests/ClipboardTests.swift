@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 import StackbarHostCore
 import StackbarProtocol
+@testable import Plugin_Clipboard
 
 final class ClipboardTests: XCTestCase {
     func testFindsImagesByTheirText() async throws {
@@ -197,5 +198,16 @@ final class ClipboardTests: XCTestCase {
     private func history(_ host: Host, _ id: String) async -> [[String: Any]] {
         let json = await host.services.storage.snapshot(for: id)["history"] ?? "[]"
         return (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [[String: Any]] ?? []
+    }
+
+    @MainActor
+    func testALongCopyIsFoundByAWordFarIn() {
+        let text = String(repeating: "lorem ipsum ", count: 400) + "needle in the haystack" + String(repeating: " dolor", count: 400)
+        let excerpt = Clipboard.excerpt(text, around: "Needle")
+        XCTAssertTrue(excerpt.contains("needle in the haystack"))
+        XCTAssertTrue(excerpt.hasPrefix("…") && excerpt.hasSuffix("…"))
+        XCTAssertEqual(Clipboard.excerpt(text, around: "lorem"), String(text.prefix(2000)), "found in the start: the start")
+        XCTAssertEqual(Clipboard.excerpt(text, around: ""), String(text.prefix(2000)))
+        XCTAssertEqual(Clipboard.excerpt(text, around: "absent"), String(text.prefix(2000)))
     }
 }

@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 import StackbarHostCore
 import StackbarProtocol
+@testable import Plugin_RecentProjects
 
 final class RecentProjectsTests: XCTestCase {
     /// Settings offers the installed editors as the default, and keeps the
@@ -48,5 +49,12 @@ extension ViewNode {
             if case .picker(_, let options, let selection, _, let action) = node { return (options, selection, action) }
             return nil
         }
+    }
+
+    @MainActor
+    func testRemoteEntriesAreCountedNotListed() {
+        let json = #"{"entries":[{"folderUri":"file:///Users/me/app"},{"folderUri":"vscode-remote://ssh-remote+box/home/me/api"},{"workspace":{"configPath":"vscode-remote://dev-container+1/w.code-workspace"}}]}"#
+        XCTAssertEqual(RecentProjects.parse(json, editor: "VS Code").map(\.path), ["/Users/me/app"])
+        XCTAssertEqual(RecentProjects.remoteCount(json), 2)
     }
 }

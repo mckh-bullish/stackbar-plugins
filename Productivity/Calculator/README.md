@@ -20,9 +20,15 @@ answers.
   currencies, updated each working day) from Frankfurter, fetched at launch
   and every six hours. `$`, `€`, `£`, `¥`, `₹` and names like `euros` work
   as well as codes.
+- **Dates:** `days until dec 20`, `days since jan 1`, `weeks until
+  christmas`, `today + 3 weeks`, `in 10 days`.
 - **Time zones:** any city in a time zone's name (`tokyo`, `new york`), plus
   common ones like `sf`, `nyc`, `bangalore`, `uk` and abbreviations like
   `pst` and `ist`. Without a starting place, the time is yours.
+
+## What's new in 1.7.0
+
+- Date math: `days until dec 20`, `weeks until christmas`, `days since 2026-01-01`, `today + 3 weeks`, `in 10 days`, `friday - 2 days`.
 
 ## What's new in 1.6.0
 

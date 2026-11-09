@@ -11,7 +11,7 @@ final class Calculator: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.calculator",
         name: "Calculator",
-        version: "1.6.0",
+        version: "1.7.0",
         summary: "Sums, units, currencies and time zones answered right in the command palette.",
         surfaces: [.panel, .settings],
         // Exchange rates are fetched at launch, on wake and every six hours
@@ -129,14 +129,14 @@ final class Calculator: StackbarPlugin {
                         }
                     }
                 } else {
-                    ContentUnavailableView("Type a sum", symbol: "equal.square", message: "Like 12*(3+4), 15% * 80, 3h in min, 100 usd in eur or 5pm london in tokyo.")
+                    ContentUnavailableView("Type a sum", symbol: "equal.square", message: "Like 12*(3+4), 15% * 80, 3h in min, 100 usd in eur, 5pm london in tokyo or days until dec 20.")
                 }
             }
-            // Only text that can have an answer (a number, or `now in
-            // tokyo`) reaches it. A matched pattern also puts the answer
+            // Only text that can have an answer (a number, `now in
+            // tokyo` or `days until christmas`) reaches it. A matched pattern also puts the answer
             // above everything else, so a past answer in the panel, which
             // the palette finds too, never sits on top of the live one.
-            .rootSearch(section: "Calculator", matching: #"(?is).*(\p{N}| in | to ).*"#)
+            .rootSearch(section: "Calculator", matching: #"(?is).*(\p{N}| in | to | until | till | since ).*"#)
     }
 
     // MARK: Panel
@@ -191,6 +191,7 @@ final class Calculator: StackbarPlugin {
             let text = query.trimmingCharacters(in: .whitespaces)
             guard text.count <= 200 else { return nil }
             if let time = Times.answer(text, now: now, here: here) { return time }
+            if let date = Dates.answer(text, now: now, here: here) { return date }
             guard text.contains(where: \.isNumber) else { return nil }
             if let conversion = convert(text) { return conversion }
             if let rates, let money = rates.convert(text) { return money }
@@ -755,6 +756,136 @@ final class Calculator: StackbarPlugin {
                 guard let first = Calendar(identifier: .gregorian).date(from: a), let second = Calendar(identifier: .gregorian).date(from: b) else { return 0 }
                 return Calendar(identifier: .gregorian).dateComponents([.day], from: first, to: second).day ?? 0
             }
+        }
+    }
+}
+
+extension Calculator.Math {
+    /// Date math: `days until dec 20`, `days since 2026-01-01`,
+    /// `weeks until christmas`, `today + 3 weeks`, `in 10 days`,
+    /// `friday - 2 days`.
+    enum Dates {
+        static func answer(_ text: String, now: Date, here: TimeZone) -> Answer? {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = here
+            let lower = text.lowercased().split(separator: " ", omittingEmptySubsequences: true).joined(separator: " ")
+            let today = calendar.startOfDay(for: now)
+            return between(lower, today: today, calendar: calendar) ?? shifted(lower, today: today, calendar: calendar)
+        }
+
+        /// `days until dec 20`, `weeks since jan 1`: a whole count.
+        static func between(_ text: String, today: Date, calendar: Calendar) -> Answer? {
+            let units: [(String, Calendar.Component)] = [("days", .day), ("weeks", .weekOfYear), ("months", .month), ("years", .year)]
+            for (word, component) in units {
+                for (link, future) in [("until", true), ("till", true), ("to", true), ("since", false)] {
+                    let prefix = "\(word) \(link) "
+                    guard text.hasPrefix(prefix), let date = day(String(text.dropFirst(prefix.count)), today: today, calendar: calendar, future: future) else { continue }
+                    let from = future ? today : date
+                    let to = future ? date : today
+                    let count: Int
+                    if component == .weekOfYear {
+                        count = (calendar.dateComponents([.day], from: from, to: to).day ?? 0) / 7
+                    } else {
+                        count = calendar.dateComponents([component], from: from, to: to).value(for: component) ?? 0
+                    }
+                    let unit = count == 1 ? String(word.dropLast()) : word
+                    let result = String(count)
+                    return Answer(expression: "\(word.capitalized) \(link) \(long(date, calendar: calendar))", result: result, display: "\(result) \(unit)")
+                }
+            }
+            return nil
+        }
+
+        /// `today + 3 weeks`, `in 10 days`, `dec 20 - 2 weeks`: a date.
+        static func shifted(_ text: String, today: Date, calendar: Calendar) -> Answer? {
+            let start: Date
+            let sign: Int
+            let amount: Substring
+            if text.hasPrefix("in "), text.count > 3 {
+                start = today
+                sign = 1
+                amount = text.dropFirst(3)
+            } else if let range = text.range(of: " + ") ?? text.range(of: " - ") {
+                guard let base = day(String(text[..<range.lowerBound]), today: today, calendar: calendar, future: true) else { return nil }
+                start = base
+                sign = text[range].contains("-") ? -1 : 1
+                amount = text[range.upperBound...]
+            } else {
+                return nil
+            }
+            let parts = amount.split(separator: " ")
+            guard parts.count == 2, let count = Int(parts[0]) else { return nil }
+            let component: Calendar.Component
+            switch parts[1] {
+            case "day", "days", "d": component = .day
+            case "week", "weeks", "w", "wk", "wks": component = .weekOfYear
+            case "month", "months", "mo": component = .month
+            case "year", "years", "y", "yr", "yrs": component = .year
+            default: return nil
+            }
+            guard abs(count) <= 10_000, let date = calendar.date(byAdding: component, value: sign * count, to: start) else { return nil }
+            let result = long(date, calendar: calendar)
+            return Answer(expression: text, result: result, display: result)
+        }
+
+        /// A day by name: `today`, `tomorrow`, `friday`, `christmas`,
+        /// `dec 20`, `20 december 2027`, `2026-12-20`, `12/20`. Without a
+        /// year, the next one (`future`) or the last one.
+        static func day(_ text: String, today: Date, calendar: Calendar, future: Bool) -> Date? {
+            let text = text.trimmingCharacters(in: .whitespaces)
+            switch text {
+            case "today", "now": return today
+            case "tomorrow": return calendar.date(byAdding: .day, value: 1, to: today)
+            case "yesterday": return calendar.date(byAdding: .day, value: -1, to: today)
+            default: break
+            }
+            let weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
+            if let index = weekdays.firstIndex(where: { $0 == text || $0.prefix(3) == text }) {
+                let current = calendar.component(.weekday, from: today) - 1
+                var offset = (index - current + 7) % 7
+                if !future { offset = offset == 0 ? 0 : offset - 7 }
+                return calendar.date(byAdding: .day, value: offset, to: today)
+            }
+            let named: [String: (month: Int, day: Int)] = [
+                "christmas": (12, 25), "xmas": (12, 25), "new year": (1, 1), "new years": (1, 1), "new year's day": (1, 1),
+                "halloween": (10, 31), "valentines": (2, 14), "valentine's day": (2, 14),
+            ]
+            if let (month, day) = named[text] { return nearest(month: month, day: day, today: today, calendar: calendar, future: future) }
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = calendar.timeZone
+            formatter.isLenient = false
+            for format in ["yyyy-MM-dd", "MMM d yyyy", "MMMM d yyyy", "d MMM yyyy", "d MMMM yyyy", "MMM d, yyyy", "MMMM d, yyyy", "M/d/yyyy"] {
+                formatter.dateFormat = format
+                if let date = formatter.date(from: text) { return calendar.startOfDay(for: date) }
+            }
+            for format in ["MMM d", "MMMM d", "d MMM", "d MMMM", "M/d"] {
+                formatter.dateFormat = format
+                if let date = formatter.date(from: text) {
+                    let parts = Calendar(identifier: .gregorian).dateComponents(in: calendar.timeZone, from: date)
+                    guard let month = parts.month, let day = parts.day else { continue }
+                    return nearest(month: month, day: day, today: today, calendar: calendar, future: future)
+                }
+            }
+            return nil
+        }
+
+        /// This year's `month`/`day`, or next year's when it has passed
+        /// (last year's when it is still to come, looking back).
+        static func nearest(month: Int, day: Int, today: Date, calendar: Calendar, future: Bool) -> Date? {
+            let year = calendar.component(.year, from: today)
+            guard let this = calendar.date(from: DateComponents(year: year, month: month, day: day)) else { return nil }
+            if future, this < today { return calendar.date(from: DateComponents(year: year + 1, month: month, day: day)) }
+            if !future, this > today { return calendar.date(from: DateComponents(year: year - 1, month: month, day: day)) }
+            return this
+        }
+
+        static func long(_ date: Date, calendar: Calendar) -> String {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = calendar.timeZone
+            formatter.dateFormat = "EEE, d MMM yyyy"
+            return formatter.string(from: date)
         }
     }
 }

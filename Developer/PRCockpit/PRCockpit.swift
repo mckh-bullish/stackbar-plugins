@@ -24,7 +24,7 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.13.0",
+        version: "1.14.0",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(20)), .wake],
@@ -488,12 +488,15 @@ final class PRCockpit: StackbarPlugin {
                 "Authorization": "Bearer \(token)", "Content-Type": "application/json", "Accept": "application/json",
             ], body: body, timeout: Self.refreshTimeout))
             guard (200..<300).contains(response.status) else {
-                throw HostError(response.status == 401 ? "GitHub rejected the token (401); set a new GITHUB_TOKEN" : "GitHub answered \(response.status): \(String(decoding: response.body.prefix(200), as: UTF8.self))")
+                let text = String(decoding: response.body.prefix(200), as: UTF8.self)
+                throw HostError(response.status == 401 ? "GitHub rejected the token (401); set a new GITHUB_TOKEN"
+                    : response.status == 403 ? Self.refusal(403, message: text) : "GitHub answered \(response.status): \(text)")
             }
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let reply = try decoder.decode(Reply.self, from: response.body)
-            guard let data = reply.data else { throw HostError(reply.errors?.map(\.message).joined(separator: "; ") ?? "GitHub sent no data") }
+            let errors = reply.errors?.map(\.message).joined(separator: "; ")
+            guard let data = reply.data else { throw HostError(errors.map { Self.refusal(200, message: $0) } ?? "GitHub sent no data") }
             update(review: data.review.nodes, mine: data.mine.nodes, closed: data.closed?.nodes ?? [])
             reviewTotal = data.review.issueCount ?? 0
             mineTotal = data.mine.issueCount ?? 0
@@ -932,7 +935,7 @@ final class PRCockpit: StackbarPlugin {
         case 403, 404:
             struct Message: Decodable { let message: String }
             let message = (try? JSONDecoder().decode(Message.self, from: response.body))?.message ?? "not allowed"
-            throw HostError("GitHub said \(response.status): \(message). The token may need more access.")
+            throw HostError(Self.refusal(response.status, message: message))
         case 422: throw HostError("GitHub couldn't do that (422): \(String(decoding: response.body.prefix(200), as: UTF8.self))")
         default: throw HostError("GitHub answered \(response.status)")
         }
@@ -1284,11 +1287,21 @@ final class PRCockpit: StackbarPlugin {
         }
     }
 
+    /// Why GitHub refused, in words: an organization with SAML single
+    /// sign-on refuses a token until it is authorized for that organization.
+    static func refusal(_ status: Int, message: String) -> String {
+        if message.localizedCaseInsensitiveContains("SAML") {
+            return "Your organization uses single sign-on. On github.com, open Settings › Developer settings › Tokens, choose Configure SSO next to this token and authorize the organization."
+        }
+        // A GraphQL error comes with a 200 and says what was wrong itself.
+        return status == 200 ? message : "GitHub said \(status): \(message). The token may need more access."
+    }
+
     /// What to show instead of the lists when none have loaded: how to add a
     /// token, or why GitHub can't be reached.
     @ViewBuilder var problemState: ViewContent {
         if let lastError, lastError.contains("Add a GitHub token") {
-            EmptyState("Paste a GitHub token above", symbol: "key.fill", message: "A fine-grained token with read access to pull requests, issues and metadata. Add write access to issues to create them from the palette.", theme: theme)
+            EmptyState("Paste a GitHub token above", symbol: "key.fill", message: "A fine-grained token with read access to pull requests, issues and metadata. Add write access to issues to create them from the palette. Already signed in to the gh command-line tool? Run gh auth token | pbcopy in Terminal and paste.", theme: theme)
         } else {
             EmptyState("Can't reach GitHub", symbol: "exclamationmark.triangle.fill", message: lastError, theme: .critical) {
                 ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh() }
