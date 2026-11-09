@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.timers",
+  "protocol" : 26,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "73bd01ceea3b2d0fc4f81b99c53b2795478167d06d03b18c0ee4557aa136128f",
+  "signature" : "4MbuyhHey+3b4qACiGAy1qxBCAgOXf7FQ6Y9gYL3WFaNM6FbmoT1FjlvfFJmwZjQ2XCgTra/50Mr/ag2GSyUDQ==",
+  "size" : 5952808,
+  "sourceDigest" : "5aefb5533acf33234ad6b76098bab73ec803c247f13ad3925cf335778f241ead",
+  "stackbarKit" : "94470a0def440d1ab132be34cf52ae06d6874f42e56903fd616a019efed07c7c",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-94470a0def440d1a/Timers-5aefb5533acf",
+  "version" : "1.2.0"
+}
