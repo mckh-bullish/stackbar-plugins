@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-09T14:15:16Z",
+  "generated" : "2026-11-09T15:09:26Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -2881,6 +2881,37 @@
       "symbol" : "sparkles",
       "updated" : "2026-11-09",
       "version" : "1.5.0"
+    },
+    {
+      "accent" : "pink",
+      "bundle" : "Monitoring/io.navbytes.stackbar.plugins.litellm-1.6.0.stackbarplugin",
+      "capabilities" : [
+        "Connects to the server you enter as LITELLM_PROXY_URL, and no other",
+        "Reads the secret LITELLM_API_KEY"
+      ],
+      "capabilityKinds" : [
+        "userServer",
+        "secret"
+      ],
+      "category" : "Monitoring",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Monitoring/LiteLLM",
+      "id" : "io.navbytes.stackbar.plugins.litellm",
+      "minimumStackbar" : "0.17.0",
+      "name" : "LiteLLM",
+      "publisher" : "navbytes",
+      "screenshot" : "Monitoring/io.navbytes.stackbar.plugins.litellm.png",
+      "sha256" : "01c4dc9688557951f7be4fd1fef934c719ebe2e8e601f5a05bda491a32746981",
+      "summary" : "Tokens, spend, budget and model mix from your LiteLLM proxy, with charts.",
+      "surfaces" : [
+        "menuBar",
+        "panel",
+        "window",
+        "widget",
+        "settings"
+      ],
+      "symbol" : "sparkles",
+      "updated" : "2026-11-09",
+      "version" : "1.6.0"
     },
     {
       "accent" : "teal",
@@ -6956,5 +6987,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "rhknFqGPAns+GkUOztrQyEkuzoqqkp3VB5TdIRyDZojMt1Zt5/lykUj8VDSEs4tpXQK/MBsV6akYxzXyJ+ddDA=="
+  "signature" : "+HRg0j7X22vsxknDAQRowiuv+MRwASKSygoiqqPm8LP25Pi7toQt83/YcVj37V4UfS65FseR57iqAdxGf9oYDw=="
 }
