@@ -6,6 +6,8 @@ proxy, with charts. The panel has:
 - **Tiles** for today, the last 7 days and the last 30 days, with tokens,
   spend, active days and the daily average.
 - **Budget**: spend against your key's budget and when it resets.
+- **Today by model**: what each model cost today and how many tokens it
+  used, the most expensive first, as a share of the day's spend.
 - **Activity**: six months of daily tokens as a heatmap.
 - **Trend**: a week as bars, or a month or six months as an area chart, in
   tokens or spend.
@@ -30,6 +32,10 @@ red at 90%.
 - **Agent tool:** `usage_summary`.
 
 Ported from vee-plugins' `litellm-cost`.
+
+## What's new in 1.6.0
+
+- Today by model: the panel, the window and LiteLLM Spend show what each model cost today.
 
 ## What's new in 1.5.0
 

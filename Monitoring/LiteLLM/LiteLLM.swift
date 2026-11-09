@@ -14,7 +14,7 @@ final class LiteLLM: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.litellm",
         name: "LiteLLM",
-        version: "1.5.0",
+        version: "1.6.0",
         summary: "Tokens, spend, budget and model mix from your LiteLLM proxy, with charts.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .minutes(2), .wake],
@@ -56,7 +56,11 @@ final class LiteLLM: StackbarPlugin {
             Model(name: "llama-3.3-70b", tokens: 22e6, spend: 19),
         ]
         plugin.budget = Budget(spend: 612, max: 1000, resetAt: Calendar.current.date(byAdding: .day, value: 12, to: Date()))
-        plugin.todayDetail = Today(date: day(0), requests: 1490, failed: 17, promptTokens: 2.9e6, cacheReadTokens: 1.1e6, cacheSavings: 3.4)
+        // Today's mix splits today's totals, so the two always add up.
+        let today = days[day(0)] ?? Day(tokens: 0, spend: 0)
+        let mix: [(String, Double, Double)] = [("claude-sonnet", 0.46, 0.71), ("gpt-5-mini", 0.29, 0.2), ("claude-haiku", 0.17, 0.085), ("text-embedding-3-small", 0.08, 0.005)]
+        plugin.todayDetail = Today(date: day(0), requests: 1490, failed: 17, promptTokens: 2.9e6, cacheReadTokens: 1.1e6, cacheSavings: 3.4,
+                                   models: mix.map { Model(name: $0.0, tokens: today.tokens * $0.1, spend: today.spend * $0.2) })
         plugin.historyFetched = Date()
         plugin.lastSuccess = Date()
     }
@@ -115,6 +119,8 @@ final class LiteLLM: StackbarPlugin {
         var promptTokens: Double
         var cacheReadTokens: Double
         var cacheSavings: Double
+        /// What each model cost today, most expensive first.
+        var models: [Model]? = nil
     }
 
     var problem: String?
@@ -237,18 +243,22 @@ final class LiteLLM: StackbarPlugin {
             for result in activity.results ?? [] {
                 let metrics = result.metrics ?? Metrics()
                 fetched.days[result.date] = Day(tokens: metrics.tokens, spend: metrics.spend?.value ?? 0, requests: metrics.requests, failed: metrics.failed_requests ?? 0)
-                if result.date == Self.day(0) {
-                    fetched.today = Today(date: result.date, requests: metrics.requests, failed: metrics.failed_requests ?? 0,
-                                          promptTokens: metrics.prompt_tokens ?? 0, cacheReadTokens: metrics.cache_read_input_tokens ?? 0,
-                                          cacheSavings: metrics.prompt_caching_savings_spend ?? 0)
-                }
+                var dayModels: [String: Model] = [:]
                 for (name, breakdown) in result.breakdown?.models ?? [:] {
                     let model = breakdown?.metrics ?? Metrics()
                     let short = Self.shortName(name)
-                    var total = byModel[short] ?? Model(name: short, tokens: 0, spend: 0)
-                    total.tokens += model.tokens
-                    total.spend += model.spend?.value ?? 0
-                    byModel[short] = total
+                    for index in 0..<2 {
+                        var total = (index == 0 ? byModel[short] : dayModels[short]) ?? Model(name: short, tokens: 0, spend: 0)
+                        total.tokens += model.tokens
+                        total.spend += model.spend?.value ?? 0
+                        if index == 0 { byModel[short] = total } else { dayModels[short] = total }
+                    }
+                }
+                if result.date == Self.day(0) {
+                    fetched.today = Today(date: result.date, requests: metrics.requests, failed: metrics.failed_requests ?? 0,
+                                          promptTokens: metrics.prompt_tokens ?? 0, cacheReadTokens: metrics.cache_read_input_tokens ?? 0,
+                                          cacheSavings: metrics.prompt_caching_savings_spend ?? 0,
+                                          models: Self.bySpend(dayModels.values))
                 }
             }
             let pages = activity.metadata?.total_pages ?? 1
@@ -257,6 +267,12 @@ final class LiteLLM: StackbarPlugin {
         }
         fetched.models = byModel.values.filter { $0.tokens > 0 || $0.spend > 0 }.sorted { $0.tokens > $1.tokens }
         return fetched
+    }
+
+    /// Models that were used, the most expensive first, then by tokens.
+    static func bySpend(_ models: some Sequence<Model>) -> [Model] {
+        models.filter { $0.tokens > 0 || $0.spend > 0 }
+            .sorted { $0.spend != $1.spend ? $0.spend > $1.spend : $0.tokens > $1.tokens }
     }
 
     private func check(_ response: HTTPResponse, what: String) throws {
@@ -319,6 +335,7 @@ final class LiteLLM: StackbarPlugin {
                 staleBanner
                 tiles
                 budgetCard
+                todayModelsCard
                 trendCard
             }
         }
@@ -335,6 +352,7 @@ final class LiteLLM: StackbarPlugin {
                 staleBanner
                 tiles
                 budgetCard
+                todayModelsCard
                 trendCard
                 Card("Activity", detail: "\(activeDays(0...181)) active days in 6 months") {
                     Chart(values: series(days: 182, measure: .tokens), kind: .heatmap, labels: dayLabels(182, formatter: Self.longLabels), unit: " tokens")
@@ -404,6 +422,34 @@ final class LiteLLM: StackbarPlugin {
                       theme: used >= 0.9 ? .critical : used >= 0.75 ? .warning : theme)
                 if let reset = budget.resetAt {
                     Text("Resets \(Self.relative(reset))").role(.secondary).typography(.caption)
+                }
+            }
+        }
+    }
+
+    /// Today's models, the most expensive first. The models from the latest
+    /// fetch only count while it is still today.
+    var todayModels: [Model] {
+        guard let today = todayDetail, today.date == Self.day(0) else { return [] }
+        return today.models ?? []
+    }
+
+    /// What each model cost today, as bars against the day's total.
+    @ViewBuilder var todayModelsCard: ViewContent {
+        let models = todayModels
+        if !models.isEmpty {
+            let spend = models.reduce(0) { $0 + $1.spend }
+            let top = models.prefix(5)
+            let rest = models.dropFirst(5)
+            Card("Today by model", detail: "\(Self.money(spend, cents: true)) across \(models.count) model\(models.count == 1 ? "" : "s")", spacing: Space.s) {
+                ForEach(Array(top)) { model in
+                    Meter(model.name, reading: "\(Self.money(model.spend, cents: true)) · \(Self.compact(model.tokens)) tokens",
+                          value: spend > 0 ? model.spend / spend : 0, theme: theme)
+                }
+                if !rest.isEmpty {
+                    let other = rest.reduce(Model(name: "", tokens: 0, spend: 0)) { Model(name: "", tokens: $0.tokens + $1.tokens, spend: $0.spend + $1.spend) }
+                    Meter("\(rest.count) more", reading: "\(Self.money(other.spend, cents: true)) · \(Self.compact(other.tokens)) tokens",
+                          value: spend > 0 ? other.spend / spend : 0, theme: .neutral)
                 }
             }
         }
@@ -485,7 +531,7 @@ final class LiteLLM: StackbarPlugin {
     // MARK: Commands
 
     var commands: [Command] {
-        Command("spend", title: "LiteLLM Spend", subtitle: "Today, 7 and 30 days, the budget and top models", symbol: "gauge.with.dots.needle.50percent", keywords: ["litellm", "llm", "tokens", "spend", "cost", "budget"])
+        Command("spend", title: "LiteLLM Spend", subtitle: "Today, 7 and 30 days, the budget, and what each model cost", symbol: "gauge.with.dots.needle.50percent", keywords: ["litellm", "llm", "tokens", "spend", "cost", "budget"])
             .view(search: { _ in try? await self.refresh(maxAge: 30) }) { _ in
                 if self.proxy == nil {
                     ContentUnavailableView("Connect your LiteLLM proxy", symbol: "server.rack", message: "Set LITELLM_PROXY_URL and LITELLM_API_KEY in Stackbar's Settings.")
@@ -507,6 +553,11 @@ final class LiteLLM: StackbarPlugin {
                                 .badge(self.budgetUsed.map { "\(Int($0))%" } ?? "", role: (self.budgetUsed ?? 0) >= 90 ? .critical : (self.budgetUsed ?? 0) >= 75 ? .warning : .secondary)
                                 .action("Copy Summary") { Stackbar.copy(self.summaryText) }
                         }
+                        ForEach(self.todayModels) { model in
+                            Row(model.name, subtitle: "\(Self.compact(model.tokens)) tokens · today", symbol: "cpu", key: "spend-today-\(model.name)")
+                                .badge(Self.money(model.spend, cents: true))
+                                .action("Copy Summary") { Stackbar.copy(self.summaryText) }
+                        }
                         ForEach(Array(self.models.prefix(5))) { model in
                             Row(model.name, subtitle: "\(Self.compact(model.tokens)) tokens · 30 days", symbol: "cpu", key: "spend-model-\(model.name)")
                                 .badge(Self.money(model.spend, cents: true))
@@ -525,7 +576,7 @@ final class LiteLLM: StackbarPlugin {
     }
 
     var tools: [AgentTool] {
-        AgentTool("usage_summary", description: "LiteLLM tokens and spend for today, 7 and 30 days, the budget and the top models") { _ in
+        AgentTool("usage_summary", description: "LiteLLM tokens and spend for today, 7 and 30 days, the budget, today's cost per model and the top models over 30 days") { _ in
             self.summaryText
         }
     }
@@ -626,8 +677,11 @@ final class LiteLLM: StackbarPlugin {
         if let budget, let max = budget.max {
             lines.append("Budget: \(Self.money(budget.spend, cents: true)) of \(Self.money(max))" + (budget.resetAt.map { ", resets \(Self.relative($0))" } ?? ""))
         }
+        for model in todayModels {
+            lines.append("Today, \(model.name): \(Self.compact(model.tokens)) tokens, \(Self.money(model.spend, cents: true))")
+        }
         for model in models.prefix(5) {
-            lines.append("\(model.name): \(Self.compact(model.tokens)) tokens, \(Self.money(model.spend, cents: true))")
+            lines.append("30 days, \(model.name): \(Self.compact(model.tokens)) tokens, \(Self.money(model.spend, cents: true))")
         }
         if let problem { lines.append("Problem: \(problem)") }
         return lines.joined(separator: "\n")

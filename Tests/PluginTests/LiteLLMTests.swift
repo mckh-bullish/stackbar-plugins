@@ -172,6 +172,23 @@ final class LiteLLMTests: XCTestCase {
         await supervisor.stop()
     }
 
+    /// The panel shows what each model cost today, the most expensive first.
+    func testThePanelShowsTodaysCostPerModel() async throws {
+        let stub = try LiteLLMStub { method, path, _, _ in answer(method, path, Proxy()) }
+        let host = Host(self)
+        try host.services.secrets.setSecret("http://127.0.0.1:\(stub.port)", for: "LITELLM_PROXY_URL")
+        try host.services.secrets.setSecret("k", for: "LITELLM_API_KEY")
+        let supervisor = try await host.start("LiteLLM")
+        _ = await waitUntil { await self.panelText(supervisor).contains("TODAY BY MODEL") }
+        let panel = await panelText(supervisor)
+        XCTAssertTrue(panel.contains("TODAY BY MODEL"), panel)
+        XCTAssertTrue(panel.contains("$0.06 · 600K tokens"), panel)
+        XCTAssertTrue(panel.contains("$0.04 · 400K tokens"), panel)
+        let sonnet = panel.range(of: "claude-sonnet")?.lowerBound, mini = panel.range(of: "gpt-mini")?.lowerBound
+        XCTAssertTrue(sonnet != nil && mini != nil && sonnet! < mini!, panel)
+        await supervisor.stop()
+    }
+
     /// Without a key the panel asks for one rather than saying the proxy can't be reached.
     func testWithoutAKeyThePanelAsksForOne() async throws {
         let stub = try LiteLLMStub { method, path, _, _ in answer(method, path, Proxy()) }
@@ -201,6 +218,7 @@ final class LiteLLMTests: XCTestCase {
         XCTAssertEqual(userInfoRequests(), before, "keystrokes in the palette don't refetch")
         let keys = opened.root?.rows.map(\.key) ?? []
         XCTAssertTrue(keys.contains("spend-model-claude-sonnet") && keys.contains("spend-model-gpt-mini"), "\(keys)")
+        XCTAssertEqual(keys.filter { $0.hasPrefix("spend-today-") }, ["spend-today-claude-sonnet", "spend-today-gpt-mini"], "today's models, most expensive first")
 
         proxy.change { $0.failing = true }
         try await session.refresh()
