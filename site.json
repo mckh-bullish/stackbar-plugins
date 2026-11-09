@@ -4,6 +4,13 @@
       "changes": [
         {
           "notes": [
+            "Searching the history finds words anywhere in a long copy, not only in its first 2,000 characters, and the preview shows the part where it was found.",
+            "Settings explains that \u2318\u21e7V is also Paste and Match Style in Chrome, Slack, Pages and Mail, and how to pick another hotkey to keep theirs."
+          ],
+          "version": "1.14.0"
+        },
+        {
+          "notes": [
             "Clearing the history from Settings asks through Stackbar, naming how many items go.",
             "Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question."
           ],
@@ -110,7 +117,7 @@
           "text": "Stackbar 0.35.0 or later."
         }
       ],
-      "version": "1.13.0"
+      "version": "1.14.0"
     },
     "io.navbytes.stackbar.plugins.app-switcher": {
       "changes": [
@@ -246,6 +253,40 @@
       ],
       "version": "1.2.2"
     },
+    "io.navbytes.stackbar.plugins.ask-ai": {
+      "changes": [
+        {
+          "notes": [
+            "First version: Ask AI with follow-ups and Tab from the palette, five commands on selected text, and Anthropic, OpenAI, OpenRouter or Ollama."
+          ],
+          "version": "1.0.0"
+        }
+      ],
+      "description": "Ask an AI model from the palette with your own key. Type a question and press\n**Tab** (Stackbar 0.36 and later; you can change what Tab does in Settings \u203a\nCommand Palette), or pick **Ask AI** under the results for any text. Type\nagain in the answer view to ask a follow-up with the conversation so far.\nReturn copies an answer and \u2318P pastes it into the app you were in.",
+      "facts": [
+        {
+          "label": "Commands",
+          "text": " - **Ask AI:** a question, with follow-ups. Also offered under the palette's results for anything you type. - **Fix Spelling and Grammar**, **Improve Writing** and **Make Shorter** replace the selected text with the result (your clipboard comes back afterwards). - **Summarize Selection** and **Explain Selection** show the answer in the palette, with follow-ups. - The panel has a question box and the last answer."
+        },
+        {
+          "label": "Providers",
+          "text": "Anthropic is the default, with Claude Opus 5.5 at low effort for quick answers; name another model in Settings, such as `claude-haiku-5-5` for cheaper ones. OpenAI, OpenRouter (`openrouter/auto` picks a model per question) and Ollama on your own Mac (no key, nothing sent anywhere) are the others. Answers arrive whole rather than word by word."
+        },
+        {
+          "label": "Needs",
+          "text": "the selection (`.context`), the clipboard (to paste results), `api.anthropic.com`, `api.openai.com`, `openrouter.ai` and `localhost` (Ollama), and one of the secrets `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` or `OPENROUTER_API_KEY`, asked for only for the provider you use. Your question, the conversation and, for the text commands, the selected text go to that provider."
+        },
+        {
+          "label": "Surfaces",
+          "text": "panel, settings. No menu-bar item."
+        },
+        {
+          "label": "Settings",
+          "text": "the provider and its model."
+        }
+      ],
+      "version": "1.0.0"
+    },
     "io.navbytes.stackbar.plugins.browser-tabs": {
       "changes": [
         {
@@ -309,6 +350,12 @@
     },
     "io.navbytes.stackbar.plugins.calculator": {
       "changes": [
+        {
+          "notes": [
+            "Date math: `days until dec 20`, `weeks until christmas`, `days since 2026-01-01`, `today + 3 weeks`, `in 10 days`, `friday - 2 days`."
+          ],
+          "version": "1.7.0"
+        },
         {
           "notes": [
             "Adding or taking off a percent works the way you'd expect: 100 + 10% is 110 and 200 - 15% is 170.",
@@ -392,11 +439,15 @@
           "text": "the European Central Bank's reference rates (about 30 currencies, updated each working day) from Frankfurter, fetched at launch and every six hours. `$`, `\u20ac`, `\u00a3`, `\u00a5`, `\u20b9` and names like `euros` work as well as codes."
         },
         {
+          "label": "Dates",
+          "text": "`days until dec 20`, `days since jan 1`, `weeks until christmas`, `today + 3 weeks`, `in 10 days`."
+        },
+        {
           "label": "Time zones",
           "text": "any city in a time zone's name (`tokyo`, `new york`), plus common ones like `sf`, `nyc`, `bangalore`, `uk` and abbreviations like `pst` and `ist`. Without a starting place, the time is yours."
         }
       ],
-      "version": "1.6.0"
+      "version": "1.7.0"
     },
     "io.navbytes.stackbar.plugins.color-picker": {
       "changes": [
@@ -497,6 +548,13 @@
       "changes": [
         {
           "notes": [
+            "Follow Logs in Terminal (\u2318\u21e7L) runs `docker logs --follow` in your terminal, which you can pick in Stackbar's Settings from 0.36.0.",
+            "Docker Desktop's and OrbStack's own `docker` are found even when they aren't linked into /usr/local/bin (Stackbar 0.36.0)."
+          ],
+          "version": "1.10.0"
+        },
+        {
+          "notes": [
             "Remove and Remove Stopped Containers ask through Stackbar: press again within 10 seconds, and the prompt names what goes.",
             "Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question."
           ],
@@ -594,7 +652,7 @@
           "text": "`containers` lists every container with its image, state, CPU and memory."
         }
       ],
-      "version": "1.9.0"
+      "version": "1.10.0"
     },
     "io.navbytes.stackbar.plugins.emoji": {
       "changes": [
@@ -960,6 +1018,12 @@
       "changes": [
         {
           "notes": [
+            "Create Linear Issue takes the title as you type it: `create linear issue Fix the login page` (or an alias and the title) opens the form with it filled in. It can now run from links and Spotlight too."
+          ],
+          "version": "1.8.0"
+        },
+        {
+          "notes": [
             "Mark All as Read asks through Stackbar, naming how many it marks.",
             "Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question."
           ],
@@ -1043,7 +1107,7 @@
           "text": "`assigned` lists your open issues with their branch names."
         }
       ],
-      "version": "1.7.0"
+      "version": "1.8.0"
     },
     "io.navbytes.stackbar.plugins.litellm": {
       "changes": [
@@ -1426,6 +1490,12 @@
       "changes": [
         {
           "notes": [
+            "The panel says how many remote projects (SSH, containers, WSL) your editors listed and were left out, so a missing project isn't a mystery."
+          ],
+          "version": "1.4.0"
+        },
+        {
+          "notes": [
             "VS Code 1.118 and later: your recent projects show up again. VS Code moved its list to `~/.vscode-shared/sharedStorage`, and the plugin now reads it there as well as in the old place. Updating asks you once to allow reading that folder."
           ],
           "version": "1.3.0"
@@ -1480,7 +1550,7 @@
           "text": "single files and remote (SSH, container) projects."
         }
       ],
-      "version": "1.3.0"
+      "version": "1.4.0"
     },
     "io.navbytes.stackbar.plugins.script-commands": {
       "changes": [
@@ -2011,6 +2081,22 @@
       "changes": [
         {
           "notes": [
+            "Save Window Layout can keep only some apps: fill in \"apps\" with `Xcode, Safari` and only their windows are saved.",
+            "Edit Window Layout lists a layout's windows so you can take one out.",
+            "Export and Import Window Layouts keep your layouts in a file, for a backup or another Mac.",
+            "On Stackbar 0.36.0 and later, two identical monitors keep their own layouts when they are reconnected in a different order."
+          ],
+          "version": "2.4.0"
+        },
+        {
+          "notes": [
+            "Next Display and Previous Display keep the window's share of the screen: a half on your laptop is a half on the big display, not the same number of pixels.",
+            "Make Larger and Make Smaller grow or shrink the front window by a tenth of the screen from its middle, staying on screen."
+          ],
+          "version": "2.3.0"
+        },
+        {
+          "notes": [
             "Deleting a layout, or every layout, asks through Stackbar, naming what goes.",
             "Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question."
           ],
@@ -2065,7 +2151,7 @@
         },
         {
           "label": "Snapping",
-          "text": "halves, the four quarters, First / Center / Last Third, First / Last Two Thirds, Maximize, Almost Maximize, Center, Next Display, Previous Display (palette only) and Undo Snap, which puts the window back where it was before its last snap. Pressing Left, Right, Top or Bottom Half again cycles through two thirds and one third."
+          "text": "halves, the four quarters, First / Center / Last Third, First / Last Two Thirds, Maximize, Almost Maximize, Center, Next Display, Previous Display, Make Larger and Make Smaller (these three from the palette or a hotkey only) and Undo Snap, which puts the window back where it was before its last snap. Pressing Left, Right, Top or Bottom Half again cycles through two thirds and one third."
         },
         {
           "label": "Settings",
@@ -2073,7 +2159,7 @@
         },
         {
           "label": "Commands",
-          "text": "one per snap, Save Window Layout, Restore Window Layout, and one Restore command per layout, so each layout can have its own hotkey or alias."
+          "text": "one per snap, Save Window Layout (optionally only some apps), Restore Window Layout, Edit Window Layout, Export and Import Window Layouts, and one Restore command per layout, so each layout can have its own hotkey or alias."
         },
         {
           "label": "Agent tools",
@@ -2084,7 +2170,7 @@
           "text": "windows in full screen and on other Spaces, and browser tabs."
         }
       ],
-      "version": "2.2.0"
+      "version": "2.4.0"
     },
     "io.navbytes.stackbar.plugins.world-clock": {
       "changes": [
@@ -2166,6 +2252,13 @@
     },
     "io.navbytes.stackbar.pr-cockpit": {
       "changes": [
+        {
+          "notes": [
+            "When your organization uses SAML single sign-on, PR Cockpit says to authorize the token for it (Configure SSO on github.com), instead of a bare 403.",
+            "Signed in to the gh command-line tool? The empty state tells you how to reuse its token: `gh auth token | pbcopy`."
+          ],
+          "version": "1.14.0"
+        },
         {
           "notes": [
             "Merge your own pull request from the panel or the palette once it is approved with green checks, the way its repository merges (squash, rebase or a merge commit).",
@@ -2287,7 +2380,7 @@
           "text": "`review_queue`, `my_pull_requests` and `my_issues`."
         }
       ],
-      "version": "1.13.0"
+      "version": "1.14.0"
     },
     "io.navbytes.stackbar.quicklinks": {
       "changes": [
@@ -2643,6 +2736,12 @@
         "seconds": 7.2,
         "surface": "panel"
       },
+      "1.14.0": {
+        "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.14.0/dark/demo/b07000be5086/panel.png",
+        "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.14.0/light/demo/b07000be5086/panel.png",
+        "seconds": 7.2,
+        "surface": "panel"
+      },
       "1.5.0": {
         "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.5.0/dark/demo/b07000be5086/panel.png",
         "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.5.0/light/demo/b07000be5086/panel.png",
@@ -2809,6 +2908,12 @@
         "seconds": 5.0,
         "surface": "panel"
       },
+      "1.14.0": {
+        "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/dark/demo/526649a16612/panel.png",
+        "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/light/demo/526649a16612/panel.png",
+        "seconds": 5.0,
+        "surface": "panel"
+      },
       "1.6.0": {
         "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.6.0/dark/demo/526649a16612/panel.png",
         "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.6.0/light/demo/526649a16612/panel.png",
@@ -2872,6 +2977,16 @@
         "panel": {
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.13.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.13.0/light/panel.png"
+        }
+      },
+      "1.14.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.14.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.14.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.14.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.14.0/light/panel.png"
         }
       },
       "1.4.0": {
@@ -3065,6 +3180,14 @@
         }
       }
     },
+    "io.navbytes.stackbar.plugins.ask-ai": {
+      "1.0.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.ask-ai/1.0.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.ask-ai/1.0.0/light/panel.png"
+        }
+      }
+    },
     "io.navbytes.stackbar.plugins.browser-tabs": {
       "1.0.0": {
         "panel": {
@@ -3139,6 +3262,12 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.6.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.6.0/light/panel.png"
         }
+      },
+      "1.7.0": {
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.7.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.7.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.color-picker": {
@@ -3182,6 +3311,16 @@
       }
     },
     "io.navbytes.stackbar.plugins.docker": {
+      "1.10.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.10.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.10.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.10.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.10.0/light/panel.png"
+        }
+      },
       "1.3.0": {
         "menuBar": {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.3.0/dark/menuBar.png",
@@ -3571,6 +3710,16 @@
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.7.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.7.0/light/panel.png"
         }
+      },
+      "1.8.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.8.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.8.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.8.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.8.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.litellm": {
@@ -3878,6 +4027,12 @@
         "panel": {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.3.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.3.0/light/panel.png"
+        }
+      },
+      "1.4.0": {
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.4.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.4.0/light/panel.png"
         }
       }
     },
@@ -4281,6 +4436,16 @@
           "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.2.0/dark/panel.png",
           "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.2.0/light/panel.png"
         }
+      },
+      "2.4.0": {
+        "menuBar": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.4.0/dark/menuBar.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.4.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.4.0/dark/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.4.0/light/panel.png"
+        }
       }
     },
     "io.navbytes.stackbar.plugins.world-clock": {
@@ -4394,6 +4559,16 @@
         "panel": {
           "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/light/panel.png"
+        }
+      },
+      "1.14.0": {
+        "menuBar": {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/dark/menuBar.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/light/menuBar.png"
+        },
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/light/panel.png"
         }
       },
       "1.4.0": {
@@ -4813,6 +4988,29 @@
           "title": "What you copy, and from where"
         }
       ],
+      "1.14.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.14.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.14.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Everything you copied, one keystroke away"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.14.0/dark/previews/pinned/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.14.0/light/previews/pinned/panel.png",
+          "name": "pinned",
+          "surface": "panel",
+          "title": "Pin what you paste every day"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.14.0/dark/previews/insights/window.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.clipboard/1.14.0/light/previews/insights/window.png",
+          "name": "insights",
+          "surface": "window",
+          "title": "What you copy, and from where"
+        }
+      ],
       "1.5.0": [
         {
           "dark": "Productivity/shots/io.navbytes.stackbar.clipboard/1.5.0/dark/previews/hero/panel.png",
@@ -5113,6 +5311,17 @@
         }
       ]
     },
+    "io.navbytes.stackbar.plugins.ask-ai": {
+      "1.0.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.ask-ai/1.0.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.ask-ai/1.0.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Ask from the palette, follow up, copy the answer"
+        }
+      ]
+    },
     "io.navbytes.stackbar.plugins.browser-tabs": {
       "1.0.0": [
         {
@@ -5251,6 +5460,22 @@
           "surface": "panel",
           "title": "Currencies and time zones too"
         }
+      ],
+      "1.7.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.7.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.7.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Answers as you type"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.7.0/dark/previews/conversions/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.calculator/1.7.0/light/previews/conversions/panel.png",
+          "name": "conversions",
+          "surface": "panel",
+          "title": "Currencies and time zones too"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.color-picker": {
@@ -5306,6 +5531,36 @@
       ]
     },
     "io.navbytes.stackbar.plugins.docker": {
+      "1.10.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.10.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.10.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every container, grouped by Compose project"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.10.0/dark/previews/trouble/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.10.0/light/previews/trouble/panel.png",
+          "name": "trouble",
+          "surface": "panel",
+          "title": "Catch the container that keeps crashing"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.10.0/dark/previews/logs/window.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.10.0/light/previews/logs/window.png",
+          "name": "logs",
+          "surface": "window",
+          "title": "Follow a container's logs beside your editor"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.10.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.10.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your stack's health on the desktop"
+        }
+      ],
       "1.4.0": [
         {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.docker/1.4.0/dark/previews/hero/panel.png",
@@ -5912,6 +6167,22 @@
           "surface": "widget",
           "title": "What you're on, on your desktop"
         }
+      ],
+      "1.8.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.8.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.8.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your Linear issues, by state and priority"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.8.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.linear/1.8.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "What you're on, on your desktop"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.litellm": {
@@ -6357,6 +6628,22 @@
         {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.3.0/dark/previews/editors/settings.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.3.0/light/previews/editors/settings.png",
+          "name": "editors",
+          "surface": "settings",
+          "title": "Open projects in the editor you prefer"
+        }
+      ],
+      "1.4.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.4.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.4.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your projects, a few letters away"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.4.0/dark/previews/editors/settings.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.recent-projects/1.4.0/light/previews/editors/settings.png",
           "name": "editors",
           "surface": "settings",
           "title": "Open projects in the editor you prefer"
@@ -6939,6 +7226,29 @@
           "surface": "settings",
           "title": "Gaps, auto-restore and more"
         }
+      ],
+      "2.4.0": [
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.4.0/dark/previews/hero/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.4.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Snap a window, or bring back every window for your desk"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.4.0/dark/previews/restored/panel.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.4.0/light/previews/restored/panel.png",
+          "name": "restored",
+          "surface": "panel",
+          "title": "Back where they were, apps opened for you"
+        },
+        {
+          "dark": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.4.0/dark/previews/settings/settings.png",
+          "light": "Productivity/shots/io.navbytes.stackbar.plugins.workspaces/2.4.0/light/previews/settings/settings.png",
+          "name": "settings",
+          "surface": "settings",
+          "title": "Gaps, auto-restore and more"
+        }
       ]
     },
     "io.navbytes.stackbar.plugins.world-clock": {
@@ -7209,6 +7519,43 @@
         {
           "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/dark/previews/widget/widget.png",
           "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.13.0/light/previews/widget/widget.png",
+          "name": "widget",
+          "surface": "widget",
+          "title": "Your review queue on the desktop"
+        }
+      ],
+      "1.14.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Every pull request waiting on you"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/dark/previews/mine/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/light/previews/mine/panel.png",
+          "name": "mine",
+          "surface": "panel",
+          "title": "Your own PRs: checks, reviews and conflicts"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/dark/previews/checks/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/light/previews/checks/panel.png",
+          "name": "checks",
+          "surface": "panel",
+          "title": "Why a check failed, and its preview deploy, without leaving the menu bar"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/dark/previews/dashboard/window.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/light/previews/dashboard/window.png",
+          "name": "dashboard",
+          "surface": "window",
+          "title": "Both lists, what merged and how long reviews wait"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/dark/previews/widget/widget.png",
+          "light": "Developer/shots/io.navbytes.stackbar.pr-cockpit/1.14.0/light/previews/widget/widget.png",
           "name": "widget",
           "surface": "widget",
           "title": "Your review queue on the desktop"
