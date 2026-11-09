@@ -11,16 +11,18 @@ import Foundation
 /// names (bash, zsh, python3, node, ruby, swift, osascript and a few more).
 @main
 final class ScriptCommands: StackbarPlugin {
-    static let folder = "~/Script Commands"
+    nonisolated static let folder = "~/Script Commands"
     static let interpreters = ["bash", "zsh", "sh", "python3", "node", "ruby", "perl", "php", "swift", "osascript"]
 
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.plugins.script-commands",
         name: "Script Commands",
-        version: "1.3.0",
+        version: "1.4.0",
         summary: "Run your own scripts from the palette, in Raycast's Script Commands format.",
-        surfaces: [.panel],
-        triggers: [.launch, .every(.seconds(300))],
+        surfaces: [.panel, .settings],
+        // Every minute for inline scripts that refresh; the folders are
+        // read again every 5 minutes.
+        triggers: [.launch, .every(.seconds(60))],
         capabilities: [
             .files(paths: [folder]),
             .run(commands: ["grep"] + interpreters),
@@ -60,8 +62,10 @@ final class ScriptCommands: StackbarPlugin {
             var choices: [Choice] = []
         }
 
-        /// Relative to the folder: `./uuid.py`.
+        /// Relative to its folder: `./uuid.py`.
         var file: String
+        /// The folder it is in: ~/Script Commands, or one the user added.
+        var folder: String = ScriptCommands.folder
         var interpreter: String?
         var title: String
         var mode: Mode = .compact
@@ -70,10 +74,15 @@ final class ScriptCommands: StackbarPlugin {
         var description: String?
         var arguments: [Argument] = []
         var needsConfirmation = false
+        /// How often an inline script runs again, in seconds (`@raycast.refreshTime`).
+        var refreshTime: TimeInterval?
 
         var id: String {
-            // Stable across launches: the command id is the file name.
-            "script-" + file.dropFirst(2).map { $0.isLetter || $0.isNumber ? String($0) : "-" }.joined().lowercased()
+            // Stable across launches: the command id is the file name, with
+            // an added folder's name in front.
+            let prefix = folder == ScriptCommands.folder ? "" : (folder as NSString).lastPathComponent + "-"
+            let id = "script-" + (prefix + file.dropFirst(2)).map { $0.isLetter || $0.isNumber ? String($0) : "-" }.joined().lowercased()
+            return String(id.prefix(64))
         }
         var name: String { String(file.dropFirst(2)) }
     }
@@ -83,10 +92,57 @@ final class ScriptCommands: StackbarPlugin {
     var problem: String?
     /// The last full output, by script id, for the fullOutput view.
     var outputs: [String: String] = [:]
+    /// An inline script's last line, by id, and when it ran.
+    var inline: [String: (line: String, at: Date)] = [:]
+    /// Folders the user added in Settings, besides ~/Script Commands.
+    var added: [String] = []
 
     // MARK: Reading the folder
 
     func refresh() async throws {
+        if Date().timeIntervalSince(lastScan) >= Self.rescanAfter { await scan() }
+        await refreshInline()
+    }
+
+    static let rescanAfter: TimeInterval = 290
+
+    /// A path with the home folder as ~.
+    static func tilde(_ path: String) -> String {
+        let home = NSHomeDirectory()
+        return path.hasPrefix(home + "/") ? "~" + path.dropFirst(home.count) : path
+    }
+
+    /// `10s`, `5m`, `1h`, `1d`: Raycast's refresh times, at least a minute
+    /// here, since that is how often Stackbar looks.
+    nonisolated static func refreshTime(_ text: String) -> TimeInterval? {
+        let text = text.trimmingCharacters(in: .whitespaces).lowercased()
+        guard let unit = text.last, let count = Double(text.dropLast()), count > 0 else { return nil }
+        let seconds: Double
+        switch unit {
+        case "s": seconds = count
+        case "m": seconds = count * 60
+        case "h": seconds = count * 3600
+        case "d": seconds = count * 86400
+        default: return nil
+        }
+        return max(seconds, 60)
+    }
+
+    /// Runs the inline scripts that are due, one at a time, and keeps their
+    /// last line for the palette.
+    func refreshInline(now: Date = Date()) async {
+        for script in scripts where script.mode == .inline {
+            guard let every = script.refreshTime, script.arguments.allSatisfy(\.optional) else { continue }
+            if let last = inline[script.id], now.timeIntervalSince(last.at) < every - 5 { continue }
+            guard let result = try? await run(script, arguments: script.arguments.map { _ in "" }) else { continue }
+            let line = Self.lastLine(result.succeeded ? result.text : result.errorText) ?? (result.succeeded ? "" : "failed (\(result.status))")
+            inline[script.id] = (line, Date())
+        }
+    }
+
+    /// Adds a folder of scripts, chosen by the user.
+    func addFolder() async throws {
+        guard try await Stackbar.chooseFolder(prompt: "Choose a folder of script commands") != nil else { return }
         await scan()
     }
 
@@ -112,6 +168,14 @@ final class ScriptCommands: StackbarPlugin {
 
     func scan() async {
         defer { lastScan = Date() }
+        added = ((try? await Stackbar.grantedFolders()) ?? []).filter { $0 != Self.folder }
+        var found: [Script] = []
+        for folder in added {
+            // An added folder that can't be read is skipped; the main one says why.
+            guard let result = try? await Stackbar.run("grep", Self.grepArguments, workingDirectory: folder, timeout: .seconds(10)),
+                  Self.usable(status: result.status, timedOut: result.timedOut, hasOutput: !result.stdout.isEmpty) else { continue }
+            found += Self.parse(result.text, folder: folder)
+        }
         do {
             // Every metadata line and every shebang, as ./file:line.
             let result = try await Stackbar.run("grep", Self.grepArguments, workingDirectory: Self.folder, timeout: .seconds(10))
@@ -121,7 +185,7 @@ final class ScriptCommands: StackbarPlugin {
                 scanned = true
                 return
             }
-            scripts = Self.parse(result.text)
+            scripts = Self.parse(result.text) + found
             problem = nil
         } catch {
             let text = "\(error)"
@@ -130,13 +194,13 @@ final class ScriptCommands: StackbarPlugin {
                 : text
             // A folder that is gone has no scripts; any other failure (a
             // timeout, say) keeps the last good list.
-            if text.contains("not a folder") || text.contains("exist") || text.contains("No such") { scripts = [] }
+            if text.contains("not a folder") || text.contains("exist") || text.contains("No such") { scripts = found }
         }
         scanned = true
     }
 
     /// `grep -H` output, `./file:line`, into one script a file with a title.
-    static func parse(_ output: String) -> [Script] {
+    nonisolated static func parse(_ output: String, folder: String = ScriptCommands.folder) -> [Script] {
         var order: [String] = []
         var lines: [String: [String]] = [:]
         for line in output.split(separator: "\n", omittingEmptySubsequences: true) {
@@ -147,7 +211,7 @@ final class ScriptCommands: StackbarPlugin {
             lines[file, default: []].append(String(line[line.index(after: colon)...]))
         }
         return order.compactMap { file in
-            var script = Script(file: file, title: "")
+            var script = Script(file: file, folder: folder, title: "")
             for line in lines[file] ?? [] {
                 if line.hasPrefix("#!") {
                     if script.interpreter == nil { script.interpreter = interpreter(fromShebang: line) }
@@ -165,6 +229,7 @@ final class ScriptCommands: StackbarPlugin {
                 case "icon": script.icon = value.count <= 2 ? value : nil
                 case "description": script.description = value
                 case "needsConfirmation": script.needsConfirmation = value == "true"
+                case "refreshTime": script.refreshTime = refreshTime(value)
                 case "argument1", "argument2", "argument3":
                     if let argument = argument(value) { script.arguments.append(argument) }
                 default: break
@@ -179,7 +244,7 @@ final class ScriptCommands: StackbarPlugin {
 
     /// `#!/bin/bash`, `#!/usr/bin/env python3`, `#!/usr/bin/env -S node --flag`
     /// as the interpreter's name.
-    static func interpreter(fromShebang line: String) -> String? {
+    nonisolated static func interpreter(fromShebang line: String) -> String? {
         let parts = line.dropFirst(2).split(separator: " ").map(String.init).filter { $0 != "-S" }
         guard let first = parts.first else { return nil }
         let program = (first as NSString).lastPathComponent
@@ -190,7 +255,7 @@ final class ScriptCommands: StackbarPlugin {
     /// `{ "type": "text", "placeholder": "City", "optional": true }`. A dropdown's
     /// choices are read one at a time: a choice that doesn't decode is skipped,
     /// and choices that can't be read at all leave a free-text argument.
-    static func argument(_ json: String) -> Script.Argument? {
+    nonisolated static func argument(_ json: String) -> Script.Argument? {
         struct Item: Decodable { var title: String; var value: String }
         struct LossyItem: Decodable {
             let value: Item?
@@ -229,7 +294,8 @@ final class ScriptCommands: StackbarPlugin {
 
     func run(_ script: Script, arguments: [String]) async throws -> RunResult {
         let interpreter = try Self.interpreter(for: script)
-        return try await Stackbar.run(interpreter, [script.file] + arguments, workingDirectory: Self.folder, timeout: .seconds(script.mode == .fullOutput ? 120 : 60))
+        // Ten minutes, as long as Stackbar lets a command take.
+        return try await Stackbar.run(interpreter, [script.file] + arguments, workingDirectory: script.folder, timeout: .seconds(600))
     }
 
     /// Runs a script for a row or a palette command: whether it worked, and
@@ -245,6 +311,7 @@ final class ScriptCommands: StackbarPlugin {
             if let last { Stackbar.hud(last) }
             return (true, nil)
         }
+        if script.mode == .inline { inline[script.id] = (last ?? "", Date()) }
         return (true, last ?? "\(script.title) done")
     }
 
@@ -269,7 +336,9 @@ final class ScriptCommands: StackbarPlugin {
     }
 
     func command(for script: Script) -> Command {
-        let subtitle = [script.package, script.description].compactMap { $0 }.joined(separator: " · ")
+        // An inline script shows what it last printed, as in Raycast.
+        let shown = script.mode == .inline ? inline[script.id].map(\.line).flatMap { $0.isEmpty ? nil : $0 } : nil
+        let subtitle = shown ?? [script.package, script.description].compactMap { $0 }.joined(separator: " · ")
         var command: Command
         if script.mode == .fullOutput || script.needsConfirmation {
             command = Command(script.id, title: script.title, subtitle: subtitle.isEmpty ? script.name : subtitle, symbol: "terminal", keywords: ["script", script.package ?? ""].filter { !$0.isEmpty })
@@ -280,6 +349,8 @@ final class ScriptCommands: StackbarPlugin {
                 return ok ? .message(message) : .failure(message ?? "")
             }
         }
+        // As long as the script may run (Stackbar 0.36; older ones stop at 30 s).
+        command = command.timeout(.seconds(600))
         for (index, argument) in script.arguments.enumerated() {
             command = command.argument("argument\(index + 1)", placeholder: argument.placeholder, required: !argument.optional,
                                        options: argument.choices.isEmpty ? nil : argument.choices.map(\.title))
@@ -344,7 +415,7 @@ final class ScriptCommands: StackbarPlugin {
                     }
                 }
             }
-        Command("reload", title: "Reload Script Commands", subtitle: Self.folder, symbol: "arrow.clockwise", keywords: ["script", "reload", "refresh"]) { _ in
+        Command("reload", title: "Reload Script Commands", subtitle: ([Self.folder] + added.map(Self.tilde)).joined(separator: ", "), symbol: "arrow.clockwise", keywords: ["script", "reload", "refresh"]) { _ in
             await self.scan()
             if let problem = self.problem { return .failure(problem) }
             return .message("\(self.scripts.count) script command\(self.scripts.count == 1 ? "" : "s")")
@@ -354,7 +425,7 @@ final class ScriptCommands: StackbarPlugin {
     // MARK: Panel
 
     var panel: ViewContent {
-        PanelHeader("Script Commands", subtitle: "\(scripts.count) in \(Self.folder)", symbol: "terminal.fill", theme: theme)
+        PanelHeader("Script Commands", subtitle: "\(scripts.count) in \(Self.folder)" + (added.isEmpty ? "" : " and \(added.count) more folder\(added.count == 1 ? "" : "s")"), symbol: "terminal.fill", theme: theme)
         if let problem, !scripts.isEmpty {
             Banner(problem, theme: .warning)
         }
@@ -363,6 +434,19 @@ final class ScriptCommands: StackbarPlugin {
             EmptyState("Add your first script", symbol: "terminal", message: problem ?? "Put a script with a \"# @raycast.title My Command\" line in ~/Script Commands, and it shows up in the palette within a minute. Raycast's script-commands repository on GitHub has hundreds ready to copy.", theme: theme)
         } else {
             List(scripts, searchable: scripts.count > 8) { script in self.scriptRow(script) }
+        }
+    }
+
+    // MARK: Settings
+
+    var settings: ViewContent {
+        Section("Folders") {
+            LabeledContent("Always", value: Self.folder)
+            for folder in added {
+                LabeledContent("Added", value: Self.tilde(folder))
+            }
+            Button("Add a Folder…", symbol: "folder.badge.plus") { try await self.addFolder() }
+            Text("Scripts in an added folder become commands too. Remove a folder under Folders you chose, below.").style(.caption)
         }
     }
 }

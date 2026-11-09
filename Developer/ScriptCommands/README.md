@@ -16,8 +16,14 @@ Reload Script Commands).
 echo "Hello ${1:-world}"
 ```
 
-- **Modes:** `silent` shows the last line it prints on screen, `compact` (and
-  `inline`) shows it in the palette, `fullOutput` opens a view with all of it.
+- **Modes:** `silent` shows the last line it prints on screen, `compact` shows
+  it in the palette, `fullOutput` opens a view with all of it. `inline` with a
+  `@raycast.refreshTime` (such as `5m`, at least a minute) runs on its own and
+  shows its last line as the command's subtitle in the palette.
+- **Long scripts:** a script may run for up to ten minutes (Stackbar 0.36 and
+  later; earlier versions stop waiting after 30 seconds).
+- **More folders:** Settings › Add a Folder… adds another folder of scripts,
+  such as one in a repository. Remove it under Folders you chose.
 - **Also read:** `packageName`, `description`, `icon` (an emoji),
   `argument1` to `argument3` (`dropdown` arguments show their choices in the
   palette), and `needsConfirmation`, which asks before the script runs.
@@ -25,8 +31,15 @@ echo "Hello ${1:-world}"
   ruby, perl, php, swift or osascript.
 - **Needs:** the ~/Script Commands folder, running grep (to read the
   `@raycast.` lines) and those interpreters. Stackbar 0.35.0 or later.
-- **Surfaces:** panel (your scripts; click one to run it).
+- **Surfaces:** panel (your scripts; click one to run it), settings (folders).
 - **Commands:** one for each script, Script Commands (the list), and Reload Script Commands.
+
+## What's new in 1.4.0
+
+- Scripts can run for up to ten minutes instead of 30 seconds (Stackbar 0.36).
+- `inline` scripts with a refresh time run on their own and show their output in the palette.
+- Add more folders of scripts in Settings.
+- Programs in folders you add under Stackbar's Settings › Terminal › More folders for commands are found, such as ~/.cargo/bin.
 
 ## What's new in 1.3.0
 

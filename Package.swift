@@ -14,7 +14,7 @@ import PackageDescription
 /// and custom styling.
 /// Switch to `exact:` once tags are pushed, and raise it in its own pull
 /// request; a plugin may still set an older `minimumStackbar`.
-let stackbarRevision = "b2a243d170a07d2835ced5a2e205d9e1d73b4775" // 0.35.0 + renders draw held actions (#167)
+let stackbarRevision = "8a4a6cdf9e411eef1ae6060b97b7505144a61d95" // 0.35.1 + round 2: timeouts, Tab to AI, Hyper key (#174)
 
 /// Category folders. The folder name is the category the store shows.
 let categories = ["System", "Developer", "Network", "Monitoring", "Productivity"]
@@ -41,7 +41,7 @@ let plugins: [(category: String, name: String, target: String)] = categories.fla
 }
 
 /// The plugins Tests/PluginTests runs.
-let testedPlugins = ["AppSwitcher", "Applications", "AskAI", "BrowserTabs", "Calculator", "Clipboard", "ColorPicker", "Dictionary", "Emoji", "FileSearch", "Jira", "KillProcess", "Linear", "LiteLLM", "MenuSearch", "Music", "OpenRouter", "PRCockpit", "Pomodoro", "Ports", "Quicklinks", "RecentProjects", "Snippets", "StayAwake", "SystemCommands", "SystemMonitor", "Timers", "Todo", "Translate", "UpNext", "WindowSwitcher", "Windows", "WorldClock"]
+let testedPlugins = ["AppSwitcher", "Applications", "AskAI", "BrowserTabs", "Calculator", "Clipboard", "ColorPicker", "Dictionary", "Emoji", "FileSearch", "Jira", "KillProcess", "Linear", "LiteLLM", "MenuSearch", "Music", "OpenRouter", "PRCockpit", "Pomodoro", "Ports", "Quicklinks", "RecentProjects", "ScriptCommands", "Snippets", "StayAwake", "SystemCommands", "SystemMonitor", "Timers", "Todo", "Translate", "UpNext", "WindowSwitcher", "Windows", "WorldClock"]
 
 let stackbar: Package.Dependency = ProcessInfo.processInfo.environment["STACKBAR_PATH"].map { .package(name: "stackbar", path: $0) }
     ?? .package(url: "https://github.com/navbytes/stackbar", revision: stackbarRevision)
