@@ -1,0 +1,13 @@
+{
+  "arch" : "arm64",
+  "id" : "io.navbytes.stackbar.plugins.docker",
+  "protocol" : 25,
+  "publicKey" : "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+  "sha256" : "9422851462ac0b7ed848fa535006394b82c418a8ed2380eba8aea07cb5c3cb36",
+  "signature" : "w7v7LzSd86S2rZU5uAj7XVJDRXeaHrLCSyNLrbti6JW6ehMCXHGjS5dq1kXuOHULN5cDBfIUK5ciTRSENSLFDA==",
+  "size" : 6094456,
+  "sourceDigest" : "6035d04255ff6b8d94969caa129a4409053c495e8d1cd92d4341c1df277de9a0",
+  "stackbarKit" : "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+  "url" : "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/Docker-6035d04255ff",
+  "version" : "1.10.0"
+}

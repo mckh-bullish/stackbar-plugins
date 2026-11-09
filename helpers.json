@@ -29,6 +29,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.ask-ai",
+      "protocol": 23,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "fd603e2e79955a3f2c5c5de55cabbe03b5b89bb47f385a228e228b6c4d06be05",
+      "signature": "J71EijWCzV7Dx7UcCyhWbNn+SXJ9/b9w2+QycEHIS9hEoHYwxr0RxDF2pFty3RmCH6n30o7j8qyZ1HH8TdfsAg==",
+      "size": 5765016,
+      "sourceDigest": "9c0e9b83eea9eef9dea14f48733a7575d4085b2b3c96432955fff7f67dc85ee3",
+      "stackbarKit": "a4c131a63549c9609f8d3cf11490dce90eefa36600327fe523e37f9b36d38b59",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-a4c131a63549c960/AskAI-9c0e9b83eea9",
+      "version": "1.0.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.browser-tabs",
       "protocol": 23,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -52,6 +65,19 @@
       "stackbarKit": "a4c131a63549c9609f8d3cf11490dce90eefa36600327fe523e37f9b36d38b59",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-a4c131a63549c960/Calculator-3451bebe7b2d",
       "version": "1.6.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.calculator",
+      "protocol": 23,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "6c9fa98c65549a99302e2022b9072c4aa4fcd00c1276db2d09e07b0f31dd95c8",
+      "signature": "ndJdAJhnjm4nRWWxa3vAAI7m4UhsZ3ZyWWd0l2Lz04x51+QesZ/xqDRbBGiNULgXlawrJa+TEejnE3sLVcGcAA==",
+      "size": 5899512,
+      "sourceDigest": "37525ee04dbd5fde7eb07c6e2890bed0fbea8e9fe3327faefaf6920de28e74a3",
+      "stackbarKit": "a4c131a63549c9609f8d3cf11490dce90eefa36600327fe523e37f9b36d38b59",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-a4c131a63549c960/Calculator-37525ee04dbd",
+      "version": "1.7.0"
     },
     {
       "arch": "arm64",
@@ -318,6 +344,19 @@
       "id": "io.navbytes.stackbar.plugins.recent-projects",
       "protocol": 23,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "e1d61de17c91760ee5f96ebe9f7bac33bc1295af9bd44a8fb0dd0b47fba5a800",
+      "signature": "je2LdZgsP3gXrs/9WcZt647S3USg2cWb41cPnTO/xi/gIn8GX1gx0jAlo0XlKpb97EFtwPel11vHrImQCG+hAA==",
+      "size": 5829376,
+      "sourceDigest": "3bf8b08fa7a3e4a1ee071620f025cb947c96e37f0b013dadcbcb95af9937c46f",
+      "stackbarKit": "a4c131a63549c9609f8d3cf11490dce90eefa36600327fe523e37f9b36d38b59",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-a4c131a63549c960/RecentProjects-3bf8b08fa7a3",
+      "version": "1.4.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.recent-projects",
+      "protocol": 23,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
       "sha256": "175eed090841f5f089a704128a1eecbc891f6c0a99d14f939d2baaf7fa8cb155",
       "signature": "iSKhQuoozZBs8ZRSXcL5kyNSD5aUsRrUUS3Hx+dR9jLMNHF8lhKSTWaojK/5Bap7p4ltmRSfpcTxQHhSG0e2DQ==",
       "size": 5812592,
@@ -510,6 +549,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.ask-ai",
+      "protocol": 24,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "396b45e618a8b13cf2a70ff0e3329746fbdb6ba0b1836dc9878699d4d5f25043",
+      "signature": "VD//09K1jpPI7Ggppv4mlrM3oljBhVgtKDHVwTltuk33nqvozySQNdgMVlzli4oogb2jh5YQPaB9MoyblPnTBw==",
+      "size": 5803320,
+      "sourceDigest": "9c0e9b83eea9eef9dea14f48733a7575d4085b2b3c96432955fff7f67dc85ee3",
+      "stackbarKit": "6a2ddb217a71b30e690308df8d219cc3494edf3678ddb93032b5ebf3c46b8072",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-6a2ddb217a71b30e/AskAI-9c0e9b83eea9",
+      "version": "1.0.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.browser-tabs",
       "protocol": 24,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -533,6 +585,19 @@
       "stackbarKit": "6a2ddb217a71b30e690308df8d219cc3494edf3678ddb93032b5ebf3c46b8072",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-6a2ddb217a71b30e/Calculator-3451bebe7b2d",
       "version": "1.6.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.calculator",
+      "protocol": 24,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "d9bd0a00601641776221766579a46f991b439b334a1ca84342944d969d8bb7cb",
+      "signature": "EmJnFR8tkmNpFBqs2z/QqjNxv68G4OcNW33MFswgLqWrheaLJox/wrulUWfzFBT77EeiJkWdImCW71lLI6S2AA==",
+      "size": 5954312,
+      "sourceDigest": "37525ee04dbd5fde7eb07c6e2890bed0fbea8e9fe3327faefaf6920de28e74a3",
+      "stackbarKit": "6a2ddb217a71b30e690308df8d219cc3494edf3678ddb93032b5ebf3c46b8072",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-6a2ddb217a71b30e/Calculator-37525ee04dbd",
+      "version": "1.7.0"
     },
     {
       "arch": "arm64",
@@ -799,6 +864,19 @@
       "id": "io.navbytes.stackbar.plugins.recent-projects",
       "protocol": 24,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "44dacc83fcaf59afbda434be9dce4980ee1eedb49de348df64f3c7b1f74d06bf",
+      "signature": "G+vWwTfkhTejjE8i6uVBGY/JEyfpBAEDUfQdnG1t1Fj2ga3LFq3diQwz9jcQTP0WS/j9icqgZjIaWcV3BewxCA==",
+      "size": 5867680,
+      "sourceDigest": "3bf8b08fa7a3e4a1ee071620f025cb947c96e37f0b013dadcbcb95af9937c46f",
+      "stackbarKit": "6a2ddb217a71b30e690308df8d219cc3494edf3678ddb93032b5ebf3c46b8072",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-6a2ddb217a71b30e/RecentProjects-3bf8b08fa7a3",
+      "version": "1.4.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.recent-projects",
+      "protocol": 24,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
       "sha256": "a8267e1cc09a65bf9f0870ad2239a197f8993eccf8453357ae42fa3233a27157",
       "signature": "g1I97oDEx0kWmDyg+k69RXYxl4wB6tgLBoCtz6Q9PsajfqlW6Op8X8OSxOQDxN83RizYXQA7lf6vSw8SHLajDg==",
       "size": 5867408,
@@ -1004,6 +1082,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.ask-ai",
+      "protocol": 25,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "c8148dad57ef205ddb1d98ce32d8acfe1ff0877c1dd9e4d84f1abadf2d01e76f",
+      "signature": "7LH74FmFcd33JJShQ5u6UVS4XnuXpi0q8u4jTjJ0SJAZyTVLkG26MMuC3OPzAEaCSvZR4t2wPy20Lm2EFsPhAw==",
+      "size": 5841064,
+      "sourceDigest": "9c0e9b83eea9eef9dea14f48733a7575d4085b2b3c96432955fff7f67dc85ee3",
+      "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/AskAI-9c0e9b83eea9",
+      "version": "1.0.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.browser-tabs",
       "protocol": 25,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -1056,6 +1147,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.calculator",
+      "protocol": 25,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "9af46edf2ea26a8ea50a9eb66296eba58c749f479ea65ecba62d6170deb99bfb",
+      "signature": "2i6Pu2nK3bs3BGWYEmljhPzvaJsaPReZH1mtJZzhANB6IjPpC2JCe45p8u+wFjjr5jpGOXurJK+Wusb50eo6Aw==",
+      "size": 5992072,
+      "sourceDigest": "37525ee04dbd5fde7eb07c6e2890bed0fbea8e9fe3327faefaf6920de28e74a3",
+      "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/Calculator-37525ee04dbd",
+      "version": "1.7.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.clipboard",
       "protocol": 25,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -1066,6 +1170,19 @@
       "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/Clipboard-6b4c025844ed",
       "version": "1.13.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.clipboard",
+      "protocol": 25,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "d5b7ba1fe8f3cdfeafdc7d5a648b2dbe1129b80f763a6f3dc5bc5e3cb66eb0a8",
+      "signature": "EGvPNEpk5BNij5AJgV0mT3DRUYogxYmihlXFjKqoIOpBYa1rnsBns84Bu2x6hFQcSd8DNYD55GJamoQKdOOyBg==",
+      "size": 6057112,
+      "sourceDigest": "7939f9b0c5e1abb21b2bd1d7cef8ec1e6efffb96a9983ca89673a0da07fcced9",
+      "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/Clipboard-7939f9b0c5e1",
+      "version": "1.14.0"
     },
     {
       "arch": "arm64",
@@ -1118,6 +1235,19 @@
       "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/Dictionary-b3a69e810988",
       "version": "1.2.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.docker",
+      "protocol": 25,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "9422851462ac0b7ed848fa535006394b82c418a8ed2380eba8aea07cb5c3cb36",
+      "signature": "w7v7LzSd86S2rZU5uAj7XVJDRXeaHrLCSyNLrbti6JW6ehMCXHGjS5dq1kXuOHULN5cDBfIUK5ciTRSENSLFDA==",
+      "size": 6094456,
+      "sourceDigest": "6035d04255ff6b8d94969caa129a4409053c495e8d1cd92d4341c1df277de9a0",
+      "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/Docker-6035d04255ff",
+      "version": "1.10.0"
     },
     {
       "arch": "arm64",
@@ -1254,6 +1384,19 @@
       "id": "io.navbytes.stackbar.plugins.linear",
       "protocol": 25,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "6e53663761936f11e39510e6734bc9cb294d65ec7ac8752128d7a173bd312944",
+      "signature": "AOxeQHyju+pLM2XKU2/h0VxQ6IsI/WTrkk0zdzlHOgu3XY2IV4jpfN7DT2c5ZX/sEopxsRxxu/pQtuSLqFpwAg==",
+      "size": 6688808,
+      "sourceDigest": "3301d0dffa6abc6f3014c98a020ce57b67d2258c12b68b99b6688a879f552214",
+      "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/Linear-3301d0dffa6a",
+      "version": "1.8.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.linear",
+      "protocol": 25,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
       "sha256": "3604c9b872420e240a43f2959a329a57d3671933a93bd428f4174ee182d219d4",
       "signature": "rql+3J4WT56kXvCpyCkjrUbjFTCQiXFIYgg9il2ELQoP7SVzc/ln6phmm3w+BnjOH1iEebPjb0uESgflwvjDAA==",
       "size": 6688440,
@@ -1368,6 +1511,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.pr-cockpit",
+      "protocol": 25,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "d635925800b9ca8658eec7b9a7f3fc52c076787bd74e234bde8b10c684bdc8c3",
+      "signature": "MP9uGjaZnQiUbqPT/ZMh0o0yEA2ZoYag9TuhP/Mr5xIy84MyLa6x2FAVC3IG4K/z4YnPr6j/0HMafVw4mtKgDw==",
+      "size": 7380440,
+      "sourceDigest": "97823d7f1cab6c40b74b83dd5d79b9b124112d9c4639a6fc2b69b2ab63551799",
+      "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/PRCockpit-97823d7f1cab",
+      "version": "1.14.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.pomodoro",
       "protocol": 25,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -1430,6 +1586,19 @@
       "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/Quicklinks-67b218878eb2",
       "version": "1.6.1"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.recent-projects",
+      "protocol": 25,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "b13e630998a2d4f541d614973b8fb8ea97c88b281bc8dbfc8b0c87bb84b80b1b",
+      "signature": "C1yfHfINdclQ9E0iRSeGBy2NyjcZhRPsA/X6WCBkJZtkpez6Ul6JDWxmR9SkYj5AwoJprePGTtPUa79winm7BQ==",
+      "size": 5905440,
+      "sourceDigest": "3bf8b08fa7a3e4a1ee071620f025cb947c96e37f0b013dadcbcb95af9937c46f",
+      "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/RecentProjects-3bf8b08fa7a3",
+      "version": "1.4.0"
     },
     {
       "arch": "arm64",
@@ -1677,6 +1846,19 @@
       "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/Windows-b9c62953f22d",
       "version": "2.2.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.workspaces",
+      "protocol": 25,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "c092925d0aeef0fa498231b262e13af13d5260b9f1e64aa8bff3cc35ae40c9be",
+      "signature": "1Np2j6D2k3g+RiOd9Eb9MOepXAxR7uSA6Re/29I5yQ5ILDJ7+N0NUoVUXTZSYu0QLU/jU2JDoCfOmo8NYN+cDg==",
+      "size": 6007608,
+      "sourceDigest": "df966072cb6bdb82bb531e050206e0b7942db078486ec7625bcd55fbc16b2e1d",
+      "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/Windows-df966072cb6b",
+      "version": "2.4.0"
     },
     {
       "arch": "arm64",
