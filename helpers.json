@@ -237,6 +237,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.litellm",
+      "protocol": 24,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "4cea79d46453d1c7713f1760639be69a4e5a5477221a781bcc270387d0845214",
+      "signature": "9eQZxbjf7NReuOgOQDcKMUkH8sOSrZfclrJ+fXzmgwcoahm0RCRQb8LCXFUSs5D3U3Gnke3XNP5jZkcq1QEACQ==",
+      "size": 6147752,
+      "sourceDigest": "dbff9a614c243d94c17da668491e14214d457e7e6ae042413e47c0ab240844d7",
+      "stackbarKit": "6a2ddb217a71b30e690308df8d219cc3494edf3678ddb93032b5ebf3c46b8072",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-6a2ddb217a71b30e/LiteLLM-dbff9a614c24",
+      "version": "1.6.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.menu-search",
       "protocol": 24,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -913,6 +926,19 @@
     },
     {
       "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.litellm",
+      "protocol": 25,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "b45934642be3eb4bd14ab5830a5f1312d051f5e93929de01e7fc873d93737cb3",
+      "signature": "mUO+z5d3Eer1CPsfx68R3ds3TcjnzaSVc3aSSCDCeMYHR/MXZAVzHQuUsszsDIDmMabyP0TUCCdMjBYjy/MbBA==",
+      "size": 6185512,
+      "sourceDigest": "dbff9a614c243d94c17da668491e14214d457e7e6ae042413e47c0ab240844d7",
+      "stackbarKit": "036510375015748b176108bf1fa44eaca4764f3cfb1821821b214301d966788d",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-036510375015748b/LiteLLM-dbff9a614c24",
+      "version": "1.6.0"
+    },
+    {
+      "arch": "arm64",
       "id": "io.navbytes.stackbar.plugins.menu-search",
       "protocol": 25,
       "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
@@ -1573,6 +1599,19 @@
       "stackbarKit": "94470a0def440d1ab132be34cf52ae06d6874f42e56903fd616a019efed07c7c",
       "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-94470a0def440d1a/LiteLLM-586fdc5fce44",
       "version": "1.5.0"
+    },
+    {
+      "arch": "arm64",
+      "id": "io.navbytes.stackbar.plugins.litellm",
+      "protocol": 26,
+      "publicKey": "4dpLtXEpFXdi+6cviY/KdYuUulJPbEmCxxIK0EEN2/w=",
+      "sha256": "ec5a2dc0f40ae44eb1c4b6302b3bac7e38b498ab22178e71ebc23119a2b66c9c",
+      "signature": "8ova7qenMHR9x4WVyQnUbaJfwVq+qYA5ZY38cs8NzY6iGhwrgjCyG7KE/l0+kkQ6O02vaaQFsvXUahND2SGtDA==",
+      "size": 6243688,
+      "sourceDigest": "dbff9a614c243d94c17da668491e14214d457e7e6ae042413e47c0ab240844d7",
+      "stackbarKit": "94470a0def440d1ab132be34cf52ae06d6874f42e56903fd616a019efed07c7c",
+      "url": "https://github.com/navbytes/stackbar-plugins/releases/download/helpers-94470a0def440d1a/LiteLLM-dbff9a614c24",
+      "version": "1.6.0"
     },
     {
       "arch": "arm64",
