@@ -1556,6 +1556,15 @@
       "changes": [
         {
           "notes": [
+            "Scripts can run for up to ten minutes instead of 30 seconds (Stackbar 0.36).",
+            "`inline` scripts with a refresh time run on their own and show their output in the palette.",
+            "Add more folders of scripts in Settings.",
+            "Programs in folders you add under Stackbar's Settings \u203a Terminal \u203a More folders for commands are found, such as ~/.cargo/bin."
+          ],
+          "version": "1.4.0"
+        },
+        {
+          "notes": [
             "A script that asks first is confirmed by Stackbar: press Run again within 10 seconds. One that can't run says why on the first press.",
             "Stackbar 0.35.0 now asks for the second press itself, the same way in the panel, the palette and every window, and VoiceOver reads the question."
           ],
@@ -1590,7 +1599,15 @@
       "facts": [
         {
           "label": "Modes",
-          "text": "`silent` shows the last line it prints on screen, `compact` (and `inline`) shows it in the palette, `fullOutput` opens a view with all of it."
+          "text": "`silent` shows the last line it prints on screen, `compact` shows it in the palette, `fullOutput` opens a view with all of it. `inline` with a `@raycast.refreshTime` (such as `5m`, at least a minute) runs on its own and shows its last line as the command's subtitle in the palette."
+        },
+        {
+          "label": "Long scripts",
+          "text": "a script may run for up to ten minutes (Stackbar 0.36 and later; earlier versions stop waiting after 30 seconds)."
+        },
+        {
+          "label": "More folders",
+          "text": "Settings \u203a Add a Folder\u2026 adds another folder of scripts, such as one in a repository. Remove it under Folders you chose."
         },
         {
           "label": "Also read",
@@ -1606,14 +1623,14 @@
         },
         {
           "label": "Surfaces",
-          "text": "panel (your scripts; click one to run it)."
+          "text": "panel (your scripts; click one to run it), settings (folders)."
         },
         {
           "label": "Commands",
           "text": "one for each script, Script Commands (the list), and Reload Script Commands."
         }
       ],
-      "version": "1.3.0"
+      "version": "1.4.0"
     },
     "io.navbytes.stackbar.plugins.system-commands": {
       "changes": [
@@ -4059,6 +4076,12 @@
         "panel": {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.3.0/dark/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.3.0/light/panel.png"
+        }
+      },
+      "1.4.0": {
+        "panel": {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.4.0/dark/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.4.0/light/panel.png"
         }
       }
     },
@@ -6696,6 +6719,22 @@
         {
           "dark": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.3.0/dark/previews/first-run/panel.png",
           "light": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.3.0/light/previews/first-run/panel.png",
+          "name": "first-run",
+          "surface": "panel",
+          "title": "Start with one line in a script"
+        }
+      ],
+      "1.4.0": [
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.4.0/dark/previews/hero/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.4.0/light/previews/hero/panel.png",
+          "name": "hero",
+          "surface": "panel",
+          "title": "Your scripts, as commands"
+        },
+        {
+          "dark": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.4.0/dark/previews/first-run/panel.png",
+          "light": "Developer/shots/io.navbytes.stackbar.plugins.script-commands/1.4.0/light/previews/first-run/panel.png",
           "name": "first-run",
           "surface": "panel",
           "title": "Start with one line in a script"

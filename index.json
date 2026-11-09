@@ -1,6 +1,6 @@
 {
   "format" : 2,
-  "generated" : "2026-11-09T13:49:21Z",
+  "generated" : "2026-11-09T14:15:16Z",
   "homepage" : "https://github.com/navbytes/stackbar-plugins",
   "name" : "Stackbar Plugins by navbytes",
   "plugins" : [
@@ -3912,6 +3912,34 @@
     },
     {
       "accent" : "graphite",
+      "bundle" : "Developer/io.navbytes.stackbar.plugins.script-commands-1.4.0.stackbarplugin",
+      "capabilities" : [
+        "Reads and writes ~/Script Commands",
+        "Runs /usr/bin/grep, /bin/bash (can run any program), /bin/zsh (can run any program), /bin/sh (can run any program), /opt/homebrew/bin/python3 (can run any program), /opt/homebrew/bin/node (can run any program), /opt/homebrew/bin/ruby (can run any program), /opt/homebrew/bin/perl (can run any program), php (not installed), /usr/bin/swift (can run any program), /usr/bin/osascript (can run any program)"
+      ],
+      "capabilityKinds" : [
+        "files",
+        "run"
+      ],
+      "category" : "Developer",
+      "homepage" : "https://github.com/navbytes/stackbar-plugins/tree/main/Developer/ScriptCommands",
+      "id" : "io.navbytes.stackbar.plugins.script-commands",
+      "minimumStackbar" : "0.35.0",
+      "name" : "Script Commands",
+      "publisher" : "navbytes",
+      "screenshot" : "Developer/io.navbytes.stackbar.plugins.script-commands.png",
+      "sha256" : "e559610d77e04107565f295bd4ff6a9653f1e988897354e2e961c0ec13acdac3",
+      "summary" : "Run your own scripts from the palette, in Raycast's Script Commands format.",
+      "surfaces" : [
+        "panel",
+        "settings"
+      ],
+      "symbol" : "terminal.fill",
+      "updated" : "2026-11-09",
+      "version" : "1.4.0"
+    },
+    {
+      "accent" : "graphite",
       "bundle" : "System/io.navbytes.stackbar.plugins.system-commands-1.0.0.stackbarplugin",
       "capabilities" : [
         "Locks, sleeps, restarts, shuts down or logs out the Mac, empties the Trash, toggles dark mode, hides or quits other apps and ejects disks"
@@ -6928,5 +6956,5 @@
       "reason" : "GitHub is now part of PR Cockpit, which has the same features and more. Install PR Cockpit from the store."
     }
   ],
-  "signature" : "RiZNNU53EQGffFTXCrhQCOmXcrnpx6MLkazrdx+YC5jB7GyA9S08Jc3haOlHjt7+qJWdHXk/ogB87oWNh5JODA=="
+  "signature" : "rhknFqGPAns+GkUOztrQyEkuzoqqkp3VB5TdIRyDZojMt1Zt5/lykUj8VDSEs4tpXQK/MBsV6akYxzXyJ+ddDA=="
 }
