@@ -16,8 +16,9 @@ import Foundation
 /// the first that works: the gh command-line tool (the host runs
 /// `gh auth token`, kept for five minutes, not once per request) or a
 /// `GITHUB_TOKEN` secret pasted in the panel or on the Settings page when
-/// gh isn't installed or signed in — the panel says which is in use and
-/// why. Every request goes through the host to the one declared domain.
+/// gh isn't installed or signed in. The panel says when the pasted token
+/// is in use, and why gh isn't. Every request goes through the host to the
+/// one declared domain.
 /// For GitHub Enterprise Server, turn it on in Settings and enter the
 /// server as `GITHUB_ENTERPRISE_URL`: requests then go to that server and
 /// no other, with that server's gh sign-in.
@@ -507,6 +508,7 @@ final class PRCockpit: StackbarPlugin {
             return stored
         }
         tokenMissing = true
+        tokenSource = nil
         return nil
     }
 
@@ -609,7 +611,9 @@ final class PRCockpit: StackbarPlugin {
                 "Authorization": "Bearer \(token)", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28",
             ], timeout: Self.refreshTimeout))
             guard (200..<300).contains(response.status) else {
-                throw HostError(response.status == 403 || response.status == 404
+                if response.status == 401 { tokenRefused() }
+                throw HostError(response.status == 401 ? Self.refusedHelp
+                    : response.status == 403 || response.status == 404
                     ? "GitHub won't share notifications with this token. Run gh auth refresh -s notifications, then try again."
                     : "GitHub answered \(response.status) for notifications")
             }
@@ -672,7 +676,10 @@ final class PRCockpit: StackbarPlugin {
                 "Authorization": "Bearer \(token)", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28",
                 "Content-Type": "application/json",
             ], body: body, timeout: Self.refreshTimeout))
-            guard response.status == 202 || response.status == 205 else { throw HostError("GitHub answered \(response.status)") }
+            guard response.status == 202 || response.status == 205 else {
+                if response.status == 401 { tokenRefused() }
+                throw HostError(response.status == 401 ? Self.refusedHelp : "GitHub answered \(response.status)")
+            }
             inbox = []
             Stackbar.hud("Marked \(count) as read")
         } catch {
@@ -686,7 +693,10 @@ final class PRCockpit: StackbarPlugin {
             let response = try await Stackbar.http(HTTPRequest(url: apiBase + "/notifications/threads/\(item.id)", method: "PATCH", headers: [
                 "Authorization": "Bearer \(token)", "Accept": "application/vnd.github+json",
             ], timeout: Self.refreshTimeout))
-            guard (200..<300).contains(response.status) else { throw HostError("GitHub answered \(response.status)") }
+            guard (200..<300).contains(response.status) else {
+                if response.status == 401 { tokenRefused() }
+                throw HostError(response.status == 401 ? Self.refusedHelp : "GitHub answered \(response.status)")
+            }
             inbox.removeAll { $0.id == item.id }
         } catch {
             Stackbar.hud("Couldn't mark it as read: \(error)", isError: true)
@@ -1070,6 +1080,7 @@ final class PRCockpit: StackbarPlugin {
         // An empty account or an unreachable GitHub never fills the cache;
         // the palette asks on every keystroke, so wait between tries, unless
         // the token or server changed since the last one.
+        try? await loadEnterpriseServer()
         let token = await accessToken() ?? ""
         let credentials = token + "|" + apiBase
         if !force, credentials == reposCredentials, let at = reposAttempted, Date().timeIntervalSince(at) < 15 { return }

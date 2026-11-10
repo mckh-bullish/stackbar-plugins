@@ -14,7 +14,8 @@ all here, with the same `GITHUB_TOKEN`.
   sign in: the gh command-line tool, used first when it is installed and
   signed in (`gh auth login`; the plugin reads its token itself, nothing to
   paste), or a `GITHUB_TOKEN` secret kept in the Keychain, used when gh
-  isn't available — the panel says which is in use and why. A fine-grained
+  isn't available. The panel says when the pasted token is in use, and why
+  gh isn't. A fine-grained
   token with read access to pull
   requests, issues and metadata covers everything except creating issues,
   which needs write access to issues; gh's usual scopes cover all of it.
