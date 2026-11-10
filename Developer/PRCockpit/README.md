@@ -10,13 +10,20 @@ The separate GitHub plugin is now part of PR Cockpit. If you had it, you can
 uninstall it: its repositories, assigned issues and Create GitHub Issue are
 all here, with the same `GITHUB_TOKEN`.
 
-- **Needs:** network access to `api.github.com` only, and a `GITHUB_TOKEN`
-  secret kept in the Keychain. A fine-grained token with read access to pull
+- **Needs:** network access to `api.github.com` only, and one of two ways to
+  sign in: the gh command-line tool, used first when it is installed and
+  signed in (`gh auth login`; the plugin reads its token itself, nothing to
+  paste), or a `GITHUB_TOKEN` secret kept in the Keychain, used when gh
+  isn't available — the panel says which is in use and why. A fine-grained
+  token with read access to pull
   requests, issues and metadata covers everything except creating issues,
-  which needs write access to issues. Approving, merging, auto-merge and
+  which needs write access to issues; gh's usual scopes cover all of it.
+  Approving, merging, auto-merge and
   Mark Ready for Review need write access to pull requests (merging also
-  needs contents write). Mark as done in the inbox needs notifications. On GitHub Enterprise Server, turn it on in Settings and enter the
-  server as `GITHUB_ENTERPRISE_URL`; the plugin then reaches that server and
+  needs contents write). Mark as done in the inbox needs the notifications
+  scope (`gh auth refresh -s notifications`). On GitHub Enterprise Server, turn it on in Settings, sign in to that
+  server with gh (`gh auth login --hostname <server>`) or enter it as
+  `GITHUB_ENTERPRISE_URL`; the plugin then reaches that server and
   no other.
 - **Checks on click:** click a pull request to see each check under it:
   failures first with the step that failed and its first errors, which
@@ -78,6 +85,13 @@ how long reviews have waited.
 ### On your desktop too
 A widget keeps the review queue in view.
 <!-- preview: widget -->
+
+## What's new in 1.16.0
+
+- Sign in with the gh command-line tool instead of pasting a token: when gh is installed and signed in, PR Cockpit reads its token itself (`gh auth token`, run by Stackbar once every five minutes, not once per request), so there is nothing to paste.
+- When gh isn't installed or signed in, the `GITHUB_TOKEN` secret still works — and the panel says that's why it's in use, so both ways to sign in stay visible.
+- On GitHub Enterprise Server, the token is read for that server's host (`gh auth login --hostname <server>`).
+- A token GitHub rejects (401) says to sign in with gh or paste a fresh one.
 
 ## What's new in 1.14.0
 

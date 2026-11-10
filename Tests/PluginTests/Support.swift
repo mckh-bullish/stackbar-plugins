@@ -44,19 +44,23 @@ struct Host {
     let copies = Recorder<String>()
     let services: HostServices
 
-    init(_ test: XCTestCase, system: SimulatedSystem = SimulatedSystem()) {
+    init(_ test: XCTestCase, system: SimulatedSystem = SimulatedSystem(), runs: CommandRunGate? = nil) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         test.addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         self.system = system
         let (notifications, alerts, opened, copies) = (notifications, alerts, opened, copies)
-        services = HostServices.local(directory: directory, secrets: MemorySecretStore([:]), platform: .init(
+        let platform = HostServices.Platform(
             notify: notifications.record,
             alert: alerts.record,
             open: { opened.record(($0.absoluteString, nil)) },
             openWith: { url, app in opened.record((url.absoluteString, app)) },
             copy: copies.record,
             system: system
-        ))
+        )
+        services = runs.map { gate in
+            HostServices(storage: StorageStore(directory: directory.appendingPathComponent("storage", isDirectory: true)),
+                         secrets: MemorySecretStore([:]), platform: platform, runs: gate)
+        } ?? HostServices.local(directory: directory, secrets: MemorySecretStore([:]), platform: platform)
     }
 
     /// Starts a plugin under a supervisor and waits for its first render.
