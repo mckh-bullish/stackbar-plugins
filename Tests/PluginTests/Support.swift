@@ -59,7 +59,8 @@ struct Host {
         )
         services = runs.map { gate in
             HostServices(storage: StorageStore(directory: directory.appendingPathComponent("storage", isDirectory: true)),
-                         secrets: MemorySecretStore([:]), platform: platform, runs: gate)
+                         secrets: MemorySecretStore([:]), platform: platform, runs: gate,
+                         folderGrants: FolderGrants(file: directory.appendingPathComponent("folder-grants.json")))
         } ?? HostServices.local(directory: directory, secrets: MemorySecretStore([:]), platform: platform)
     }
 

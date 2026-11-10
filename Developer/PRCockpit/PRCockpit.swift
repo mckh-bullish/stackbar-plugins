@@ -13,12 +13,11 @@ import Foundation
 /// limits the lists to what changed in the last few days. It tells you when
 /// someone asks for your review, and when one of your own PRs is approved, gets changes requested,
 /// or its checks fail. There are two ways to sign in, and the plugin uses
-/// the first that works: the gh command-line tool (the host runs
-/// `gh auth token`, kept for five minutes, not once per request) or a
-/// `GITHUB_TOKEN` secret pasted in the panel or on the Settings page when
-/// gh isn't installed or signed in. The panel says when the pasted token
-/// is in use, and why gh isn't. Every request goes through the host to the
-/// one declared domain.
+/// the first that works: a `GITHUB_TOKEN` secret pasted in the panel or on
+/// the Settings page (the Settings page says when it is in use, and why gh
+/// isn't), or the gh command-line tool when no secret is pasted (the host
+/// runs `gh auth token`, kept for five minutes, not once per request).
+/// Every request goes through the host to the one declared domain.
 /// For GitHub Enterprise Server, turn it on in Settings and enter the
 /// server as `GITHUB_ENTERPRISE_URL`: requests then go to that server and
 /// no other, with that server's gh sign-in.
@@ -27,7 +26,7 @@ final class PRCockpit: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.navbytes.stackbar.pr-cockpit",
         name: "PR Cockpit",
-        version: "1.16.0",
+        version: "1.15.0",
         summary: "Your pull requests, reviews and issues with CI and review state, and your repositories a keystroke away.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(20)), .wake],
@@ -443,12 +442,13 @@ final class PRCockpit: StackbarPlugin {
 
     // MARK: Sign-in: the gh command-line tool first, GITHUB_TOKEN as the fallback
 
-    /// `gh auth token`'s answer for one host, and when it was asked: the
-    /// token it printed, or why it couldn't. Kept five minutes, a failure
-    /// too, so a refresh with its parallel requests, and a search's typing,
-    /// run gh once per stretch of requests instead of once per request.
-    /// The pasted secret, when gh can't serve, is read fresh on every
-    /// request, so a token pasted over an old one takes effect at once.
+    /// The gh command-line tool's answer for one host, and when it was
+    /// asked: the token it printed, or why it couldn't. Kept five minutes,
+    /// a failure too, so a refresh with its parallel requests, and a
+    /// search's typing, run gh once per stretch of requests instead of once
+    /// per request. An explicit refresh (Try Again, the Refresh command)
+    /// forgets it, so signing in takes effect at once. The pasted secret,
+    /// when there is one, is read fresh on every request.
     var ghAnswer: (token: String?, problem: String?, host: String, at: Date)?
     static let tokenTTL: TimeInterval = 300
 
@@ -481,14 +481,26 @@ final class PRCockpit: StackbarPlugin {
     /// `GITHUB_TOKEN` secret, read fresh. Nil when neither works;
     /// `tokenProblem` says why gh isn't in use.
     func accessToken() async -> String? {
-        let host = enterprise ? URL(string: enterpriseServer ?? "")?.host ?? "" : ""
+        // The pasted secret wins when there is one: it is the token the user
+        // chose, possibly a read-only fine-grained one. Read fresh, so a
+        // token pasted over an old one takes effect at once.
+        if let stored = try? await Stackbar.secret("GITHUB_TOKEN"), !stored.isEmpty {
+            tokenMissing = false
+            tokenSource = "secret"
+            return stored
+        }
+        // No pasted token: the signed-in gh command-line tool, which keeps
+        // its token in the keychain. The host runs `gh auth token`, always
+        // naming the host, and the answer is kept five minutes, a failure
+        // too, so a refresh with its parallel requests, and a search's
+        // typing, run gh once per stretch of requests instead of once per
+        // request.
+        let host = enterprise ? URL(string: enterpriseServer ?? "")?.host ?? "" : "github.com"
         if let kept = ghAnswer, kept.host == host, Date().timeIntervalSince(kept.at) < Self.tokenTTL {
             tokenProblem = kept.problem
         } else {
-            var arguments = ["auth", "token"]
-            if !host.isEmpty { arguments += ["--hostname", host] }
             do {
-                let result = try await Stackbar.run("gh", arguments, timeout: .seconds(10))
+                let result = try await Stackbar.run("gh", ["auth", "token", "--hostname", host], timeout: .seconds(10))
                 let token = result.status == 0 && !result.truncated ? result.text.trimmingCharacters(in: .whitespacesAndNewlines) : ""
                 ghAnswer = token.isEmpty ? (nil, "gh isn't signed in", host, Date()) : (token, nil, host, Date())
             } catch {
@@ -500,12 +512,6 @@ final class PRCockpit: StackbarPlugin {
             tokenMissing = false
             tokenSource = "gh"
             return token
-        }
-        // gh can't serve: the pasted secret, when the user has one.
-        if let stored = try? await Stackbar.secret("GITHUB_TOKEN"), !stored.isEmpty {
-            tokenMissing = false
-            tokenSource = "secret"
-            return stored
         }
         tokenMissing = true
         tokenSource = nil
@@ -523,6 +529,14 @@ final class PRCockpit: StackbarPlugin {
     static let refreshTimeout = 20.0
 
     func refresh() async throws {
+        try await refresh(retryGh: false)
+    }
+
+    /// Runs a full refresh. `retryGh` forgets gh's answer first, so an
+    /// explicit refresh (Try Again, the Refresh command) picks up a fresh
+    /// sign-in instead of the five-minute memory of a failure.
+    func refresh(retryGh: Bool) async throws {
+        if retryGh { ghAnswer = nil }
         // The 20-second timer follows open checks; the lists every two minutes.
         if Stackbar.refreshReason == .interval, let listsFetched, Date().timeIntervalSince(listsFetched) < 115 {
             await followOpenChecks()
@@ -614,7 +628,7 @@ final class PRCockpit: StackbarPlugin {
                 if response.status == 401 { tokenRefused() }
                 throw HostError(response.status == 401 ? Self.refusedHelp
                     : response.status == 403 || response.status == 404
-                    ? "GitHub won't share notifications with this token. Run gh auth refresh -s notifications, then try again."
+                    ? "The inbox needs the notifications scope: gh auth refresh -s notifications, or a classic token pasted as GITHUB_TOKEN."
                     : "GitHub answered \(response.status) for notifications")
             }
             let decoder = JSONDecoder()
@@ -1321,9 +1335,6 @@ final class PRCockpit: StackbarPlugin {
 
     var panel: ViewContent {
         VStack(spacing: Space.m) {
-            if tokenSource == "secret", let tokenProblem {
-                Banner("Using the GITHUB_TOKEN secret because \(tokenProblem). Either works: sign in with gh (gh auth login), then refresh.", symbol: "info.circle")
-            }
             if !loaded {
                 PanelHeader("Pull requests", subtitle: "Checking…", symbol: "arrow.triangle.pull", theme: theme)
             } else if lastError != nil, toReview.isEmpty, mine.isEmpty, updatedAt == nil {
@@ -1392,18 +1403,16 @@ final class PRCockpit: StackbarPlugin {
         return status == 200 ? message : "GitHub said \(status): \(message). The token may need more access."
     }
 
-    /// What to show instead of the lists when none have loaded: how to add a
-    /// token, or why GitHub can't be reached.
-    /// The problem state, with the gh reason and both ways in when neither
-    /// source is available.
+    /// What to show instead of the lists when none have loaded: the two ways
+    /// to sign in, with why gh isn't in use, or why GitHub can't be reached.
     @ViewBuilder var problemState: ViewContent {
         if tokenMissing {
             EmptyState("Connect to GitHub", symbol: "person.badge.key.fill", message: connectMessage, theme: theme) {
-                ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh() }
+                ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh(retryGh: true) }
             }
         } else {
             EmptyState("Can't reach GitHub", symbol: "exclamationmark.triangle.fill", message: lastError, theme: .critical) {
-                ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh() }
+                ActionButton("Try Again", symbol: "arrow.clockwise", theme: theme) { try await self.refresh(retryGh: true) }
             }
         }
     }
@@ -1419,6 +1428,12 @@ final class PRCockpit: StackbarPlugin {
 
     /// Stackbar's Settings window, so the panel stays about the pull requests.
     var settings: ViewContent {
+        Section("Sign-in") {
+            LabeledContent("Token", value: tokenSource == "secret" ? "the GITHUB_TOKEN secret" : tokenSource == "gh" ? "the gh command-line tool" : "resolved at the next refresh")
+            if tokenSource == "secret", let tokenProblem {
+                Text("Not using gh: \(tokenProblem). Sign in with gh (gh auth login in Terminal) and this plugin switches to its token.").style(.caption).role(.secondary)
+            }
+        }
         Section("What to show") {
             Toggle("Include requests to my teams", isOn: includeTeams) { on in
                 self.includeTeams = on
@@ -1438,7 +1453,7 @@ final class PRCockpit: StackbarPlugin {
             Picker("Click", options: ["Shows its checks", "Opens it in the browser"], selection: clickShowsChecks ? "Shows its checks" : "Opens it in the browser") { chosen in
                 self.clickShowsChecks = chosen == "Shows its checks"
             }
-            Text("Checks open under the pull request with why they failed, its deployments, and Re-run. ⌘↩ always opens the browser. Re-running needs the token's workflow scope: gh auth refresh -s workflow.").style(.caption).role(.secondary)
+            Text("Checks open under the pull request with why they failed, its deployments, and Re-run. ⌘↩ always opens the browser. Re-running needs Actions write: gh auth refresh -s workflow, or Actions write on a pasted fine-grained token.").style(.caption).role(.secondary)
             Toggle("Show checks in the palette's preview", isOn: previewChecks) { self.previewChecks = $0 }
             Text("Fetches the checks of your listed pull requests in the background, only for those whose checks changed, so the preview beside the palette shows them as you move through the list.").style(.caption).role(.secondary)
         }
@@ -1462,7 +1477,7 @@ final class PRCockpit: StackbarPlugin {
                 self.showInbox = on
                 if on { try await self.refresh() } else { self.inbox = [] }
             }
-            Text("Mentions, issues and everything else GitHub notifies you about. Needs the token's notifications scope: gh auth refresh -s notifications.").style(.caption).role(.secondary)
+            Text("Mentions, issues and everything else GitHub notifies you about. Needs the notifications scope: gh auth refresh -s notifications; a fine-grained token can't read notifications.").style(.caption).role(.secondary)
             if let inboxError { Text(inboxError).style(.caption).role(.warning) }
         }
         Section("Repositories") {
@@ -1470,7 +1485,7 @@ final class PRCockpit: StackbarPlugin {
             Toggle("Include archived", isOn: includeArchived) { self.includeArchived = $0 }
             Picker("Copy clone URLs as", options: ["SSH", "HTTPS"], selection: cloneWith) { self.cloneWith = $0 }
             Button("Reload", symbol: "arrow.clockwise") { await self.loadRepos(force: true) }
-            Text("Search GitHub Repositories in the palette opens any of them, or its pull requests, issues or Actions. Creating issues needs write access to issues (gh's usual repo scope covers it).").style(.caption).role(.secondary)
+            Text("Search GitHub Repositories in the palette opens any of them, or its pull requests, issues or Actions. Creating issues needs write access to issues (gh's usual repo scope covers it; a fine-grained token needs Issues write).").style(.caption).role(.secondary)
         }
         Section("Hidden repositories") {
             if hiddenRepos.isEmpty { Text("None. Hide one from a pull request's menu.").role(.secondary) }
@@ -1493,9 +1508,6 @@ final class PRCockpit: StackbarPlugin {
 
     @ViewBuilder var windowContent: ViewContent {
         if let lastError { Banner(lastError) }
-        if tokenSource == "secret", let tokenProblem {
-            Banner("Using the GITHUB_TOKEN secret because \(tokenProblem). Either works: sign in with gh (gh auth login), then refresh.", symbol: "info.circle")
-        }
         List(searchable: true) {
             Section("Waiting on your review (\(shownReview.count))") {
                 ForEach(shownReview) { pr in rowWithChecks(pr, showAuthor: true, place: "window-") }
@@ -1713,7 +1725,7 @@ final class PRCockpit: StackbarPlugin {
                 self.filesView(invocation["url"] ?? "")
             }
         Command("refresh", title: "Refresh Pull Requests", symbol: "arrow.clockwise", keywords: ["github"]) { _ in
-            try await self.refresh()
+            try await self.refresh(retryGh: true)
             return .message(self.lastError ?? "\(self.shownReview.count) to review, \(self.shownMine.count) of yours open")
         }
     }
@@ -2142,7 +2154,7 @@ extension PRCockpit {
             await loadDetails(url)
         } catch {
             let text = "\(error)"
-            Stackbar.hud(text.contains("403") || text.contains("404") ? "Re-running needs the token's workflow scope: gh auth refresh -s workflow" : text, isError: true)
+            Stackbar.hud(text.contains("403") || text.contains("404") ? "Re-running needs Actions write: gh auth refresh -s workflow, or Actions write on the pasted token" : text, isError: true)
         }
     }
 
