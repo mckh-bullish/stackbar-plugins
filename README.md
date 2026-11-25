@@ -65,6 +65,7 @@ An update that asks for something new waits for your approval.
 | [Window Switcher](Productivity/WindowSwitcher) | Productivity | Jump to any open window by typing part of its app or title in the palette. |
 | [Windows](Productivity/Windows) | Productivity | Snap the front window to halves, thirds or quarters, and save where your windows go for each monitor setup. |
 | [World Clock](Productivity/WorldClock) | Productivity | The time in the cities you work with, with offsets and working hours. |
+| [Up Next Flash](Community/mckh-bullish/UpNextFlash) | Community (by @mckh-bullish) | Your next meeting in the menu bar, with a countdown, one-click join and a flash as it comes up. |
 
 <!-- plugins:end -->
 
