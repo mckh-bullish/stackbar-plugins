@@ -13,14 +13,16 @@ when it starts.
   access once, and permission to add events (for Add Calendar Event). No
   network.
 - **Surfaces:** menu bar, panel, window, widget, settings.
-- **The flash:** a red dot shows beside the countdown as a meeting comes up
-  (5 minutes before by default), and again as the meeting starts, for its
-  first two minutes. A left click while it shows mutes that one flash — the
-  coming-up flash alone, so the meeting still flashes as it starts. Muting is
-  per meeting: the next one always flashes. The dot is the one red thing the
-  menu bar truly draws — colors and symbol effects are stripped there — and
-  it can be turned off entirely.
-- **Settings:** flash on or off, and each flash moment picked from 60, 45,
+- **The flash:** a mark of your choosing — any emoji or up to ten characters
+  of text, the red circle by default — shows beside the countdown as a
+  meeting comes up (5 minutes before by default), and again as the meeting
+  starts, for its first two minutes. A left click while it shows mutes that
+  one flash — the coming-up flash alone, so the meeting still flashes as it
+  starts. Muting is per meeting: the next one always flashes. Emoji and plain
+  text are the marks the menu bar truly draws — colors and symbol effects are
+  stripped there — and flashing can be turned off entirely.
+- **Settings:** flash on or off, the flash mark, and each flash moment picked
+  from 60, 45,
   30, 15, 10, 5, 1 or 0 minutes before; calendars to hide, all-day and
   declined events, only meetings with a link or with other people, the
   reminder lead time, auto-join, a full-screen alert, how the title shows in
@@ -46,6 +48,12 @@ still fires after a coming-up one is muted, and the next meeting starts fresh.
 The countdown, the one-click join, the week at a glance, quick add in plain
 language, reminders with Snooze, and a widget for the desktop.
 <!-- preview: widget -->
+
+## What's new in 1.0.4
+
+- The flash mark is yours: any emoji or up to ten characters of text, set in
+  Settings → Flashing. The red circle is the default, and an empty field
+  brings it back.
 
 ## What's new in 1.0.3
 

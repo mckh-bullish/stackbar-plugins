@@ -16,7 +16,7 @@ final class UpNextFlash: StackbarPlugin {
     static let manifest = Manifest(
         id: "io.github.mckh-bullish.up-next-flash",
         name: "Up Next Flash",
-        version: "1.0.3",
+        version: "1.0.4",
         summary: "Your next meeting in the menu bar, with a countdown, one-click join and a flash as it comes up.",
         surfaces: [.menuBar, .panel, .window, .widget, .settings],
         triggers: [.launch, .every(.seconds(30)), .wake],
@@ -196,6 +196,8 @@ final class UpNextFlash: StackbarPlugin {
     @Stored("flashNowMinutes") var flashNowMinutes = 0.0
     /// Whether the menu bar flashes at all; the moments keep their values.
     @Stored("flashEnabled") var flashEnabled = true
+    /// The mark a flash shows: an emoji or short text of the user's choosing.
+    @Stored("flashIcon") var flashIcon = "🔴"
     /// Meetings whose coming-up flash a click muted, by event id.
     @Stored("flashMutedSoon") var flashMutedSoon: [String] = []
     /// Meetings whose now flash a click muted, by event id.
@@ -892,12 +894,21 @@ final class UpNextFlash: StackbarPlugin {
         return flashEnabled && until <= flashNowMinutes * 60 && now < min(event.end, event.start.addingTimeInterval(2 * 60)) && !flashMutedNow.contains(event.id)
     }
 
-    /// The red dot that marks a flash. The bar strips every paint, so the dot
-    /// is the red circle emoji — the one red thing it draws. It shows for the
-    /// whole flash window; a blinking dot needs `Stackbar.redraw`, which is
-    /// newer than the StackbarKit this store builds against.
-    @ViewBuilder static var flashDot: ViewContent {
-        Text("🔴")
+    /// The mark of a flash: the emoji or short text set in Settings (the red
+    /// circle by default). The bar strips every paint, so a mark is text or
+    /// an emoji — the things it draws as given. It shows for the whole flash
+    /// window; a blinking mark needs `Stackbar.redraw`, which is newer than
+    /// the StackbarKit this store builds against.
+    var flashMark: String {
+        let trimmed = flashIcon.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty ? "🔴" : trimmed
+    }
+
+    /// Sets the flash mark from what was typed: trimmed, at most ten
+    /// characters, and the default red circle when left empty.
+    func setFlashIcon(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        flashIcon = trimmed.isEmpty ? "🔴" : String(trimmed.prefix(10))
     }
 
     /// Mutes the flash a click stopped, that one alone: the coming-up one (the
@@ -924,10 +935,10 @@ final class UpNextFlash: StackbarPlugin {
             let now = Date()
             let until = event.start.timeIntervalSince(now)
             if flashesNow(event, now: now) {
-                // The meeting is starting: the red dot shows until the flash
-                // is muted, two minutes in, or the meeting ends.
+                // The meeting is starting: the mark shows until the flash is
+                // muted, two minutes in, or the meeting ends.
                 HStack(spacing: Space.xs) {
-                    Self.flashDot
+                    Text(flashMark)
                     Image(systemName: symbol)
                     if showTitle { Text(shortTitle(event.title) + " ·") }
                     Text(countdown(event, now: now))
@@ -935,7 +946,7 @@ final class UpNextFlash: StackbarPlugin {
                 .foreground(.role(.critical))
             } else if flashesSoon(event, now: now) {
                 HStack(spacing: Space.xs) {
-                    Self.flashDot
+                    Text(flashMark)
                     Image(systemName: symbol)
                     if showTitle { Text(shortTitle(event.title) + " ·") }
                     if until <= 10 * 60 {
@@ -1344,6 +1355,9 @@ final class UpNextFlash: StackbarPlugin {
         Section("Flashing") {
             Toggle("Flash the menu bar", isOn: flashEnabled, key: "flash-enabled") { on in
                 self.flashEnabled = on
+            }
+            TextField("Flash icon: emoji or text", text: flashMark) { submitted in
+                self.setFlashIcon(submitted)
             }
             Picker("Coming up", options: Self.flashChoices.map(\.title), selection: Self.flashChoices.first { $0.minutes == flashSoonMinutes }?.title ?? "\(Int(flashSoonMinutes)) min before", key: "flash-soon") { title in
                 self.flashSoonMinutes = Self.flashChoices.first { $0.title == title }?.minutes ?? self.flashSoonMinutes
